@@ -23,12 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\TestFiles\**\*.*">
-      <Link>TestFiles\%(RecursiveDir)%(FileName)%(Extension)</Link>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="../Examples/Examples.csproj" />
     <ProjectReference Include="../Source/Core.csproj" />
     <ProjectReference Include="../Utility/Utility.csproj" />

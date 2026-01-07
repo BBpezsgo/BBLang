@@ -159,16 +159,23 @@ public sealed class Parser
 #endif
         CurrentTokenIndex = 0;
 
-        ParseCodeHeader();
-
-        EndlessCheck endlessSafe = new();
-        while (CurrentToken != null)
+        try
         {
-            ParseCodeBlock();
+            ParseCodeHeader();
 
-            SkipCrapTokens();
+            EndlessCheck endlessSafe = new();
+            while (CurrentToken != null)
+            {
+                ParseCodeBlock();
 
-            endlessSafe.Step();
+                SkipCrapTokens();
+
+                endlessSafe.Step();
+            }
+        }
+        catch (SyntaxException syntaxException)
+        {
+            Diagnostics.Add(syntaxException.ToDiagnostic());
         }
 
         return new ParserResult(

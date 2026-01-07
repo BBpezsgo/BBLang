@@ -1111,7 +1111,7 @@ public partial class StatementCompiler
 
         ParserResult expressionAst = Parser.Parser.ParseExpression(expressionTokens.Tokens, entryFile, Diagnostics);
 
-        ParsedFile parsedExpression = new(entryFile, null, expressionTokens, expressionAst, new ImportIndex());
+        ParsedFile parsedExpression = new(entryFile, null, expressionTokens, expressionAst, new ImportIndex(), expression);
 
         if (expressionAst.Usings.Any())
         {

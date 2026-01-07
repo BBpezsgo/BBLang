@@ -165,7 +165,7 @@ public class LanguageException : Exception
         Message,
         Position,
         File,
-        true,
+        false,
         InnerException is LanguageException innerLanguageException
             ? ImmutableArray.Create(innerLanguageException.ToDiagnostic())
             : ImmutableArray<Diagnostic>.Empty

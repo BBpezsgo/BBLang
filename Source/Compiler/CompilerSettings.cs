@@ -48,7 +48,7 @@ public struct CompilerSettings
     public bool CompileEverything { get; set; }
     public bool IsExpression { get; set; }
     public ImmutableArray<ExpressionVariable> ExpressionVariables { get; set; }
-    public Dictionary<Uri, CacheItem>? Cache { get; set; }
+    public IDictionary<Uri, CacheItem>? Cache { get; set; }
 
     [SetsRequiredMembers]
     public CompilerSettings(CompilerSettings other)

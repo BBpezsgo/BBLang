@@ -28,7 +28,8 @@ public readonly record struct ParsedFile(
     UsingDefinition? Using,
     TokenizerResult Tokens,
     ParserResult AST,
-    ImportIndex Index
+    ImportIndex Index,
+    string Text
 );
 
 record PendingFile(
@@ -50,11 +51,11 @@ public class SourceCodeManager
     readonly ImmutableHashSet<string> PreprocessorVariables;
     readonly ImmutableArray<ISourceProvider> SourceProviders;
     readonly TokenizerSettings TokenizerSettings;
-    readonly Dictionary<Uri, CacheItem> Cache;
+    readonly IDictionary<Uri, CacheItem> Cache;
     readonly List<PendingFile> PendingFiles;
     readonly List<ParsedFile> ParsedFiles;
 
-    public SourceCodeManager(DiagnosticsCollection diagnostics, ImmutableHashSet<string> preprocessorVariables, ImmutableArray<ISourceProvider> sourceProviders, TokenizerSettings? tokenizerSettings, Dictionary<Uri, CacheItem>? cache)
+    public SourceCodeManager(DiagnosticsCollection diagnostics, ImmutableHashSet<string> preprocessorVariables, ImmutableArray<ISourceProvider> sourceProviders, TokenizerSettings? tokenizerSettings, IDictionary<Uri, CacheItem>? cache)
     {
         CompiledUris = new();
         Diagnostics = diagnostics;
@@ -63,7 +64,7 @@ public class SourceCodeManager
         ParsedFiles = new();
         SourceProviders = sourceProviders;
         TokenizerSettings = tokenizerSettings ?? TokenizerSettings.Default;
-        Cache = cache ?? new();
+        Cache = cache ?? new Dictionary<Uri, CacheItem>();
     }
 
     void ProcessPendingFiles()
@@ -122,7 +123,7 @@ public class SourceCodeManager
             if (ast.Usings.Any())
             { Output.LogDebug("Loading files ..."); }
 
-            ParsedFiles.Add(new ParsedFile(finishedFile.Uri, finishedFile.Initiator, tokens, ast, finishedFile.Index));
+            ParsedFiles.Add(new ParsedFile(finishedFile.Uri, finishedFile.Initiator, tokens, ast, finishedFile.Index, text));
             Cache[finishedFile.Uri] = new CacheItem(
                 finishedFile.Version,
                 text,
@@ -173,7 +174,7 @@ public class SourceCodeManager
 
                                 ImportIndex index = initiatorIndex.Next();
 
-                                ParsedFiles.Add(new ParsedFile(query, initiator, cache.TokenizerResult, cache.ParserResult, index));
+                                ParsedFiles.Add(new ParsedFile(query, initiator, cache.TokenizerResult, cache.ParserResult, index, cache.Content));
 
                                 if (cache.ParserResult.Usings.Any())
                                 { Output.LogDebug("Loading files ..."); }
@@ -536,7 +537,7 @@ public class SourceCodeManager
         ImmutableArray<string> additionalImports,
         ImmutableArray<ISourceProvider> sourceProviders,
         TokenizerSettings? tokenizerSettings,
-        Dictionary<Uri, CacheItem>? cache)
+        IDictionary<Uri, CacheItem>? cache)
     {
         SourceCodeManager sourceCodeManager = new(diagnostics, preprocessorVariables, sourceProviders, tokenizerSettings, cache);
         return sourceCodeManager.Entry(file, additionalImports);
@@ -549,7 +550,7 @@ public class SourceCodeManager
         ImmutableArray<string> additionalImports,
         ImmutableArray<ISourceProvider> sourceProviders,
         TokenizerSettings? tokenizerSettings,
-        Dictionary<Uri, CacheItem>? cache)
+        IDictionary<Uri, CacheItem>? cache)
     {
         SourceCodeManager sourceCodeManager = new(diagnostics, preprocessorVariables, sourceProviders, tokenizerSettings, cache);
         return sourceCodeManager.Entry(files, additionalImports);
