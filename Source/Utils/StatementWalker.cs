@@ -95,11 +95,12 @@ public static partial class StatementWalker
                 foreach (Statement w in Visit(v.Left, callback)) yield return w;
                 foreach (Statement w in Visit(v.Right, callback)) yield return w;
                 break;
-            case ElseBranchStatement v:
-                foreach (Statement w in Visit(v.Body, callback)) yield return w;
-                break;
-            case ElseIfBranchStatement v:
+            case IfBranchStatement v:
                 foreach (Statement w in Visit(v.Condition, callback)) yield return w;
+                foreach (Statement w in Visit(v.Body, callback)) yield return w;
+                foreach (Statement w in Visit(v.Else, callback)) yield return w;
+                break;
+            case ElseBranchStatement v:
                 foreach (Statement w in Visit(v.Body, callback)) yield return w;
                 break;
             case ForLoopStatement v:
@@ -108,27 +109,12 @@ public static partial class StatementWalker
                 foreach (Statement w in Visit(v.Step, callback)) yield return w;
                 foreach (Statement w in Visit(v.Block, callback)) yield return w;
                 break;
-            case IfBranchStatement v:
-                foreach (Statement w in Visit(v.Condition, callback)) yield return w;
-                foreach (Statement w in Visit(v.Body, callback)) yield return w;
-                break;
-            case IfContainer v:
-                foreach (BranchStatementBase item in v.Branches) foreach (Statement w in Visit(item, callback)) yield return w;
-                break;
             case InstructionLabelDeclaration v:
                 foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 break;
             case KeywordCallStatement v:
                 foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
-                break;
-            case LinkedElse v:
-                foreach (Statement w in Visit(v.Body, callback)) yield return w;
-                break;
-            case LinkedIf v:
-                foreach (Statement w in Visit(v.Condition, callback)) yield return w;
-                foreach (Statement w in Visit(v.Body, callback)) yield return w;
-                foreach (Statement w in Visit(v.NextLink, callback)) yield return w;
                 break;
             case SimpleAssignmentStatement v:
                 foreach (Statement w in Visit(v.Target, callback)) yield return w;

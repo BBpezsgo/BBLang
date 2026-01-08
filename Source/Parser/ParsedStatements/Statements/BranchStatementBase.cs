@@ -24,7 +24,6 @@ public abstract class BranchStatementBase : StatementWithAnyBody
     {
         If,
         Else,
-        ElseIf,
     }
 
     public override string ToString()

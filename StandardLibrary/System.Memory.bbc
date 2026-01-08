@@ -180,7 +180,7 @@ export bool resize(any* ptr, int size)
 
         return true;
     }
-    elseif (size < blockSize)
+    else if (size < blockSize)
     {
         int _remainingSize = blockSize - size - HeaderSize;
 

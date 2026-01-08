@@ -1486,85 +1486,44 @@ public sealed class Parser
         return true;
     }
 
-    bool ExpectIfStatement([NotNullWhen(true)] out IfContainer? ifContainer)
+    bool ExpectIfStatement([NotNullWhen(true)] out IfBranchStatement? ifStatement)
     {
-        ifContainer = null;
+        ifStatement = null;
         int parseStart = CurrentTokenIndex;
 
-        if (!ExpectIfSegmentStatement(StatementKeywords.If, BranchStatementBase.IfPart.If, true, out BranchStatementBase? ifStatement))
+        if (!ExpectIdentifier(StatementKeywords.If, out Token? ifKeyword))
         {
             CurrentTokenIndex = parseStart;
             return false;
         }
 
-        ImmutableArray<BranchStatementBase>.Builder branches = ImmutableArray.CreateBuilder<BranchStatementBase>();
-        branches.Add(ifStatement);
+        ifKeyword.AnalyzedType = TokenAnalyzedType.Statement;
 
-        EndlessCheck endlessSafe = new();
-        while (true)
+        if (!ExpectOperator("(", out Token? bracketStart))
+        { throw new SyntaxException($"Expected \"(\" after keyword \"{ifKeyword}\"", ifKeyword.Position.After(), File); }
+
+        if (!ExpectExpression(out Expression? condition))
+        { throw new SyntaxException($"Expected condition after \"{ifKeyword} (\"", bracketStart.Position.After(), File); }
+
+        if (!ExpectOperator(")", out Token? bracketEnd))
+        { throw new SyntaxException($"Expected \")\" after \"{ifKeyword}\" condition", condition.Position.After(), File); }
+
+        if (!ExpectStatement(out Statement? ifBlock))
+        { throw new SyntaxException($"Expected a statement after \"{ifKeyword}\" condition", bracketEnd.Position.After(), File); }
+
+        ElseBranchStatement? elseBranch = null;
+
+        if (ExpectIdentifier(StatementKeywords.Else, out Token? elseKeyword))
         {
-            if (!ExpectIfSegmentStatement(StatementKeywords.ElseIf, BranchStatementBase.IfPart.ElseIf, true, out BranchStatementBase? elseifStatement))
-            {
-                break;
-            }
-            branches.Add(elseifStatement);
+            elseKeyword.AnalyzedType = TokenAnalyzedType.Statement;
 
-            endlessSafe.Step();
+            if (!ExpectStatement(out Statement? elseBlock))
+            { throw new SyntaxException($"Expected a statement after \"{elseKeyword}\" condition", elseKeyword.Position.After(), File); }
+
+            elseBranch = new ElseBranchStatement(elseKeyword, elseBlock, File);
         }
 
-        if (ExpectIfSegmentStatement(StatementKeywords.Else, BranchStatementBase.IfPart.Else, false, out BranchStatementBase? elseStatement))
-        {
-            branches.Add(elseStatement);
-        }
-
-        ifContainer = new IfContainer(branches.DrainToImmutable(), File);
-        return true;
-    }
-
-    bool ExpectIfSegmentStatement(string keywordName, BranchStatementBase.IfPart ifSegmentType, bool needParameters, [NotNullWhen(true)] out BranchStatementBase? branch)
-    {
-        branch = null;
-        int parseStart = CurrentTokenIndex;
-
-        if (!ExpectIdentifier(keywordName, out Token? keyword))
-        {
-            CurrentTokenIndex = parseStart;
-            return false;
-        }
-
-        keyword.AnalyzedType = TokenAnalyzedType.Statement;
-
-        Expression? condition = null;
-
-        Statement? block;
-
-        if (needParameters)
-        {
-            if (!ExpectOperator("(", out Token? bracketStart))
-            { throw new SyntaxException($"Expected \"(\" after keyword \"{keyword}\"", keyword.Position.After(), File); }
-
-            if (!ExpectExpression(out condition))
-            { throw new SyntaxException($"Expected condition after \"{keyword} (\"", bracketStart.Position.After(), File); }
-
-            if (!ExpectOperator(")", out Token? bracketEnd))
-            { throw new SyntaxException($"Expected \")\" after \"{keyword}\" condition", condition.Position.After(), File); }
-
-            if (!ExpectStatement(out block))
-            { throw new SyntaxException($"Expected a statement after \"{keyword}\" condition", bracketEnd.Position.After(), File); }
-        }
-        else
-        {
-            if (!ExpectStatement(out block))
-            { throw new SyntaxException($"Expected a statement after \"{keyword}\" condition", keyword.Position.After(), File); }
-        }
-
-        branch = ifSegmentType switch
-        {
-            BranchStatementBase.IfPart.If => new IfBranchStatement(keyword, condition ?? throw new UnreachableException(), block, File),
-            BranchStatementBase.IfPart.ElseIf => new ElseIfBranchStatement(keyword, condition ?? throw new UnreachableException(), block, File),
-            BranchStatementBase.IfPart.Else => new ElseBranchStatement(keyword, block, File),
-            _ => throw new UnreachableException(),
-        };
+        ifStatement = new IfBranchStatement(ifKeyword, condition, ifBlock, elseBranch, File);
         return true;
     }
 
@@ -1647,9 +1606,9 @@ public sealed class Parser
             return true;
         }
 
-        if (ExpectIfStatement(out IfContainer? ifContainer))
+        if (ExpectIfStatement(out IfBranchStatement? ifStatement))
         {
-            statement = ifContainer;
+            statement = ifStatement;
             return true;
         }
 
@@ -2434,7 +2393,6 @@ public sealed class Parser
         ForLoopStatement or
         WhileLoopStatement or
         Block or
-        IfContainer or
         BranchStatementBase or
         InstructionLabelDeclaration or
         LambdaExpression

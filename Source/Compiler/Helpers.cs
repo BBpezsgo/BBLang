@@ -3148,14 +3148,14 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         { result |= FindControlFlowUsage(statement, inDepth); }
         return result;
     }
-    static ControlFlowUsage FindControlFlowUsage(Statement statement, bool inDepth = false) => statement switch
+    static ControlFlowUsage FindControlFlowUsage(Statement? statement, bool inDepth = false) => statement switch
     {
         Block v => FindControlFlowUsage(v.Statements, true),
         KeywordCallStatement v => FindControlFlowUsage(v, inDepth),
         WhileLoopStatement v => FindControlFlowUsage(v.Body, true),
         ForLoopStatement v => FindControlFlowUsage(v.Block.Statements, true),
-        IfContainer v => FindControlFlowUsage(v.Branches, true),
-        BranchStatementBase v => FindControlFlowUsage(v.Body, true),
+        IfBranchStatement v => FindControlFlowUsage(v.Body, true) | FindControlFlowUsage(v.Else, true),
+        ElseBranchStatement v => FindControlFlowUsage(v.Body, true),
 
         SimpleAssignmentStatement => ControlFlowUsage.None,
         VariableDefinition => ControlFlowUsage.None,
@@ -3166,6 +3166,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         IdentifierExpression => ControlFlowUsage.None,
         ConstructorCallExpression => ControlFlowUsage.None,
         FieldExpression => ControlFlowUsage.None,
+        null => ControlFlowUsage.None,
 
         _ => throw new NotImplementedException(statement.GetType().Name),
     };

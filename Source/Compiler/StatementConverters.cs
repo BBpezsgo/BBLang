@@ -43,48 +43,6 @@ public static class StatementConverters
         return false;
     }
 
-    static LinkedBranch? ToLinks(this IfContainer ifContainer, int i)
-    {
-        if (i >= ifContainer.Branches.Length)
-        { return null; }
-
-        if (ifContainer.Branches[i] is ElseIfBranchStatement elseIfBranch)
-        {
-            return new LinkedIf(
-                elseIfBranch.Keyword,
-                elseIfBranch.Condition,
-                elseIfBranch.Body,
-                elseIfBranch.File)
-            {
-                NextLink = ifContainer.ToLinks(i + 1),
-            };
-        }
-
-        if (ifContainer.Branches[i] is ElseBranchStatement elseBranch)
-        {
-            return new LinkedElse(
-                elseBranch.Keyword,
-                elseBranch.Body,
-                elseBranch.File);
-        }
-
-        throw new NotImplementedException();
-    }
-
-    public static LinkedIf ToLinks(this IfContainer ifContainer)
-    {
-        if (ifContainer.Branches.Length == 0) throw new InternalExceptionWithoutContext();
-        if (ifContainer.Branches[0] is not IfBranchStatement ifBranch) throw new InternalExceptionWithoutContext();
-        return new LinkedIf(
-            ifBranch.Keyword,
-            ifBranch.Condition,
-            ifBranch.Body,
-            ifBranch.File)
-        {
-            NextLink = ifContainer.ToLinks(1),
-        };
-    }
-
     public static NewInstanceExpression ToInstantiation(this ConstructorCallExpression constructorCall) => new(constructorCall.Keyword, constructorCall.Type, constructorCall.File)
     {
         CompiledType = constructorCall.CompiledType,

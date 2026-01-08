@@ -39,7 +39,7 @@ export inline void printline<T1, T2>(temp string format, temp T1 arg1, temp T2 a
         if (c == '%')
         {
             if (arg == 0) print(arg1);
-            elseif (arg == 1) print(arg2);
+            else if (arg == 1) print(arg2);
             else crash "Invalid format";
             arg++;
         }
@@ -60,8 +60,8 @@ export inline void printline<T1, T2, T3>(temp string format, temp T1 arg1, temp 
         if (c == '%')
         {
             if (arg == 0) print(arg1);
-            elseif (arg == 1) print(arg2);
-            elseif (arg == 2) print(arg3);
+            else if (arg == 1) print(arg2);
+            else if (arg == 2) print(arg3);
             else crash "Invalid format";
             arg++;
         }
@@ -82,9 +82,9 @@ export inline void printline<T1, T2, T3, T4>(temp string format, temp T1 arg1, t
         if (c == '%')
         {
             if (arg == 0) print(arg1);
-            elseif (arg == 1) print(arg2);
-            elseif (arg == 2) print(arg3);
-            elseif (arg == 3) print(arg4);
+            else if (arg == 1) print(arg2);
+            else if (arg == 2) print(arg3);
+            else if (arg == 3) print(arg4);
             else crash "Invalid format";
             arg++;
         }

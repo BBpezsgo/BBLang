@@ -1503,18 +1503,13 @@ public partial class StatementCompiler
         };
         return true;
     }
-    bool CompileStatement(IfContainer @if, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
-    {
-        LinkedIf links = @if.ToLinks();
-        return CompileStatement(links, out compiledStatement);
-    }
-    bool CompileStatement(LinkedIf @if, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
+    bool CompileStatement(IfBranchStatement @if, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
     {
         compiledStatement = null;
 
         if (!CompileExpression(@if.Condition, out CompiledExpression? condition))
         {
-            if (@if.NextLink is not null) CompileStatement(@if.NextLink, out _);
+            if (@if.Else is not null) CompileStatement(@if.Else, out _);
             CompileStatement(@if.Body, out _);
             return false;
         }
@@ -1523,7 +1518,7 @@ public partial class StatementCompiler
         {
             if (evaluatedCondition.Value)
             {
-                if (!StatementWalker.Visit(@if.NextLink, StatementWalkerFilter.FrameOnlyFilter).OfType<InstructionLabelDeclaration>().Any())
+                if (!StatementWalker.Visit(@if.Else, StatementWalkerFilter.FrameOnlyFilter).OfType<InstructionLabelDeclaration>().Any())
                 {
                     return CompileStatement(@if.Body, out compiledStatement);
                 }
@@ -1532,9 +1527,9 @@ public partial class StatementCompiler
             {
                 if (!StatementWalker.Visit(@if, StatementWalkerFilter.FrameOnlyFilter).OfType<InstructionLabelDeclaration>().Any())
                 {
-                    if (@if.NextLink is not null)
+                    if (@if.Else is not null)
                     {
-                        if (!CompileStatement(@if.NextLink, out compiledStatement)) return false;
+                        if (!CompileStatement(@if.Else, out compiledStatement)) return false;
                         if (compiledStatement is CompiledElse nextElse)
                         {
                             compiledStatement = nextElse.Body;
@@ -1555,21 +1550,19 @@ public partial class StatementCompiler
 
         if (!CompileStatement(@if.Body, out CompiledStatement? body)) return false;
         CompiledStatement? next = null;
-        if (@if.NextLink is not null)
+        if (@if.Else is not null)
         {
-            LinkedBranch nextLink = @if.NextLink;
-            if (nextLink is LinkedElse nextElse)
+            BranchStatementBase nextLink = @if.Else;
+
+            if (nextLink.Body is IfBranchStatement nextIfContainer1)
             {
-                if (nextElse.Body is IfContainer nextIfContainer1)
-                {
-                    nextLink = nextIfContainer1.ToLinks();
-                }
-                else if (nextElse.Body is Block nextBlock
-                        && nextBlock.Statements.Length == 1
-                        && nextBlock.Statements[0] is IfContainer nextIfContainer2)
-                {
-                    nextLink = nextIfContainer2.ToLinks();
-                }
+                nextLink = nextIfContainer1;
+            }
+            else if (nextLink.Body is Block nextBlock
+                    && nextBlock.Statements.Length == 1
+                    && nextBlock.Statements[0] is IfBranchStatement nextIfContainer2)
+            {
+                nextLink = nextIfContainer2;
             }
 
             if (!CompileStatement(nextLink, out next)) return false;
@@ -1584,7 +1577,7 @@ public partial class StatementCompiler
         };
         return true;
     }
-    bool CompileStatement(LinkedElse @if, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
+    bool CompileStatement(ElseBranchStatement @if, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
     {
         compiledStatement = null;
 
@@ -1597,12 +1590,15 @@ public partial class StatementCompiler
         };
         return true;
     }
-    bool CompileStatement(LinkedBranch branch, [NotNullWhen(true)] out CompiledStatement? compiledStatement) => branch switch
+    bool CompileStatement(BranchStatementBase branch, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
     {
-        LinkedIf @if => CompileStatement(@if, out compiledStatement),
-        LinkedElse @else => CompileStatement(@else, out compiledStatement),
-        _ => throw new UnreachableException(),
-    };
+        return branch switch
+        {
+            IfBranchStatement v => CompileStatement(v, out compiledStatement),
+            ElseBranchStatement v => CompileStatement(v, out compiledStatement),
+            _ => throw new NotImplementedException(),
+        };
+    }
     bool CompileStatement(Block block, [NotNullWhen(true)] out CompiledStatement? compiledStatement, bool ignoreScope = false)
     {
         compiledStatement = null;
@@ -1669,7 +1665,7 @@ public partial class StatementCompiler
             case AssignmentStatement v: return CompileStatement(v.ToAssignment(), out compiledStatement);
             case WhileLoopStatement v: return CompileStatement(v, out compiledStatement);
             case ForLoopStatement v: return CompileStatement(v, out compiledStatement);
-            case IfContainer v: return CompileStatement(v, out compiledStatement);
+            case IfBranchStatement v: return CompileStatement(v, out compiledStatement);
             case Block v: return CompileStatement(v, out compiledStatement);
             case InstructionLabelDeclaration v: return CompileStatement(v, out compiledStatement);
             default: throw new NotImplementedException($"Statement {statement.GetType().Name} is not implemented");

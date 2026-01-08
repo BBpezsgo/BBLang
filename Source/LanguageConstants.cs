@@ -27,33 +27,33 @@ public static class TypeKeywords
 
     public static ImmutableArray<string> List { get; } = ImmutableArray.Create
     (
-        TypeKeywords.Void,
-        TypeKeywords.Any,
-        TypeKeywords.U8,
-        TypeKeywords.I8,
-        TypeKeywords.U16,
-        TypeKeywords.I16,
-        TypeKeywords.U32,
-        TypeKeywords.I32,
-        TypeKeywords.U64,
-        TypeKeywords.I64,
-        TypeKeywords.F32
+        Void,
+        Any,
+        U8,
+        I8,
+        U16,
+        I16,
+        U32,
+        I32,
+        U64,
+        I64,
+        F32
     );
 
     public static ImmutableDictionary<string, BasicType> BasicTypes { get; } = new Dictionary<string, BasicType>()
     {
-        { TypeKeywords.Void, BasicType.Void },
-        { TypeKeywords.Any, BasicType.Any },
+        { Void, BasicType.Void },
+        { Any, BasicType.Any },
 
-        { TypeKeywords.U8, BasicType.U8 },
-        { TypeKeywords.I8, BasicType.I8 },
-        { TypeKeywords.U16, BasicType.U16 },
-        { TypeKeywords.I16, BasicType.I16 },
-        { TypeKeywords.U32, BasicType.U32 },
-        { TypeKeywords.I32, BasicType.I32 },
-        { TypeKeywords.U64, BasicType.U64 },
-        { TypeKeywords.I64, BasicType.I64 },
-        { TypeKeywords.F32, BasicType.F32 },
+        { U8, BasicType.U8 },
+        { I8, BasicType.I8 },
+        { U16, BasicType.U16 },
+        { I16, BasicType.I16 },
+        { U32, BasicType.U32 },
+        { I32, BasicType.I32 },
+        { U64, BasicType.U64 },
+        { I64, BasicType.I64 },
+        { F32, BasicType.F32 },
     }.ToImmutableDictionary();
 }
 
@@ -75,7 +75,6 @@ public static class ModifierKeywords
 public static class StatementKeywords
 {
     public const string If = "if";
-    public const string ElseIf = "elseif";
     public const string Else = "else";
     public const string While = "while";
     public const string For = "for";
