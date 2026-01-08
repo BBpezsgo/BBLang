@@ -1,0 +1,5 @@
+u8 a = 1;
+u8 b = 2;
+u8 c = 3;
+u8 d = 4;
+return (int)(a + b + c + d);

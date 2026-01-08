@@ -1,0 +1,7 @@
+[External("no")]
+int no(int p)
+{
+    return 64 + p;
+}
+
+return no(3);

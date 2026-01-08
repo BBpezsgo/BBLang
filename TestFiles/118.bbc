@@ -1,0 +1,8 @@
+using System;
+
+temp HashMap<string, int>* map = new HashMap<string, int>*;
+map["asd"] = 67;
+
+int res = map["asd"];
+
+printline(res);

@@ -4483,7 +4483,7 @@ public partial class StatementCompiler
 
         FunctionFlags topLevelFlags = default;
         ILocated? firstHeapUsageLocation = null;
-        StatementWalker.Visit(CompiledTopLevelStatements, v =>
+        StatementWalker.Visit(CompiledTopLevelStatements.Append(GeneratedFunctions.Where(v => v.Function is IExposeable exposeable && exposeable.ExposedFunctionName is not null).Select(v => v.Body)), v =>
         {
             FunctionFlags flags = GetStatementFlags(v);
             if (flags.HasFlag(FunctionFlags.AllocatesMemory) || topLevelFlags.HasFlag(FunctionFlags.DeallocatesMemory))

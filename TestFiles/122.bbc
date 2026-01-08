@@ -1,0 +1,19 @@
+using System.Memory;
+
+struct Yes
+{
+    int a;
+    int b;
+}
+
+Yes* new_yes()
+{
+    Yes* yes = new Yes*;
+    yes.a = 3;
+    yes.b = 8;
+    return yes;
+}
+
+temp any* _ = 4 as any*; // deallocate the object created in new_yes to pass the test
+
+return new_yes().a;

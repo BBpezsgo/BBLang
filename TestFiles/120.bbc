@@ -1,0 +1,50 @@
+using System;
+
+struct Generator<T>
+{
+    bool(GeneratorStateThing*, T*) next;
+    GeneratorStateThing* _genstate;
+
+    Generator(bool(GeneratorStateThing*, T*) next, GeneratorStateThing* state)
+    {
+        this.next = next;
+        this._genstate = state;
+    }
+}
+
+struct GeneratorStateThing
+{
+    void() _state;
+    int i;
+}
+
+bool yeah(GeneratorStateThing* self, int* value)
+{
+    if (self._state) goto self._state;
+    *value = -1;
+    self._state = _1;
+    return true;
+    _1:
+    self.i = 0;
+    for (; self.i < 10; self.i++)
+    {
+        *value = self.i;
+        self._state = _2;
+        return true;
+        _2:
+    }
+    *value = 99;
+    self._state = _3;
+    return true;
+    _3:
+    return false;
+}
+
+Generator<int> gen = new Generator<int>(yeah, new GeneratorStateThing*);
+int v;
+
+for (int i = 0; i < 20; i++)
+{
+    bool res = gen.next(gen._genstate, &v);
+    printline(v);
+}

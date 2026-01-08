@@ -1,0 +1,14 @@
+using System;
+
+void main()
+{
+    bool a = true;
+    if (a)
+    {
+        goto bruh;
+    }
+    bruh:
+    printline('1');
+}
+
+main();

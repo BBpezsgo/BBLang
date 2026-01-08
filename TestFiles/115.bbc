@@ -1,0 +1,18 @@
+using System;
+
+int rah(int[]* v, int index)
+{
+    return v[index];
+}
+
+int rah(List<int>* v, int index)
+{
+    return v[index];
+}
+
+temp List<int>* a = new List<int>*(4);
+a.add(1);
+a.add(2);
+a.add(3);
+a.add(4);
+return rah(a._ptr, 2);

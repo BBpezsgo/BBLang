@@ -7,6 +7,6 @@ struct Bruh
 
 export void a()
 {
-  Bruh bruh;
+  Bruh bruh = new Bruh;
   printline(bruh.hello);
 }
