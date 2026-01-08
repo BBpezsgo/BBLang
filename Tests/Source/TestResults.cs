@@ -190,7 +190,7 @@ static class TestResults
             brainfuckResult.Outcome = TranslateOutcome(brainfuckResult.Outcome);
             ilResult.Outcome = TranslateOutcome(ilResult.Outcome);
 
-            string translatedName = $"https://github.com/BBpezsgo/Interpreter/blob/master/TestFiles/{serialNumber.ToString().PadLeft(2, '0')}.{LanguageConstants.LanguageExtension}";
+            string translatedName = $"https://github.com/BBpezsgo/BBLang/blob/master/TestFiles/{serialNumber.ToString().PadLeft(2, '0')}.{LanguageConstants.LanguageExtension}";
             translatedName = $"[{serialNumber}]({translatedName})";
 
             file.Write("| ");

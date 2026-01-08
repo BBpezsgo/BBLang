@@ -30,7 +30,7 @@ An interpreted language for mostly scripting purposes or simulations. I use this
 > [!WARNING]
 > Assembly 100% not working.
 
-- `--debug` Launches the debugger screen (only avaliable on Windows) [More info](https://github.com/BBpezsgo/Interpreter/wiki/Debugger)
+- `--debug` Launches the debugger screen (only avaliable on Windows) [More info](https://github.com/BBpezsgo/BBLang/wiki/Debugger)
 
 - `--output file` Writes the generated code to the specified file (this option only works for brainfuck)
 
@@ -61,7 +61,7 @@ An interpreted language for mostly scripting purposes or simulations. I use this
 ## Hello World
 
 ```cs
-using "https://raw.githubusercontent.com/BBpezsgo/Interpreter/master/StandardLibrary/System.Console.bbc";
+using "https://raw.githubusercontent.com/BBpezsgo/BBLang/master/StandardLibrary/System.Console.bbc";
 
 printline("hello, world");
 ```
@@ -131,7 +131,7 @@ ln -s ../Source Runtime
 - If you want some profiler analytics, add `UNITY_PROFILER` too.
 - You can install the necessary NuGet packages with this tool: [NuGetForUnity](https://github.com/GlitchEnzo/NuGetForUnity) or import the dll-s manually.
 
-## [Tests](https://github.com/BBpezsgo/Interpreter/blob/master/Tests.md)
+## [Tests](https://github.com/BBpezsgo/BBLang/blob/master/Tests.md)
 
 ## Troubleshooting
 
