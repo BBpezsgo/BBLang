@@ -46,5 +46,10 @@ public partial class StatementCompiler
         ExternalConstants = settings.ExternalConstants;
         PreprocessorVariables = settings.PreprocessorVariables;
         UserDefinedAttributes = settings.UserDefinedAttributes.IsDefault ? ImmutableArray<UserDefinedAttribute>.Empty : settings.UserDefinedAttributes;
+
+        InternalConstants = new Dictionary<string, GeneralType>()
+        {
+            { "heap_start", BuiltinType.I32 }
+        }.ToImmutableDictionary();
     }
 }

@@ -1064,6 +1064,32 @@ public partial class StatementCompiler
             }
         }
 
+        if (newVariable.InternalConstantName is not null)
+        {
+            if (!InternalConstants.TryGetValue(newVariable.InternalConstantName, out GeneralType? internalConstantType))
+            {
+                Diagnostics.Add(Diagnostic.Warning($"Internal constant \"{newVariable.InternalConstantName}\" not found", newVariable));
+            }
+            else
+            {
+                type ??= internalConstantType;
+
+                if (!CanCastImplicitly(internalConstantType, type, out PossibleDiagnostic? castError))
+                {
+                    Diagnostics.Add(castError.ToError(newVariable.Type));
+                    return false;
+                }
+
+                initialValue = new CompiledCompilerVariableAccess()
+                {
+                    Identifier = newVariable.InternalConstantName,
+                    Location = newVariable.Location,
+                    SaveValue = true,
+                    Type = internalConstantType,
+                };
+            }
+        }
+
         if (initialValue is null && newVariable.InitialValue is not null)
         {
             if (!CompileExpression(newVariable.InitialValue, out initialValue, type)) return false;
@@ -1125,7 +1151,7 @@ public partial class StatementCompiler
 
             if (GeneratorStructDefinition is null)
             {
-                Diagnostics.Add(Diagnostic.Critical($"No struct found with an [Builtin(\"generator\")] attribute.", compiledVariable));
+                Diagnostics.Add(Diagnostic.Critical($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", compiledVariable));
                 return false;
             }
 
@@ -2791,18 +2817,6 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (variable.Content.StartsWith('@'))
-        {
-            compiledStatement = new CompiledConstantValue()
-            {
-                Value = Settings.PreprocessorVariables.Contains(variable.Content[1..]),
-                Type = BooleanType,
-                Location = variable.Location,
-                SaveValue = variable.SaveValue,
-            };
-            return true;
-        }
-
         if (RegisterKeywords.TryGetValue(variable.Content, out (Register Register, BuiltinType Type) registerKeyword))
         {
             compiledStatement = new CompiledRegisterAccess()
@@ -2842,29 +2856,43 @@ public partial class StatementCompiler
             SetStatementReference(variable, constant);
             variable.AnalyzedType = TokenAnalyzedType.ConstantName;
 
-            CompiledValue value = constant.Value;
-            GeneralType type = constant.Type;
-
-            if (expectedType is not null &&
-                constant.Value.TryCast(expectedType, out CompiledValue castedValue))
-            {
-                value = castedValue;
-                type = expectedType;
-            }
-
             if (constant.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
             {
                 Frames.LastRef.IsMsilCompatible = false;
             }
 
-            compiledStatement = new CompiledConstantValue()
+            if (constant.InternalConstantName is not null)
             {
-                Value = value,
-                Type = type,
-                Location = variable.Location,
-                SaveValue = variable.SaveValue,
-            };
-            return true;
+                compiledStatement = new CompiledCompilerVariableAccess()
+                {
+                    Identifier = constant.InternalConstantName,
+                    Type = constant.Type,
+                    Location = variable.Location,
+                    SaveValue = variable.SaveValue,
+                };
+                return true;
+            }
+            else
+            {
+                CompiledValue value = constant.Value;
+                GeneralType type = constant.Type;
+
+                if (expectedType is not null &&
+                    constant.Value.TryCast(expectedType, out CompiledValue castedValue))
+                {
+                    value = castedValue;
+                    type = expectedType;
+                }
+
+                compiledStatement = new CompiledConstantValue()
+                {
+                    Value = value,
+                    Type = type,
+                    Location = variable.Location,
+                    SaveValue = variable.SaveValue,
+                };
+                return true;
+            }
         }
 
         if (GetParameter(variable.Content, out CompiledParameter? param, out PossibleDiagnostic? parameterNotFoundError))
@@ -2898,7 +2926,7 @@ public partial class StatementCompiler
                 //Debugger.Break();
                 if (GeneratorStructDefinition is null)
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"No struct found with an [Builtin(\"generator\")] attribute.", variable));
+                    Diagnostics.Add(Diagnostic.Critical($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
                     return false;
                 }
 
@@ -3656,7 +3684,7 @@ public partial class StatementCompiler
                 //Debugger.Break();
                 if (GeneratorStructDefinition is null)
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"No struct found with an [Builtin(\"generator\")] attribute.", variable));
+                    Diagnostics.Add(Diagnostic.Critical($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
                     return false;
                 }
 
@@ -4247,7 +4275,7 @@ public partial class StatementCompiler
             if (function.IsTemplate) continue;
             if (!Settings.CompileEverything)
             {
-                if (!function.References.Any() && (function is not IExposeable exposeable || exposeable.ExposedFunctionName is null))
+                if (!function.References.Any() && (function is not IExposeable exposeable || exposeable.ExposedFunctionName is null) && !function.Attributes.TryGetAttribute(AttributeConstants.BuiltinIdentifier, out _))
                 { continue; }
             }
 
@@ -4452,11 +4480,98 @@ public partial class StatementCompiler
         {
             AnalyseFunction(function, new());
         }
+
+        FunctionFlags topLevelFlags = default;
+        ILocated? firstHeapUsageLocation = null;
+        StatementWalker.Visit(CompiledTopLevelStatements, v =>
+        {
+            FunctionFlags flags = GetStatementFlags(v);
+            if (flags.HasFlag(FunctionFlags.AllocatesMemory) || topLevelFlags.HasFlag(FunctionFlags.DeallocatesMemory))
+            {
+                firstHeapUsageLocation ??= v;
+            }
+            topLevelFlags |= flags;
+            return true;
+        });
+
+        if (topLevelFlags.HasFlag(FunctionFlags.AllocatesMemory) || topLevelFlags.HasFlag(FunctionFlags.DeallocatesMemory))
+        {
+            if (firstHeapUsageLocation is null) throw new UnreachableException();
+
+            if (!TryGetBuiltinFunction(BuiltinFunctions.InitializeHeap, ImmutableArray.Create<GeneralType>(), entryFile, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFoundError, AddCompilable))
+            {
+                Diagnostics.Add(
+                    Diagnostic.Critical($"Failed to generate heap initialization code", firstHeapUsageLocation)
+                    .WithSuberrors(
+                        Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.InitializeHeap}\")] not found", firstHeapUsageLocation)
+                        .WithSuberrors(
+                            notFoundError.ToError(firstHeapUsageLocation)
+                        )
+                    )
+                );
+            }
+            else
+            {
+                CompiledTopLevelStatements.Insert(0, new CompiledFunctionCall()
+                {
+                    Arguments = ImmutableArray<CompiledArgument>.Empty,
+                    Function = result.Function,
+                    Location = new Location(Position.UnknownPosition, entryFile),
+                    Type = result.Function.Type,
+                    SaveValue = false,
+                });
+            }
+        }
+    }
+
+    FunctionFlags GetStatementFlags(CompiledStatement statement)
+    {
+        static bool IsAllocator(ICompiledFunctionDefinition function) =>
+            function is IHaveAttributes haveAttributes
+            && haveAttributes.Attributes.TryGetAttribute(AttributeConstants.BuiltinIdentifier, out AttributeUsage? attribute)
+            && attribute.TryGetValue(out string? value)
+            && value == BuiltinFunctions.Allocate;
+
+        static bool IsDeallocator(ICompiledFunctionDefinition function) =>
+            function is IHaveAttributes haveAttributes
+            && haveAttributes.Attributes.TryGetAttribute(AttributeConstants.BuiltinIdentifier, out AttributeUsage? attribute)
+            && attribute.TryGetValue(out string? value)
+            && value == BuiltinFunctions.Free;
+
+        FunctionFlags flags = default;
+        switch (statement)
+        {
+            case CompiledLambda v:
+                flags |= v.Flags;
+                break;
+            case CompiledVariableAccess v:
+                if (v.Variable.IsGlobal)
+                {
+                    flags |= FunctionFlags.CapturesGlobalVariables;
+                }
+                break;
+            case CompiledFunctionCall v:
+                if (IsAllocator(v.Function)) flags |= FunctionFlags.AllocatesMemory;
+                if (IsDeallocator(v.Function)) flags |= FunctionFlags.DeallocatesMemory;
+                flags |= GeneratedFunctions.First(w => w.Function == v.Function).Flags;
+                break;
+            case CompiledExternalFunctionCall v:
+                if (IsAllocator(v.Declaration)) flags |= FunctionFlags.AllocatesMemory;
+                if (IsDeallocator(v.Declaration)) flags |= FunctionFlags.DeallocatesMemory;
+                break;
+            case CompiledFunctionReference v:
+                if (v.Function is ICompiledFunctionDefinition f1 && IsAllocator(f1)) flags |= FunctionFlags.AllocatesMemory;
+                if (v.Function is ICompiledFunctionDefinition f2 && IsDeallocator(f2)) flags |= FunctionFlags.DeallocatesMemory;
+                flags |= GeneratedFunctions.First(w => w.Function == v.Function).Flags;
+                break;
+        }
+        return flags;
     }
 
     FunctionFlags AnalyseFunction(CompiledStatement statement, HashSet<CompiledFunction> visited)
     {
         FunctionFlags flags = default;
+
         StatementWalker.VisitWithFunctions(GeneratedFunctions, statement, statement =>
         {
             switch (statement)
@@ -4464,11 +4579,8 @@ public partial class StatementCompiler
                 case CompiledLambda v:
                     v.Flags = AnalyseFunction(v.Block, visited);
                     break;
-                case CompiledVariableAccess v:
-                    if (v.Variable.IsGlobal)
-                    {
-                        flags |= FunctionFlags.CapturesGlobalVariables;
-                    }
+                default:
+                    flags |= GetStatementFlags(statement);
                     break;
             }
             return true;

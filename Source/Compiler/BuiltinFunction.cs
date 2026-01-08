@@ -9,6 +9,12 @@ public class BuiltinFunction
 
     public bool ReturnSomething => !Type.Equals(BasicType.Void);
 
+    public BuiltinFunction(Predicate<GeneralType> type)
+    {
+        Type = type;
+        Parameters = ImmutableArray<Predicate<GeneralType>>.Empty;
+    }
+
     public BuiltinFunction(Predicate<GeneralType> type, params Predicate<GeneralType>[] parameters)
     {
         Type = type;

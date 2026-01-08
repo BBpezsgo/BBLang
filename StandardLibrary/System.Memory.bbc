@@ -17,11 +17,19 @@ const int HeapSize = 127;
 [External("heap_size")]
 const int HeapSize = 512;
 #endif
+
 const int HeaderSize = sizeof(BlockHeader);
 
-if ((!#BRAINFUCK) && (!#IL))
+[Internal("heap_start")]
+const int HeapStart = 0;
+
+[Builtin("init_heap")]
+void init_heap()
 {
-    *(0 as BlockHeader*) = (BlockHeader)HeapSize;
+    if ((!#BRAINFUCK) && (!#IL))
+    {
+        *(HeapStart as BlockHeader*) = (BlockHeader)HeapSize;
+    }
 }
 
 [MSILIncompatible]
@@ -55,7 +63,7 @@ export inline void set_header_free(BlockHeader* headerPtr, int size)
 [MSILIncompatible]
 bool join_free_blocks()
 {
-    BlockHeader* headerPointer = 0 as BlockHeader*;
+    BlockHeader* headerPointer = HeapStart as BlockHeader*;
     int prevBlockSize = 0;
     while (headerPointer < HeapSize)
     {
@@ -96,7 +104,7 @@ export any* alloc(int sizeNeed)
 #else
     if (sizeNeed <= 0) { crash "Invalid size"; }
 
-    BlockHeader* headerPointer = 0 as BlockHeader*;
+    BlockHeader* headerPointer = HeapStart as BlockHeader*;
     while (true)
     {
         if (headerPointer >= HeapSize) { crash "Out of memory"; }

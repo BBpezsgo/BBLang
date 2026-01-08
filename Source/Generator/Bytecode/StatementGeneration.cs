@@ -1035,6 +1035,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledString stringInstance)
     {
+        //Code.Emit(Opcode.Push, (InstructionOperand)GenerateString(stringInstance.Value, stringInstance.IsASCII));
+        //return;
+
         BuiltinType charType = stringInstance.IsASCII ? BuiltinType.U8 : BuiltinType.Char;
         int charSize = FindSize(charType, stringInstance);
         BitWidth charBw = (BitWidth)charSize;
@@ -1792,6 +1795,10 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Diagnostics.Add(Diagnostic.Warning($"Ignoring invalid type cast ({statementType} -> {targetType})", typeCast));
         GenerateCodeForStatement(typeCast.Value, targetType);
     }
+    void GenerateCodeForStatement(CompiledCompilerVariableAccess statement, GeneralType? expectedType = null, bool resolveReference = true)
+    {
+        Code.Emit(Opcode.Push, new PreparationInstructionOperand(new VariableInstructionOperand(statement.Identifier)));
+    }
     void GenerateCodeForStatement(CompiledBlock block, bool ignoreScope = false)
     {
         if (block.Statements.Length == 0) return;
@@ -1815,19 +1822,45 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (!ignoreScope) OnScopeExit(block.Location.Position.After(), block.Location.File, scope);
     }
-    void GenerateCodeForStatement(CompiledStatement statement, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledStatement statement)
     {
         int startInstruction = Code.Offset;
 
         switch (statement)
         {
+            case CompiledExpression v: GenerateCodeForStatement(v); break;
             case CompiledVariableDefinition v: GenerateCodeForStatement(v); break;
-            case CompiledSizeof v: GenerateCodeForStatement(v); break;
             case CompiledReturn v: GenerateCodeForStatement(v); break;
             case CompiledCrash v: GenerateCodeForStatement(v); break;
             case CompiledBreak v: GenerateCodeForStatement(v); break;
             case CompiledDelete v: GenerateCodeForStatement(v); break;
             case CompiledGoto v: GenerateCodeForStatement(v); break;
+            case CompiledSetter v: GenerateCodeForValueSetter(v); break;
+            case CompiledWhileLoop v: GenerateCodeForStatement(v); break;
+            case CompiledForLoop v: GenerateCodeForStatement(v); break;
+            case CompiledIf v: GenerateCodeForStatement(v); break;
+            case CompiledBlock v: GenerateCodeForStatement(v); break;
+            case CompiledLabelDeclaration v: GenerateCodeForStatement(v); break;
+            case CompiledEmptyStatement: break;
+            default: throw new NotImplementedException($"Unimplemented statement \"{statement.GetType().Name}\"");
+        }
+
+        if (startInstruction != Code.Offset && statement is not CompiledWhileLoop and not CompiledForLoop and not CompiledBranch and not CompiledBlock and not CompiledDummyExpression)
+        {
+            DebugInfo?.SourceCodeLocations.Add(new SourceCodeLocation()
+            {
+                Instructions = (startInstruction, Code.Offset - 1),
+                Location = statement.Location,
+            });
+        }
+    }
+    void GenerateCodeForStatement(CompiledExpression statement, GeneralType? expectedType = null, bool resolveReference = true)
+    {
+        int startInstruction = Code.Offset;
+
+        switch (statement)
+        {
+            case CompiledSizeof v: GenerateCodeForStatement(v); break;
             case CompiledBinaryOperatorCall v: GenerateCodeForStatement(v); break;
             case CompiledUnaryOperatorCall v: GenerateCodeForStatement(v); break;
             case CompiledConstantValue v: GenerateCodeForStatement(v, expectedType); break;
@@ -1840,11 +1873,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             case CompiledFieldAccess v: GenerateCodeForStatement(v); break;
             case CompiledElementAccess v: GenerateCodeForStatement(v); break;
             case CompiledGetReference v: GenerateCodeForStatement(v); break;
-            case CompiledSetter v: GenerateCodeForValueSetter(v); break;
             case CompiledDereference v: GenerateCodeForStatement(v); break;
-            case CompiledWhileLoop v: GenerateCodeForStatement(v); break;
-            case CompiledForLoop v: GenerateCodeForStatement(v); break;
-            case CompiledIf v: GenerateCodeForStatement(v); break;
             case CompiledStackAllocation v: GenerateCodeForStatement(v); break;
             case CompiledConstructorCall v: GenerateCodeForStatement(v); break;
             case CompiledCast v: GenerateCodeForStatement(v); break;
@@ -1852,17 +1881,15 @@ public partial class CodeGeneratorForMain : CodeGenerator
             case CompiledRuntimeCall v: GenerateCodeForStatement(v); break;
             case CompiledFunctionCall v: GenerateCodeForFunctionCall(v); break;
             case CompiledExternalFunctionCall v: GenerateCodeForFunctionCall_External(v); break;
-            case CompiledBlock v: GenerateCodeForStatement(v); break;
-            case CompiledLabelDeclaration v: GenerateCodeForStatement(v); break;
             case CompiledDummyExpression v: GenerateCodeForStatement(v.Statement); break;
             case CompiledString v: GenerateCodeForStatement(v); break;
             case CompiledStackString v: GenerateCodeForStatement(v); break;
             case CompiledLambda v: GenerateCodeForStatement(v); break;
-            case CompiledEmptyStatement: break;
+            case CompiledCompilerVariableAccess v: GenerateCodeForStatement(v); break;
             default: throw new NotImplementedException($"Unimplemented statement \"{statement.GetType().Name}\"");
         }
 
-        if (startInstruction != Code.Offset && statement is not CompiledWhileLoop and not CompiledForLoop and not CompiledBranch and not CompiledBlock and not CompiledDummyExpression)
+        if (startInstruction != Code.Offset && statement is not CompiledDummyExpression)
         {
             DebugInfo?.SourceCodeLocations.Add(new SourceCodeLocation()
             {
@@ -2844,9 +2871,24 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
         }
 
+        List<PreparationInstruction> stringInitializationInstructions = new();
+
+        foreach (GeneratedString _string in Strings)
+        {
+            for (int i = 0; i < _string.Value.Length; i++)
+            {
+                stringInitializationInstructions.Add(new PreparationInstruction(Opcode.Move, new InstructionOperand(i + _string.Offset, InstructionOperandType.Pointer8), new InstructionOperand(_string.Value[i], InstructionOperandType.Immediate8)));
+            }
+        }
+
+        Code.Insert(0, stringInitializationInstructions);
+
         return new BBLangGeneratorResult()
         {
-            Code = Code.Compile(),
+            Code = Code.Compile(new Dictionary<string, int>()
+            {
+                { "heap_start", Strings.Sum(v => v.Value.Length) }
+            }),
             CodeEmitter = Code,
             DebugInfo = DebugInfo,
             CompiledFunctions = compilerResult.FunctionDefinitions,

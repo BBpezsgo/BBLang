@@ -710,9 +710,13 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         Code.Emit(Opcode.Push, value);
 
-        if (value.IsLabelAddress) ScopeSizes.LastRef += (int)BitWidth._32;
-        else ScopeSizes.LastRef += (int)value.Value.BitWidth;
-
+        ScopeSizes.LastRef += value.Kind switch
+        {
+            PreparationInstructionOperandKind.Label => (int)BitWidth._32,
+            PreparationInstructionOperandKind.Normal => (int)value.Value.BitWidth,
+            PreparationInstructionOperandKind.Variable => (int)BitWidth._32,
+            _ => throw new UnreachableException(),
+        };
         if (ScopeSizes.Last >= Settings.StackSize)
         { Diagnostics.Add(new DiagnosticWithoutContext(DiagnosticsLevel.Warning, "Stack will overflow")); }
     }
@@ -1004,4 +1008,43 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
 
     #endregion
+
+    int GenerateString(string value, bool isAscii)
+    {
+        List<byte> res = new();
+        if (isAscii)
+        {
+            foreach (char c in value)
+            {
+                res.Add((byte)c);
+            }
+            res.Add(0);
+        }
+        else
+        {
+            foreach (char c in value)
+            {
+                res.Add((byte)((c & 0xff00) >> 8));
+                res.Add((byte)(c & 0x00ff));
+            }
+            res.Add(0);
+            res.Add(0);
+        }
+        return GenerateString(res.ToImmutableArray());
+    }
+
+    int GenerateString(ImmutableArray<byte> value)
+    {
+        int currentOffset = 0;
+        foreach (GeneratedString item in Strings)
+        {
+            if (value.SequenceEqual(item.Value))
+            {
+                return item.Offset;
+            }
+            currentOffset += item.Value.Length;
+        }
+        Strings.Add(new GeneratedString(value, currentOffset));
+        return currentOffset;
+    }
 }

@@ -47,30 +47,70 @@ public readonly struct LabelInstructionOperand : IEquatable<LabelInstructionOper
     }
 }
 
+public readonly struct VariableInstructionOperand : IEquatable<VariableInstructionOperand>
+{
+    public readonly string Variable;
+
+    public VariableInstructionOperand(string variable) => Variable = variable;
+
+    public override bool Equals(object? obj) => obj is VariableInstructionOperand other && Equals(other);
+    public bool Equals(VariableInstructionOperand other) => Variable == other.Variable;
+    public override int GetHashCode() => Variable.GetHashCode();
+    public override string ToString() => $"#{Variable}";
+
+    public static bool operator ==(VariableInstructionOperand left, VariableInstructionOperand right) => left.Equals(right);
+    public static bool operator !=(VariableInstructionOperand left, VariableInstructionOperand right) => !left.Equals(right);
+}
+
+public enum PreparationInstructionOperandKind : byte
+{
+    Normal,
+    Label,
+    Variable,
+}
+
 public struct PreparationInstructionOperand : IEquatable<PreparationInstructionOperand>
 {
-    public bool IsLabelAddress;
+    public PreparationInstructionOperandKind Kind;
     public InstructionOperand Value;
     public LabelInstructionOperand LabelValue;
+    public VariableInstructionOperand VariableValue;
 
     public PreparationInstructionOperand(InstructionOperand value) : this()
     {
-        IsLabelAddress = false;
+        Kind = PreparationInstructionOperandKind.Normal;
         Value = value;
+    }
+
+    public PreparationInstructionOperand(VariableInstructionOperand value) : this()
+    {
+        Kind = PreparationInstructionOperandKind.Variable;
+        VariableValue = value;
     }
 
     public PreparationInstructionOperand(InstructionLabel label, bool isAbsolute, int additionalOffset = 0) : this()
     {
-        IsLabelAddress = true;
+        Kind = PreparationInstructionOperandKind.Label;
         LabelValue = new(label, isAbsolute, additionalOffset);
     }
 
     public override readonly bool Equals(object? obj) => obj is PreparationInstructionOperand other && Equals(other);
     public readonly bool Equals(PreparationInstructionOperand other) =>
-        IsLabelAddress == other.IsLabelAddress
-        && Value.Equals(other.Value)
-        && LabelValue.Equals(other.LabelValue);
-    public override readonly int GetHashCode() => IsLabelAddress ? HashCode.Combine(IsLabelAddress, LabelValue) : HashCode.Combine(IsLabelAddress, Value);
+        Kind == other.Kind
+        && Kind switch
+        {
+            PreparationInstructionOperandKind.Normal => Value.Equals(other.Value),
+            PreparationInstructionOperandKind.Label => LabelValue.Equals(other.LabelValue),
+            PreparationInstructionOperandKind.Variable => VariableValue.Equals(other.VariableValue),
+            _ => throw new UnreachableException(),
+        };
+    public override readonly int GetHashCode() => Kind switch
+    {
+        PreparationInstructionOperandKind.Normal => HashCode.Combine(Kind, Value),
+        PreparationInstructionOperandKind.Label => HashCode.Combine(Kind, LabelValue),
+        PreparationInstructionOperandKind.Variable => HashCode.Combine(Kind, VariableValue),
+        _ => throw new UnreachableException(),
+    };
 
     public static bool operator ==(PreparationInstructionOperand left, PreparationInstructionOperand right) => left.Equals(right);
     public static bool operator !=(PreparationInstructionOperand left, PreparationInstructionOperand right) => !left.Equals(right);
@@ -96,7 +136,13 @@ public struct PreparationInstructionOperand : IEquatable<PreparationInstructionO
         _ => throw new NotImplementedException()
     };
 
-    public override readonly string ToString() => IsLabelAddress ? LabelValue.ToString() : Value.ToString();
+    public override readonly string ToString() => Kind switch
+    {
+        PreparationInstructionOperandKind.Normal => Value.ToString(),
+        PreparationInstructionOperandKind.Label => LabelValue.ToString(),
+        PreparationInstructionOperandKind.Variable => VariableValue.ToString(),
+        _ => throw new UnreachableException(),
+    };
 }
 
 public class PreparationInstruction

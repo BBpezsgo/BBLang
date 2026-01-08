@@ -4,6 +4,8 @@ namespace LanguageCore.Compiler;
 public enum FunctionFlags
 {
     CapturesGlobalVariables = 0x1,
+    AllocatesMemory = 0x2,
+    DeallocatesMemory = 0x4,
 }
 
 public class CompiledFunction : ISimpleReadable

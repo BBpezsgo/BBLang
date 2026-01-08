@@ -210,6 +210,7 @@ public static class LanguageOperators
 public static class AttributeConstants
 {
     public const string ExternalIdentifier = "External";
+    public const string InternalIdentifier = "Internal";
     public const string ExposeIdentifier = "Expose";
     public const string BuiltinIdentifier = "Builtin";
     public const string MSILIncompatibleIdentifier = "MSILIncompatible";
@@ -217,6 +218,7 @@ public static class AttributeConstants
 
     public static readonly ImmutableArray<string> List = ImmutableArray.Create(
         ExternalIdentifier,
+        InternalIdentifier,
         ExposeIdentifier,
         BuiltinIdentifier,
         MSILIncompatibleIdentifier,
@@ -247,10 +249,16 @@ public static class BuiltinFunctions
                 v => v.SameAs(PointerType.Any)
             )
         },
+        {
+            InitializeHeap, new BuiltinFunction(
+                v => v.SameAs(BuiltinType.Void)
+            )
+        },
     }.ToImmutableDictionary();
 
     public const string Allocate = "alloc";
     public const string Free = "free";
+    public const string InitializeHeap = "init_heap";
 }
 
 public static class BuiltinFunctionIdentifiers

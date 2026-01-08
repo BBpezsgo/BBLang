@@ -25,6 +25,7 @@ public class VariableDefinition : Statement,
     public ImmutableArray<Token> Modifiers { get; }
 
     public string? ExternalConstantName => Attributes.TryGetAttribute(AttributeConstants.ExternalIdentifier, out AttributeUsage? attribute) && attribute.TryGetValue(out string? name) ? name : null;
+    public string? InternalConstantName => Attributes.TryGetAttribute(AttributeConstants.InternalIdentifier, out AttributeUsage? attribute) && attribute.TryGetValue(out string? name) ? name : null;
 
     public override Position Position =>
         new Position(Type, Identifier, InitialValue)

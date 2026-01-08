@@ -1763,17 +1763,22 @@ public partial class CodeGeneratorForIL : CodeGenerator
     void EmitStatement(CompiledLabelReference statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Critical($"This isn't supported in MSIL", statement, false));
+        Diagnostics.Add(Diagnostic.Critical($"Label references aren't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledList statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Critical($"Arrays on stack aren't supported in MSIL", statement, false));
+        Diagnostics.Add(Diagnostic.Critical($"Arrays on stack isn't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledLambda statement, ILProxy il, ref bool successful)
     {
         successful = false;
         Diagnostics.Add(Diagnostic.Critical($"bleh", statement, false));
+    }
+    void EmitStatement(CompiledCompilerVariableAccess statement, ILProxy il, ref bool successful)
+    {
+        successful = false;
+        Diagnostics.Add(Diagnostic.Critical($"Internal variables aren't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledStatement statement, ILProxy il, ref bool successful)
     {
@@ -1816,6 +1821,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             case CompiledLabelReference v: EmitStatement(v, il, ref successful); break;
             case CompiledList v: EmitStatement(v, il, ref successful); break;
             case CompiledLambda v: EmitStatement(v, il, ref successful); break;
+            case CompiledCompilerVariableAccess v: EmitStatement(v, il, ref successful); break;
             default: throw new NotImplementedException(statement.GetType().Name);
         }
     }

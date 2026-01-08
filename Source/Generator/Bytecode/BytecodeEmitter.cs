@@ -109,16 +109,21 @@ public class BytecodeEmitter
     void RemoveAt(int index)
     {
         Code.RemoveAt(index);
+        OffsetCodeFrom(index, -1);
+    }
+
+    void OffsetCodeFrom(int index, int offset)
+    {
         for (int i = 0; i < Labels.Count; i++)
         {
             InstructionLabel v = Labels[i];
             if (v.Index > index)
             {
-                v.Index--;
+                v.Index += offset;
                 Labels[i] = v;
             }
         }
-        DebugInfo.OffsetCodeFrom(index, -1);
+        DebugInfo.OffsetCodeFrom(index, offset);
     }
 
     static bool DoesOverlap(InstructionOperand a, InstructionOperand b)
@@ -173,7 +178,7 @@ public class BytecodeEmitter
             or Opcode.JumpIfLessU
             or Opcode.JumpIfLessOrEqualU
             or Opcode.JumpIfNotEqual
-            && prev0.Operand1.IsLabelAddress
+            && prev0.Operand1.Kind == PreparationInstructionOperandKind.Label
             && prev0.Operand1.LabelValue.AdditionalLabelOffset == 0
             && !prev0.Operand1.LabelValue.IsAbsoluteLabelAddress
             && GetLabelIndex(prev0.Operand1.LabelValue.Label) == i + 1)
@@ -182,7 +187,7 @@ public class BytecodeEmitter
             return true;
         }
 
-        if (prev0.Operand1.IsLabelAddress || prev0.Operand2.IsLabelAddress) return false;
+        if (prev0.Operand1.Kind == PreparationInstructionOperandKind.Label || prev0.Operand2.Kind == PreparationInstructionOperandKind.Label) return false;
 
         if (prev0.Opcode == Opcode.Move
             && prev0.Operand1 == prev0.Operand2)
@@ -203,7 +208,7 @@ public class BytecodeEmitter
         if (Labels.Any(v => v.Index == i)) return false;
 
         PreparationInstruction prev1 = Code[i - 1];
-        if (prev1.Operand1.IsLabelAddress || prev1.Operand2.IsLabelAddress) return false;
+        if (prev1.Operand1.Kind == PreparationInstructionOperandKind.Label || prev1.Operand2.Kind == PreparationInstructionOperandKind.Label) return false;
 
         if (prev1.Opcode == Opcode.Move
             && prev1.Operand1.Value.Type == InstructionOperandType.Register
@@ -449,14 +454,14 @@ public class BytecodeEmitter
 
         PreparationInstruction prev0 = Code[i];
 
-        if (prev0.Operand1.IsLabelAddress || prev0.Operand2.IsLabelAddress) return false;
+        if (prev0.Operand1.Kind == PreparationInstructionOperandKind.Label || prev0.Operand2.Kind == PreparationInstructionOperandKind.Label) return false;
 
         if (i < 1) return false;
 
         if (Labels.Any(v => v.Index == i)) return false;
 
         PreparationInstruction prev1 = Code[i - 1];
-        if (prev1.Operand1.IsLabelAddress || prev1.Operand2.IsLabelAddress) return false;
+        if (prev1.Operand1.Kind == PreparationInstructionOperandKind.Label || prev1.Operand2.Kind == PreparationInstructionOperandKind.Label) return false;
 
         if (prev1.Opcode == Opcode.Move
             && prev1.Operand1 == finishedRegister
@@ -481,6 +486,12 @@ public class BytecodeEmitter
         {
 
         }
+    }
+
+    public void Insert(int index, IReadOnlyCollection<PreparationInstruction> instructions)
+    {
+        OffsetCodeFrom(index, instructions.Count);
+        Code.InsertRange(index, instructions);
     }
 
     public void Emit(PreparationInstruction instruction)
@@ -541,26 +552,42 @@ public class BytecodeEmitter
         throw new KeyNotFoundException($"Label {label} not found");
     }
 
-    InstructionOperand Compile(PreparationInstructionOperand v, int i)
+    InstructionOperand Compile(PreparationInstructionOperand v, int i, Dictionary<string, int> variables)
     {
-        if (!v.IsLabelAddress) return v.Value;
-        int label = GetLabelIndex(v.LabelValue.Label);
-        if (label == -1) throw new InternalExceptionWithoutContext($"Label is not marked");
-        if (label == -2) throw new InternalExceptionWithoutContext($"Label is invalid");
-        if (label < -2) throw new UnreachableException();
-        if (v.LabelValue.IsAbsoluteLabelAddress)
+        switch (v.Kind)
         {
-            return new InstructionOperand(label + v.LabelValue.AdditionalLabelOffset, InstructionOperandType.Immediate32);
-        }
-        else
-        {
-            return new InstructionOperand(label - i + v.LabelValue.AdditionalLabelOffset, InstructionOperandType.Immediate32);
+            case PreparationInstructionOperandKind.Label:
+            {
+                int label = GetLabelIndex(v.LabelValue.Label);
+                if (label == -1) throw new InternalExceptionWithoutContext($"Label is not marked");
+                if (label == -2) throw new InternalExceptionWithoutContext($"Label is invalid");
+                if (label < -2) throw new UnreachableException();
+                if (v.LabelValue.IsAbsoluteLabelAddress)
+                {
+                    return new InstructionOperand(label + v.LabelValue.AdditionalLabelOffset, InstructionOperandType.Immediate32);
+                }
+                else
+                {
+                    return new InstructionOperand(label - i + v.LabelValue.AdditionalLabelOffset, InstructionOperandType.Immediate32);
+                }
+            }
+
+            case PreparationInstructionOperandKind.Normal:
+                return v.Value;
+            case PreparationInstructionOperandKind.Variable:
+                if (!variables.TryGetValue(v.VariableValue.Variable, out int value))
+                {
+                    throw new InternalExceptionWithoutContext($"Internal variable `{v.VariableValue.Variable}` does not exists");
+                }
+                return value;
+            default:
+                throw new UnreachableException();
         }
     }
 
-    Instruction Compile(PreparationInstruction v, int i)
+    Instruction Compile(PreparationInstruction v, int i, Dictionary<string, int> variables)
     {
-        return new Instruction(v.Opcode, Compile(v.Operand1, i), Compile(v.Operand2, i));
+        return new Instruction(v.Opcode, Compile(v.Operand1, i, variables), Compile(v.Operand2, i, variables));
     }
 
     void PurgeLabels()
@@ -568,13 +595,13 @@ public class BytecodeEmitter
         for (int i = Labels.Count - 1; i >= 0; i--)
         {
             InstructionLabel label = Labels[i];
-            if (Code.Any(v => (v.Operand1.IsLabelAddress && v.Operand1.LabelValue.Label == label) || (v.Operand2.IsLabelAddress && v.Operand2.LabelValue.Label == label)))
+            if (Code.Any(v => (v.Operand1.Kind == PreparationInstructionOperandKind.Label && v.Operand1.LabelValue.Label == label) || (v.Operand2.Kind == PreparationInstructionOperandKind.Label && v.Operand2.LabelValue.Label == label)))
             { continue; }
             Labels.RemoveSwapBack(i);
         }
     }
 
-    public ImmutableArray<Instruction> Compile()
+    public ImmutableArray<Instruction> Compile(Dictionary<string, int> variables)
     {
         bool notDone;
         do
@@ -594,7 +621,7 @@ public class BytecodeEmitter
         ImmutableArray<Instruction>.Builder result = ImmutableArray.CreateBuilder<Instruction>(Code.Count);
         for (int i = 0; i < Code.Count; i++)
         {
-            result.Add(Compile(Code[i], i));
+            result.Add(Compile(Code[i], i, variables));
         }
         return result.MoveToImmutable();
     }

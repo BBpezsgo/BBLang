@@ -108,7 +108,7 @@ public partial class StatementCompiler
 
                     if (!BuiltinFunctions.Prototypes.TryGetValue(builtinName, out BuiltinFunction? builtinFunction))
                     {
-                        Diagnostics.Add(Diagnostic.Warning($"Builtin function \"{builtinName}\" not found", attribute, function.File));
+                        Diagnostics.Add(Diagnostic.Warning($"{AttributeConstants.BuiltinIdentifier} function \"{builtinName}\" not found", attribute, function.File));
                         break;
                     }
 

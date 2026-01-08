@@ -25,6 +25,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
     readonly ImmutableArray<IExternalFunction> ExternalFunctions;
     readonly ImmutableArray<ExternalConstant> ExternalConstants;
+    readonly ImmutableDictionary<string, GeneralType> InternalConstants;
 
     public BuiltinType ArrayLengthType => Settings.ArrayLengthType;
     public BuiltinType BooleanType => Settings.BooleanType;
@@ -467,7 +468,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompilableFunctions
             .Where(v => v.Function.BuiltinFunctionName == builtinName);
 
-        string readable = $"[Builtin(\"{builtinName}\")] ?({string.Join(", ", arguments)})";
+        string readable = $"[{AttributeConstants.BuiltinIdentifier}(\"{builtinName}\")] ?({string.Join(", ", arguments)})";
         FunctionQuery<CompiledFunctionDefinition, string, Token, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(null as string, arguments, relevantFile, null, addCompilable);
 
         return GetFunction<CompiledFunctionDefinition, string, Token, GeneralType>(
@@ -702,6 +703,26 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
         }
 
+        if (variableDeclaration.InternalConstantName is not null)
+        {
+            if (!InternalConstants.TryGetValue(variableDeclaration.InternalConstantName, out GeneralType? internalConstantType))
+            {
+                Diagnostics.Add(Diagnostic.Warning($"Internal constant \"{variableDeclaration.InternalConstantName}\" not found", variableDeclaration));
+            }
+            else
+            {
+                constantType ??= internalConstantType;
+
+                if (!GetInitialValue(constantType, out constantValue))
+                {
+                    Diagnostics.Add(Diagnostic.Error($"Invalid type `{constantType}` specified for internal constant", variableDeclaration.Type));
+                    constantValue = default;
+                }
+
+                goto gotExternalValue;
+            }
+        }
+
         if (variableDeclaration.InitialValue is null)
         {
             Diagnostics.Add(Diagnostic.Critical($"Constant value must have initial value", variableDeclaration));
@@ -737,7 +758,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             if (!CompileType(constantValue.Type, out constantType, out PossibleDiagnostic? typeError))
             {
-                Diagnostics.Add(typeError.ToError((ILocated?)variableDeclaration.InitialValue ?? (ILocated)variableDeclaration));
+                Diagnostics.Add(typeError.ToError((ILocated?)variableDeclaration.InitialValue ?? variableDeclaration));
                 return false;
             }
         }
@@ -3787,6 +3808,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompiledRegisterAccess => false,
             CompiledLabelReference => false,
             CompiledExpressionVariableAccess => false,
+            CompiledCompilerVariableAccess => false,
             null => false,
 
             _ => throw new NotImplementedException(statement.GetType().ToString()),

@@ -2,6 +2,11 @@ namespace LanguageCore.Compiler;
 
 public static partial class StatementWalker
 {
+    public static void VisitWithFunctions(IReadOnlyCollection<CompiledFunction> functions, IEnumerable<CompiledStatement> statements, Func<CompiledStatement, bool> callback, Action<CompiledFunction> functionCallback)
+    {
+        foreach (CompiledStatement statement in statements) VisitWithFunctions(functions, statement, callback, functionCallback);
+    }
+
     public static void VisitWithFunctions(IReadOnlyCollection<CompiledFunction> functions, CompiledStatement statement, Func<CompiledStatement, bool> callback, Action<CompiledFunction> functionCallback)
     {
         void TryFunctionCallback(ICompiledFunctionDefinition? function)
@@ -44,7 +49,7 @@ public static partial class StatementWalker
         });
     }
 
-    static void Visit(IEnumerable<CompiledStatement> statement, Func<CompiledStatement, bool> callback)
+    public static void Visit(IEnumerable<CompiledStatement> statement, Func<CompiledStatement, bool> callback)
     {
         foreach (CompiledStatement item in statement)
         {

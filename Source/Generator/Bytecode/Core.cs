@@ -158,6 +158,18 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
     }
 
+    readonly struct GeneratedString
+    {
+        public readonly ImmutableArray<byte> Value;
+        public readonly int Offset;
+
+        public GeneratedString(ImmutableArray<byte> value, int offset)
+        {
+            Value = value;
+            Offset = offset;
+        }
+    }
+
     public static readonly CompilerSettings DefaultCompilerSettings = new()
     {
         PointerSize = 4,
@@ -207,6 +219,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
     public override BuiltinType SizeofStatementType => BuiltinType.I32;
     public override BuiltinType ArrayLengthType => BuiltinType.I32;
     readonly Stack<int> ScopeSizes = new();
+
+    readonly List<GeneratedString> Strings = new();
 
     #endregion
 
