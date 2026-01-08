@@ -4,7 +4,7 @@
 [![C# 11](https://img.shields.io/badge/C%23-11-239120.svg?style=flat-square)](#)
 
 - [VSCode Extension](https://github.com/BBpezsgo/InterpreterVSCodeExtension)
-- [Language Server](https://github.com/BBpezsgo/BBCode-LanguageServer)
+- [Language Server](https://github.com/BBpezsgo/BBLang-LanguageServer)
 - [Debugger Host](https://github.com/BBpezsgo/BBLang-DebugHost)
 
 ## About
