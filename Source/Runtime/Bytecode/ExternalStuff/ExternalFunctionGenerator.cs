@@ -18,7 +18,7 @@ public static unsafe class ExternalFunctionGenerator
             {
                 if (result is not null)
                 {
-                    exception = new PossibleDiagnostic($"External function with name \"{name}\" not found: duplicated function names");
+                    exception = new PossibleDiagnostic($"External function \"{name}\" not found: duplicated function names");
                     return false;
                 }
 
@@ -28,7 +28,7 @@ public static unsafe class ExternalFunctionGenerator
 
         if (result is null)
         {
-            exception = new PossibleDiagnostic($"External function with name \"{name}\" not found");
+            exception = new PossibleDiagnostic($"External function \"{name}\" not found");
             return false;
         }
 

@@ -1090,16 +1090,27 @@ public partial class StatementCompiler
             }
         }
 
+        bool success = true;
+
         if (initialValue is null && newVariable.InitialValue is not null)
         {
-            if (!CompileExpression(newVariable.InitialValue, out initialValue, type)) return false;
-            type ??= initialValue.Type;
-            if (!CanCastImplicitly(initialValue, type, out CompiledExpression? assignedInitialValue, out PossibleDiagnostic? castError))
+            if (!CompileExpression(newVariable.InitialValue, out initialValue, type))
             {
-                Diagnostics.Add(castError.ToError(initialValue));
-                return false;
+                success = false;
             }
-            initialValue = assignedInitialValue;
+            else
+            {
+                type ??= initialValue.Type;
+                if (!CanCastImplicitly(initialValue, type, out CompiledExpression? assignedInitialValue, out PossibleDiagnostic? castError))
+                {
+                    Diagnostics.Add(castError.ToError(initialValue));
+                    success = false;
+                }
+                else
+                {
+                    initialValue = assignedInitialValue;
+                }
+            }
         }
 
         if (type is null)
@@ -1194,7 +1205,7 @@ public partial class StatementCompiler
             }
         }
 
-        return true;
+        return success;
     }
     bool CompileStatement(InstructionLabelDeclaration instructionLabel, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
     {
@@ -1542,14 +1553,27 @@ public partial class StatementCompiler
             }
         }
 
-        CompiledStatement? next = null;
-
-        if (@if.NextLink is not null && !CompileStatement(@if.NextLink, out next))
-        {
-            CompileStatement(@if.Body, out _);
-            return false;
-        }
         if (!CompileStatement(@if.Body, out CompiledStatement? body)) return false;
+        CompiledStatement? next = null;
+        if (@if.NextLink is not null)
+        {
+            LinkedBranch nextLink = @if.NextLink;
+            if (nextLink is LinkedElse nextElse)
+            {
+                if (nextElse.Body is IfContainer nextIfContainer1)
+                {
+                    nextLink = nextIfContainer1.ToLinks();
+                }
+                else if (nextElse.Body is Block nextBlock
+                        && nextBlock.Statements.Length == 1
+                        && nextBlock.Statements[0] is IfContainer nextIfContainer2)
+                {
+                    nextLink = nextIfContainer2.ToLinks();
+                }
+            }
+
+            if (!CompileStatement(nextLink, out next)) return false;
+        }
 
         compiledStatement = new CompiledIf()
         {
@@ -1573,6 +1597,12 @@ public partial class StatementCompiler
         };
         return true;
     }
+    bool CompileStatement(LinkedBranch branch, [NotNullWhen(true)] out CompiledStatement? compiledStatement) => branch switch
+    {
+        LinkedIf @if => CompileStatement(@if, out compiledStatement),
+        LinkedElse @else => CompileStatement(@else, out compiledStatement),
+        _ => throw new UnreachableException(),
+    };
     bool CompileStatement(Block block, [NotNullWhen(true)] out CompiledStatement? compiledStatement, bool ignoreScope = false)
     {
         compiledStatement = null;
@@ -1581,13 +1611,19 @@ public partial class StatementCompiler
 
         if (ignoreScope)
         {
-            for (int i = 0; i < block.Statements.Length; i++)
+            bool success = true;
+            foreach (Statement statement in block.Statements)
             {
-                if (!CompileStatement(block.Statements[i], out CompiledStatement? item)) return false;
+                if (!CompileStatement(statement, out CompiledStatement? item))
+                {
+                    success = false;
+                    continue;
+                }
                 if (item is CompiledEmptyStatement) continue;
                 ImmutableArray<CompiledStatement> reduced = ReduceStatements(item, true);
                 res.AddRange(reduced);
             }
+            if (!success) return false;
 
             compiledStatement = new CompiledBlock()
             {
@@ -1599,11 +1635,18 @@ public partial class StatementCompiler
 
         using (Frames.Last.Scopes.PushAuto(CompileScope(block.Statements)))
         {
-            for (int i = 0; i < block.Statements.Length; i++)
+            bool success = true;
+            foreach (Statement statement in block.Statements)
             {
-                if (!CompileStatement(block.Statements[i], out CompiledStatement? item)) return false;
-                res.Add(item);
+                if (!CompileStatement(statement, out CompiledStatement? item))
+                {
+                    success = false;
+                    continue;
+                }
+                ImmutableArray<CompiledStatement> reduced = ReduceStatements(item, true);
+                res.AddRange(reduced);
             }
+            if (!success) return false;
         }
 
         compiledStatement = new CompiledBlock()
@@ -1627,8 +1670,6 @@ public partial class StatementCompiler
             case WhileLoopStatement v: return CompileStatement(v, out compiledStatement);
             case ForLoopStatement v: return CompileStatement(v, out compiledStatement);
             case IfContainer v: return CompileStatement(v, out compiledStatement);
-            case LinkedIf v: return CompileStatement(v, out compiledStatement);
-            case LinkedElse v: return CompileStatement(v, out compiledStatement);
             case Block v: return CompileStatement(v, out compiledStatement);
             case InstructionLabelDeclaration v: return CompileStatement(v, out compiledStatement);
             default: throw new NotImplementedException($"Statement {statement.GetType().Name} is not implemented");
@@ -3323,7 +3364,11 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (!prev.Type.Is(out StructType? structType)) throw new NotImplementedException();
+        if (!prev.Type.Is(out StructType? structType))
+        {
+            Diagnostics.Add(Diagnostic.Critical($"Type `{prev.Type}` doesn't have any fields", field.Identifier, field.File));
+            return false;
+        }
 
         if (!structType.GetField(field.Identifier.Content, out CompiledField? compiledField, out PossibleDiagnostic? error2))
         {
@@ -4313,12 +4358,13 @@ public partial class StatementCompiler
 
         ImmutableArray<CompiledStatement>.Builder res = ImmutableArray.CreateBuilder<CompiledStatement>(statements.Length);
 
+        bool success = true;
         foreach (Statement statement in statements)
         {
             if (!CompileStatement(statement, out CompiledStatement? compiledStatement))
             {
-                compiledStatements = ImmutableArray<CompiledStatement>.Empty;
-                return false;
+                success = false;
+                continue;
             }
             if (Settings.IsExpression)
             {
@@ -4331,6 +4377,11 @@ public partial class StatementCompiler
                 ImmutableArray<CompiledStatement> reduced = ReduceStatements(compiledStatement, true);
                 res.AddRange(reduced);
             }
+        }
+        if (!success)
+        {
+            compiledStatements = ImmutableArray<CompiledStatement>.Empty;
+            return false;
         }
 
         compiledStatements = res.ToImmutable();
@@ -4542,28 +4593,40 @@ public partial class StatementCompiler
         switch (statement)
         {
             case CompiledLambda v:
+            {
                 flags |= v.Flags;
                 break;
+            }
             case CompiledVariableAccess v:
+            {
                 if (v.Variable.IsGlobal)
                 {
                     flags |= FunctionFlags.CapturesGlobalVariables;
                 }
                 break;
+            }
             case CompiledFunctionCall v:
+            {
                 if (IsAllocator(v.Function)) flags |= FunctionFlags.AllocatesMemory;
                 if (IsDeallocator(v.Function)) flags |= FunctionFlags.DeallocatesMemory;
-                flags |= GeneratedFunctions.First(w => w.Function == v.Function).Flags;
+                CompiledFunction? f = GeneratedFunctions.FirstOrDefault(w => w.Function == v.Function);
+                if (f is not null) flags |= f.Flags;
                 break;
+            }
             case CompiledExternalFunctionCall v:
+            {
                 if (IsAllocator(v.Declaration)) flags |= FunctionFlags.AllocatesMemory;
                 if (IsDeallocator(v.Declaration)) flags |= FunctionFlags.DeallocatesMemory;
                 break;
+            }
             case CompiledFunctionReference v:
+            {
                 if (v.Function is ICompiledFunctionDefinition f1 && IsAllocator(f1)) flags |= FunctionFlags.AllocatesMemory;
                 if (v.Function is ICompiledFunctionDefinition f2 && IsDeallocator(f2)) flags |= FunctionFlags.DeallocatesMemory;
-                flags |= GeneratedFunctions.First(w => w.Function == v.Function).Flags;
+                CompiledFunction? f = GeneratedFunctions.FirstOrDefault(w => w.Function == v.Function);
+                if (f is not null) flags |= f.Flags;
                 break;
+            }
         }
         return flags;
     }

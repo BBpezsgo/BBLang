@@ -7,8 +7,8 @@ for (int y = 0; y < Height; y++)
 {
     for (int x; x < Width; x++)
     {
-        float sinv = Sin(x.ToFloat() / 10f);
-        int sinvint = (sinv * (Height / 2)).ToInt() + (Height / 2);
+        float sinv = sin((float)x / 10f);
+        int sinvint = (int)(sinv * (Height / 2)) + (Height / 2);
         if (y == sinvint)
         {
             print('x');
@@ -25,8 +25,8 @@ for (int y = 0; y < Height; y++)
 {
     for (int x; x < Width; x++)
     {
-        float sinv = Cos(x.ToFloat() / 10f);
-        int sinvint = (sinv * (Height / 2)).ToInt() + (Height / 2);
+        float sinv = cos((float)x / 10f);
+        int sinvint = (int)(sinv * (Height / 2)) + (Height / 2);
         if (y == sinvint)
         {
             print('x');

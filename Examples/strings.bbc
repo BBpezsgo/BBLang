@@ -15,4 +15,4 @@ void receive_string(string text)
 }
 
 temp string text = "你好";
-PassString(text);
+pass_string(text);

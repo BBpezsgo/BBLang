@@ -1,53 +1,53 @@
 using System;
 
-List<char*>* splits = new List<char*>*(4);
+List<string>* splits = new List<string>*(4);
 
 while (1)
 {
     print(" > ");
-    temp char* line = ReadLine();
+    temp string line = readline();
     
-    for (int i = 0; i < splits.Length(); i++)
+    for (int i = 0; i < splits.length(); i++)
     {
         delete splits[i];
     }
-    splits.Clear();
-    line.Split(' ', splits);
+    splits.clear();
+    line.split(' ', splits);
 
-    if (splits.Length() < 3)
+    if (splits.length() < 3)
     {
         printline("Invalid input");
     }
     else
     {
-        temp char* a = splits[0];
-        temp char* _op = splits[1];
-        temp char* b = splits[2];
+        temp string a = splits[0];
+        temp string _op = splits[1];
+        temp string b = splits[2];
 
-        if (_op.Length() != 1)
+        if (_op.length() != 1)
         {
             printline("Invalid operator");
             printline(_op);            
         }
         else
         {
-            int numa = ParseInt(a);
-            int numb = ParseInt(b);
+            int numa = parseint(a);
+            int numb = parseint(b);
             char op = _op[0];
 
             if (op == '+')
             {
                 printline(numa + numb);
             }
-            elseif (op == '-')
+            else if (op == '-')
             {
                 printline(numa - numb);
             }
-            elseif (op == '*')
+            else if (op == '*')
             {
                 printline(numa * numb);
             }
-            elseif (op == '/')
+            else if (op == '/')
             {
                 printline(numa / numb);
             }
