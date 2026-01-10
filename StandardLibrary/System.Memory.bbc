@@ -32,7 +32,7 @@ void init_heap()
 }
 
 [MSILIncompatible]
-export void get_header(BlockHeader* headerPtr, int* size, bool* allocated)
+void get_header(BlockHeader* headerPtr, int* size, bool* allocated)
 {
     BlockHeader header = *headerPtr;
     if (header >= StatusFlag) // value & StatusFlag
@@ -48,13 +48,13 @@ export void get_header(BlockHeader* headerPtr, int* size, bool* allocated)
 }
 
 [MSILIncompatible]
-export inline void set_header_used(BlockHeader* headerPtr, int size)
+inline void set_header_used(BlockHeader* headerPtr, int size)
 {
     *headerPtr = (BlockHeader)size + StatusFlag;
 }
 
 [MSILIncompatible]
-export inline void set_header_free(BlockHeader* headerPtr, int size)
+inline void set_header_free(BlockHeader* headerPtr, int size)
 {
     *headerPtr = (BlockHeader)size;
 }
@@ -99,8 +99,8 @@ bool join_free_blocks()
 export any* alloc(int sizeNeed)
 {
 #if IL
-    crash "Nope";
-#else
+    crash "The function `alloc` is not compatible with MSIL";
+#endif
     if (sizeNeed <= 0) { crash "Invalid size"; }
 
     BlockHeader* headerPointer = HeapStart as BlockHeader*;
@@ -134,17 +134,15 @@ export any* alloc(int sizeNeed)
         headerPointer += blockSize + HeaderSize;
     }
     return 0 as any*;
-#endif
 }
 
 [Expose("resize")]
-[Builtin("resize")]
 [MSILIncompatible]
 export bool resize(any* ptr, int size)
 {
 #if IL
-    crash "Nope";
-#else
+    crash "The function `resize` is not compatible with MSIL";
+#endif
     if (size <= 0) { crash "Invalid size"; }
     if (!ptr) { return false; }
 
@@ -199,13 +197,15 @@ export bool resize(any* ptr, int size)
     }
 
     return false;
-#endif
 }
 
 [Builtin("free")]
 [MSILIncompatible]
 export void free(any* pointer)
 {
+#if IL
+    crash "The function `free` is not compatible with MSIL";
+#endif
     BlockHeader* headerPtr = (pointer as int - HeaderSize) as BlockHeader*;
 
     int size;
