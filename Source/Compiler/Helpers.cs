@@ -3166,6 +3166,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         IdentifierExpression => ControlFlowUsage.None,
         ConstructorCallExpression => ControlFlowUsage.None,
         FieldExpression => ControlFlowUsage.None,
+        EmptyStatement => ControlFlowUsage.None,
         null => ControlFlowUsage.None,
 
         _ => throw new NotImplementedException(statement.GetType().Name),

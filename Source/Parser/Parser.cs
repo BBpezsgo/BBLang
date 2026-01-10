@@ -237,10 +237,10 @@ public sealed class Parser
             return false;
         }
 
-        if (!ExpectOperator(";"))
-        { throw new SyntaxException($"Please put a \";\" here (after \"{DeclarationKeywords.Using}\")", keyword.Position.After(), File); }
-
         usingDefinition = new UsingDefinition(keyword, tokens.ToImmutableArray(), File);
+
+        if (!ExpectOperator(";"))
+        { Diagnostics.Add(Diagnostic.Warning($"You forgot the semicolon (after \"{DeclarationKeywords.Using}\")", usingDefinition.Position.After(), File)); }
 
         return true;
     }
@@ -390,13 +390,6 @@ public sealed class Parser
 
         CheckModifiers(modifiers, AliasModifiers);
 
-        if (!ExpectOperator(";"))
-        {
-            diagnostic.Add(3, Diagnostic.Critical($"Pls put a semicolon here", type.Position.After(), File));
-            CurrentTokenIndex = parseStart;
-            return false;
-        }
-
         aliasDefinition = new AliasDefinition(
             attributes,
             modifiers,
@@ -405,6 +398,14 @@ public sealed class Parser
             type,
             File
         );
+
+        if (!ExpectOperator(";"))
+        {
+            diagnostic.Add(3, Diagnostic.Warning($"You forgot the semicolon", aliasDefinition.Position.After(), File));
+            //CurrentTokenIndex = parseStart;
+            //return false;
+        }
+
         return true;
     }
 
@@ -1327,7 +1328,10 @@ public sealed class Parser
         block = new Block(statements.DrainToImmutable(), new TokenPair(bracketStart, bracketEnd), File);
 
         if (consumeSemicolon && ExpectOperator(";", out Token? semicolon))
-        { block.Semicolon = semicolon; }
+        {
+            block.Semicolon = semicolon;
+            Diagnostics.Add(Diagnostic.Warning("Unnecessary semicolon", semicolon, File));
+        }
 
         return true;
     }
@@ -1529,6 +1533,13 @@ public sealed class Parser
 
     bool ExpectStatement([NotNullWhen(true)] out Statement? statement)
     {
+        if (ExpectOperator(";", out Token? semicolon))
+        {
+            statement = new EmptyStatement(semicolon.Position.Before(), File);
+            Diagnostics.Add(Diagnostic.Warning($"Empty statement?", semicolon, File));
+            return true;
+        }
+
         if (!ExpectStatementUnchecked(out statement))
         {
             return false;
@@ -1536,14 +1547,16 @@ public sealed class Parser
 
         if (!IsExpression) SetStatementThings(statement);
 
-        Token? semicolon;
         if (NeedSemicolon(statement))
         {
             if (!ExpectOperator(";", out semicolon) && !IsExpression)
-            { Diagnostics.Add(Diagnostic.Error($"Please put a \";\" here (after \"{statement.GetType().Name}\")", statement.Position.After(), File)); }
+            { Diagnostics.Add(Diagnostic.Warning($"You forgot the semicolon", statement.Position.After(), File)); }
         }
         else
-        { ExpectOperator(";", out semicolon); }
+        {
+            if (ExpectOperator(";", out semicolon))
+            { Diagnostics.Add(Diagnostic.Warning($"Unecessary semicolon", semicolon, File)); }
+        }
 
         statement.Semicolon = semicolon;
 

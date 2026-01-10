@@ -129,6 +129,8 @@ public static partial class StatementWalker
                 foreach (Statement w in Visit(v.Condition, callback)) yield return w;
                 foreach (Statement w in Visit(v.Body, callback)) yield return w;
                 break;
+            case EmptyStatement:
+                break;
             default: throw new NotImplementedException(statement.GetType().Name);
         }
     }

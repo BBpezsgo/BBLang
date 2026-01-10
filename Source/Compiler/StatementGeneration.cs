@@ -1652,6 +1652,14 @@ public partial class StatementCompiler
         };
         return true;
     }
+    bool CompileStatement(EmptyStatement statement, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
+    {
+        compiledStatement = new CompiledEmptyStatement()
+        {
+            Location = new Location(statement.Position, statement.File),
+        };
+        return true;
+    }
     bool CompileStatement(Statement statement, [NotNullWhen(true)] out CompiledStatement? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
     {
         switch (statement)
@@ -1668,6 +1676,7 @@ public partial class StatementCompiler
             case IfBranchStatement v: return CompileStatement(v, out compiledStatement);
             case Block v: return CompileStatement(v, out compiledStatement);
             case InstructionLabelDeclaration v: return CompileStatement(v, out compiledStatement);
+            case EmptyStatement v: return CompileStatement(v, out compiledStatement);
             default: throw new NotImplementedException($"Statement {statement.GetType().Name} is not implemented");
         }
     }
