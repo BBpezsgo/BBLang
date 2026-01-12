@@ -131,6 +131,9 @@ public static partial class StatementWalker
                 break;
             case EmptyStatement:
                 break;
+            case ArgumentListExpression v:
+                foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
+                break;
             default: throw new NotImplementedException(statement.GetType().Name);
         }
     }

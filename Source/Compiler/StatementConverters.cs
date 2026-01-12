@@ -14,7 +14,7 @@ public static class StatementConverters
 
         if (anyCall.Expression is IdentifierExpression functionIdentifier)
         {
-            functionCall = new FunctionCallExpression(null, functionIdentifier, anyCall.Arguments, anyCall.Brackets, anyCall.File)
+            functionCall = new FunctionCallExpression(null, functionIdentifier, anyCall.Arguments, anyCall.File)
             {
                 Semicolon = anyCall.Semicolon,
                 SaveValue = anyCall.SaveValue,
@@ -28,7 +28,7 @@ public static class StatementConverters
 
         if (anyCall.Expression is FieldExpression field)
         {
-            functionCall = new FunctionCallExpression(ArgumentExpression.Wrap(field.Object), field.Identifier, anyCall.Arguments, anyCall.Brackets, anyCall.File)
+            functionCall = new FunctionCallExpression(ArgumentExpression.Wrap(field.Object), field.Identifier, anyCall.Arguments, anyCall.File)
             {
                 Semicolon = anyCall.Semicolon,
                 SaveValue = anyCall.SaveValue,

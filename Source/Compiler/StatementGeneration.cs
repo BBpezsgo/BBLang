@@ -697,8 +697,7 @@ public partial class StatementCompiler
                         Token.CreateAnonymous(GeneratorStructDefinition.Struct.Identifier.Content),
                         caller.Location.File
                     ),
-                    ImmutableArray<ArgumentExpression>.Empty,
-                    TokenPair.CreateAnonymous("(", ")"),
+                    ArgumentListExpression.CreateAnonymous(caller.File),
                     caller.File
                 ),
                 caller.File,
@@ -1662,6 +1661,13 @@ public partial class StatementCompiler
     }
     bool CompileStatement(Statement statement, [NotNullWhen(true)] out CompiledStatement? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
     {
+        if (statement is IMissingNode)
+        {
+            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", statement, false));
+            compiledStatement = null;
+            return false;
+        }
+
         switch (statement)
         {
             case Expression v:
@@ -1690,13 +1696,13 @@ public partial class StatementCompiler
         {
             _identifier.AnalyzedType = TokenAnalyzedType.Keyword;
 
-            if (anyCall.Arguments.Length != 1)
+            if (anyCall.Arguments.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Length}", anyCall));
+                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
                 return false;
             }
 
-            Expression argument = anyCall.Arguments[0];
+            Expression argument = anyCall.Arguments.Arguments[0];
             CompiledTypeExpression? paramType;
             if (argument is ArgumentExpression argumentExpression
                 && argumentExpression.Modifier is null)
@@ -1752,12 +1758,10 @@ public partial class StatementCompiler
 
             SetStatementReference(anyCall, result.OriginalFunction);
             TrySetStatementReference(anyCall.Expression, result.OriginalFunction);
+            SetStatementType(anyCall, result.Function.Type);
 
             result.Function.References.Add(new(anyCall, anyCall.File));
             result.OriginalFunction.References.Add(new(anyCall, anyCall.File));
-
-            if (functionCall.CompiledType is not null)
-            { SetStatementType(anyCall, functionCall.CompiledType); }
 
             return CompileFunctionCall(functionCall, functionCall.MethodArguments, result, out compiledStatement);
         }
@@ -1774,7 +1778,7 @@ public partial class StatementCompiler
         {
             List<ArgumentExpression> arguments = new();
             arguments.Add(ArgumentExpression.Wrap(anyCall.Expression));
-            arguments.AddRange(anyCall.Arguments);
+            arguments.AddRange(anyCall.Arguments.Arguments);
             if (GetFunction(
                     GetOperators(),
                     "operator",
@@ -1814,14 +1818,14 @@ public partial class StatementCompiler
 
         SetStatementType(anyCall, functionType.ReturnType);
 
-        if (anyCall.Arguments.Length != functionType.Parameters.Length)
+        if (anyCall.Arguments.Arguments.Length != functionType.Parameters.Length)
         {
             if (notFound is not null) Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Length}", new Position(anyCall.Arguments.As<IPositioned>().DefaultIfEmpty(anyCall.Brackets)), anyCall.File));
+            Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Arguments.Length}", new Position(anyCall.Arguments.Arguments.As<IPositioned>().DefaultIfEmpty(anyCall.Arguments.Brackets)), anyCall.File));
             return false;
         }
 
-        if (!CompileArguments(anyCall.Arguments, functionType, out ImmutableArray<CompiledArgument> compiledArguments)) return false;
+        if (!CompileArguments(anyCall.Arguments.Arguments, functionType, out ImmutableArray<CompiledArgument> compiledArguments)) return false;
 
         PossibleDiagnostic? argumentError = null;
         if (!Utils.SequenceEquals(compiledArguments, functionType.Parameters, (argument, parameter) =>
@@ -2851,6 +2855,12 @@ public partial class StatementCompiler
     {
         compiledStatement = null;
 
+        if (variable is IMissingNode)
+        {
+            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", variable, false));
+            return false;
+        }
+
         if (variable.Content.StartsWith('#'))
         {
             compiledStatement = new CompiledConstantValue()
@@ -3259,7 +3269,7 @@ public partial class StatementCompiler
             return false;
         }
 
-        if (!FindStatementTypes(constructorCall.Arguments, out ImmutableArray<GeneralType> parameters, Diagnostics))
+        if (!FindStatementTypes(constructorCall.Arguments.Arguments, out ImmutableArray<GeneralType> parameters, Diagnostics))
         {
             return false;
         }
@@ -3288,7 +3298,7 @@ public partial class StatementCompiler
             return false;
         }
 
-        ImmutableArray<ArgumentExpression> arguments = constructorCall.Arguments;
+        ImmutableArray<ArgumentExpression> arguments = constructorCall.Arguments.Arguments;
         result.ReplaceArgumentsIfNeeded(ref arguments);
 
         if (!CompileExpression(constructorCall.ToInstantiation(), out CompiledExpression? _object)) return false;
@@ -3313,6 +3323,12 @@ public partial class StatementCompiler
 
         if (!CompileExpression(field.Object, out CompiledExpression? prev)) return false;
 
+        if (field.Identifier is IMissingNode)
+        {
+            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", field.Identifier, false));
+            return false;
+        }
+
         if (prev.Type.Is(out ArrayType? arrayType) && field.Identifier.Content == "Length")
         {
             if (!arrayType.Length.HasValue)
@@ -3321,8 +3337,8 @@ public partial class StatementCompiler
                 return false;
             }
 
-            SetStatementType(field, ArrayLengthType);
-            SetPredictedValue(field, arrayType.Length.Value);
+            SetStatementType(field.Identifier, ArrayLengthType);
+            SetPredictedValue(field.Identifier, arrayType.Length.Value);
 
             compiledStatement = new CompiledConstantValue()
             {
@@ -3355,8 +3371,8 @@ public partial class StatementCompiler
                 return false;
             }
 
-            SetStatementType(field, fieldDefinition.Type);
-            SetStatementReference(field, fieldDefinition);
+            SetStatementType(field.Identifier, fieldDefinition.Type);
+            SetStatementReference(field.Identifier, fieldDefinition);
 
             compiledStatement = new CompiledFieldAccess()
             {
@@ -3381,8 +3397,8 @@ public partial class StatementCompiler
             return false;
         }
 
-        SetStatementType(field, compiledField.Type);
-        SetStatementReference(field, compiledField);
+        SetStatementType(field.Identifier, compiledField.Type);
+        SetStatementReference(field.Identifier, compiledField);
 
         compiledStatement = new CompiledFieldAccess()
         {
@@ -3606,30 +3622,48 @@ public partial class StatementCompiler
         };
         return true;
     }
-    bool CompileExpression(Expression statement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true) => statement switch
+    bool CompileExpression(Expression statement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
     {
-        ListExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        BinaryOperatorCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        UnaryOperatorCallExpression v => CompileExpression(v, out compiledStatement),
-        LiteralExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        IdentifierExpression v => CompileExpression(v, out compiledStatement, expectedType, resolveReference),
-        GetReferenceExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        DereferenceExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        NewInstanceExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        ConstructorCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        IndexCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        FieldExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        ReinterpretExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        ManagedTypeCastExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        ArgumentExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        AnyCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        LambdaExpression v => CompileExpression(v, out compiledStatement, expectedType),
-        _ => throw new NotImplementedException($"Expression {statement.GetType().Name} is not implemented"),
-    };
+        if (statement is IMissingNode)
+        {
+            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", statement, false));
+            compiledStatement = null;
+            return false;
+        }
+
+        return statement switch
+        {
+            ListExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            BinaryOperatorCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            UnaryOperatorCallExpression v => CompileExpression(v, out compiledStatement),
+            LiteralExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            IdentifierExpression v => CompileExpression(v, out compiledStatement, expectedType, resolveReference),
+            GetReferenceExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            DereferenceExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            NewInstanceExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            ConstructorCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            IndexCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            FieldExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            ReinterpretExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            ManagedTypeCastExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            ArgumentExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            AnyCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            LambdaExpression v => CompileExpression(v, out compiledStatement, expectedType),
+            _ => throw new NotImplementedException($"Expression {statement.GetType().Name} is not implemented"),
+        };
+    }
 
     bool CompileSetter(Statement target, Expression value, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
     {
         compiledStatement = null;
+
+        if (target is IMissingNode)
+        {
+            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", target, false));
+            compiledStatement = null;
+            CompileExpression(value, out _);
+            return false;
+        }
 
         switch (target)
         {
@@ -3835,7 +3869,12 @@ public partial class StatementCompiler
 
         target.Identifier.AnalyzedType = TokenAnalyzedType.FieldName;
 
-        if (!CompileExpression(target.Object, out CompiledExpression? prev)) return false;
+        if (!CompileExpression(target.Object, out CompiledExpression? prev))
+        {
+            CompileExpression(value, out _);
+            return false;
+        }
+
         GeneralType prevType = prev.Type;
 
         if (prevType.Is<ArrayType>() && target.Identifier.Content == "Length")
@@ -3929,7 +3968,8 @@ public partial class StatementCompiler
             return true;
         }
 
-        throw new NotImplementedException();
+        Diagnostics.Add(Diagnostic.Critical($"Type `{prevType}` doesn't have any fields", target.Identifier));
+        return false;
     }
     bool CompileSetter(IndexCallExpression target, Expression value, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
     {

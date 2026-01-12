@@ -23,6 +23,7 @@ public class ParameterDefinition :
     public Expression? DefaultValue { get; }
 
     public bool IsRef => Modifiers.Contains(ModifierKeywords.Ref);
+    public bool IsThis => Modifiers.Contains(ModifierKeywords.This);
     public Position Position =>
         new Position(Identifier, Type)
         .Union(Modifiers);

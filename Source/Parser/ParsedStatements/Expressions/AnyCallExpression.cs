@@ -11,23 +11,17 @@ public class AnyCallExpression : Expression, IReadable, IReferenceableTo<Compile
     public CompiledFunctionDefinition? Reference { get; set; }
 
     public Expression Expression { get; }
-    public TokenPair Brackets { get; }
-    public ImmutableArray<ArgumentExpression> Arguments { get; }
-    public ImmutableArray<Token> Commas { get; }
+    public ArgumentListExpression Arguments { get; }
 
-    public override Position Position => new(Expression, Brackets);
+    public override Position Position => new(Expression, Arguments);
 
     public AnyCallExpression(
         Expression expression,
-        ImmutableArray<ArgumentExpression> arguments,
-        ImmutableArray<Token> commas,
-        TokenPair brackets,
+        ArgumentListExpression arguments,
         Uri file) : base(file)
     {
         Expression = expression;
         Arguments = arguments;
-        Commas = commas;
-        Brackets = brackets;
     }
 
     public override string ToString()
@@ -37,19 +31,7 @@ public class AnyCallExpression : Expression, IReadable, IReferenceableTo<Compile
         result.Append(SurroundingBrackets?.Start);
 
         result.Append(Expression);
-        result.Append(Brackets.Start);
-
-        for (int i = 0; i < Arguments.Length; i++)
-        {
-            if (i > 0)
-            { result.Append(", "); }
-
-            if (result.Length >= Stringify.CozyLength)
-            { result.Append("..."); break; }
-
-            result.Append(Arguments[i]);
-        }
-        result.Append(Brackets.End);
+        result.Append(Arguments.ToString());
 
         result.Append(SurroundingBrackets?.End);
         result.Append(Semicolon);
@@ -62,10 +44,10 @@ public class AnyCallExpression : Expression, IReadable, IReferenceableTo<Compile
         StringBuilder result = new();
         result.Append("...");
         result.Append('(');
-        for (int i = 0; i < Arguments.Length; i++)
+        for (int i = 0; i < Arguments.Arguments.Length; i++)
         {
             if (i > 0) { result.Append(", "); }
-            result.Append(typeSearch.Invoke(Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
+            result.Append(typeSearch.Invoke(Arguments.Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
         }
         result.Append(')');
         return result.ToString();

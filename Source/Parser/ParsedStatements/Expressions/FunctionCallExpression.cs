@@ -10,34 +10,29 @@ public class FunctionCallExpression : Expression, IReadable, IReferenceableTo<Co
     public CompiledFunctionDefinition? Reference { get; set; }
 
     public IdentifierExpression Identifier { get; }
-    public ImmutableArray<ArgumentExpression> Arguments { get; }
+    public ArgumentListExpression Arguments { get; }
     public ArgumentExpression? Object { get; }
-    public TokenPair Brackets { get; }
 
     public bool IsMethodCall => Object != null;
     public ImmutableArray<ArgumentExpression> MethodArguments
     {
         get
         {
-            if (Object == null) return Arguments;
-            return Arguments.Insert(0, Object);
+            if (Object == null) return Arguments.Arguments;
+            return Arguments.Arguments.Insert(0, Object);
         }
     }
-    public override Position Position =>
-        new Position(Brackets, Identifier)
-        .Union(MethodArguments);
+    public override Position Position => new(Identifier, Arguments, Object);
 
     public FunctionCallExpression(
         ArgumentExpression? @object,
         IdentifierExpression identifier,
-        ImmutableArray<ArgumentExpression> arguments,
-        TokenPair brackets,
+        ArgumentListExpression arguments,
         Uri file) : base(file)
     {
         Object = @object;
         Identifier = identifier;
         Arguments = arguments;
-        Brackets = brackets;
     }
 
     public override string ToString()
@@ -52,20 +47,7 @@ public class FunctionCallExpression : Expression, IReadable, IReferenceableTo<Co
             result.Append('.');
         }
         result.Append(Identifier);
-        result.Append(Brackets.Start);
-        for (int i = 0; i < Arguments.Length; i++)
-        {
-            if (i > 0) result.Append(", ");
-
-            result.Append(Arguments[i]);
-
-            if (result.Length >= 10 && i + 1 != Arguments.Length)
-            {
-                result.Append(", ...");
-                break;
-            }
-        }
-        result.Append(Brackets.End);
+        result.Append(Arguments.ToString());
 
         result.Append(SurroundingBrackets?.End);
         result.Append(Semicolon);
@@ -83,10 +65,10 @@ public class FunctionCallExpression : Expression, IReadable, IReferenceableTo<Co
         }
         result.Append(Identifier.ToString());
         result.Append('(');
-        for (int i = 0; i < Arguments.Length; i++)
+        for (int i = 0; i < Arguments.Arguments.Length; i++)
         {
             if (i > 0) result.Append(", ");
-            result.Append(typeSearch.Invoke(Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
+            result.Append(typeSearch.Invoke(Arguments.Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
         }
         result.Append(')');
         return result.ToString();

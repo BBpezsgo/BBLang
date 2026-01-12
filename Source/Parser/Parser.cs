@@ -112,6 +112,11 @@ public sealed class Parser
         "-", "+"
     );
 
+    static readonly ImmutableArray<string> IncrementDecrementOperators = ImmutableArray.Create
+    (
+        "++", "--"
+    );
+
 #pragma warning disable RCS1213, IDE0052, CA1823 // Remove unread private members
     static readonly ImmutableArray<string> UnaryPostfixOperators = ImmutableArray<string>.Empty;
 #pragma warning restore RCS1213, IDE0052, CA1823
@@ -143,6 +148,25 @@ public sealed class Parser
         Diagnostics = diagnostics;
     }
 
+    readonly struct ParseRestorePoint
+    {
+        readonly Parser Parser;
+        readonly int TokenIndex;
+
+        public ParseRestorePoint(Parser parser, int tokenIndex)
+        {
+            Parser = parser;
+            TokenIndex = tokenIndex;
+        }
+
+        public void Restore()
+        {
+            Parser.CurrentTokenIndex = TokenIndex;
+        }
+    }
+
+    ParseRestorePoint SavePoint() => new(this, CurrentTokenIndex);
+
     public static ParserResult Parse(ImmutableArray<Token> tokens, Uri file, DiagnosticsCollection diagnostics)
         => new Parser(tokens, file, diagnostics, false).ParseInternal();
 
@@ -163,14 +187,19 @@ public sealed class Parser
         {
             ParseCodeHeader();
 
+            SkipCrapTokens();
+
             EndlessCheck endlessSafe = new();
-            while (CurrentToken != null)
+            while (ParseCodeBlock())
             {
-                ParseCodeBlock();
-
-                SkipCrapTokens();
-
                 endlessSafe.Step();
+            }
+
+            SkipCrapTokens();
+
+            if (CurrentToken != null)
+            {
+                Diagnostics.Add(Diagnostic.Error($"Unexpected token `{CurrentToken}`", CurrentToken, File));
             }
         }
         catch (SyntaxException syntaxException)
@@ -218,7 +247,7 @@ public sealed class Parser
             {
                 tokens.Add(pathIdentifier);
 
-                ExpectOperator(".");
+                if (!ExpectOperator(".")) break;
 
                 endlessSafe.Step();
             }
@@ -249,10 +278,9 @@ public sealed class Parser
     {
         while (true)
         {
-            if (ExpectUsing(out UsingDefinition? usingDefinition))
-            { Usings.Add(usingDefinition); }
-            else
-            { break; }
+            if (!ExpectUsing(out UsingDefinition? usingDefinition)) break;
+
+            Usings.Add(usingDefinition);
         }
     }
 
@@ -279,7 +307,7 @@ public sealed class Parser
 
     bool ExpectOperatorDefinition([NotNullWhen(true)] out FunctionDefinition? function, OrderedDiagnosticCollection diagnostic)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         function = null;
 
         ImmutableArray<AttributeUsage> attributes = ExpectAttributes();
@@ -289,7 +317,7 @@ public sealed class Parser
         if (!ExpectType(AllowedType.None, out TypeInstance? possibleType, out _))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected type for operator definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -313,7 +341,7 @@ public sealed class Parser
                     CurrentTokenIndex = callOperatorParseStart;
 
                     diagnostic.Add(0, Diagnostic.Critical($"Expected an operator for operator definition", CurrentLocation, false));
-                    CurrentTokenIndex = parseStart;
+                    savepoint.Restore();
                     return false;
                 }
             }
@@ -323,7 +351,7 @@ public sealed class Parser
         if (!ExpectParameters(ImmutableArray.Create(ModifierKeywords.Temp), false, out ParameterDefinitionCollection? parameters, parameterDiagnostics))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected parameter list for operator", CurrentLocation, false), parameterDiagnostics);
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -336,7 +364,7 @@ public sealed class Parser
         if (!ExpectOperator(";") && !ExpectBlock(out block))
         {
             diagnostic.Add(1, Diagnostic.Critical($"Expected \";\" or block", parameters.Brackets.End.Position.After(), File));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -356,7 +384,7 @@ public sealed class Parser
 
     bool ExpectAliasDefinition([NotNullWhen(true)] out AliasDefinition? aliasDefinition, OrderedDiagnosticCollection diagnostic)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         aliasDefinition = null;
 
         ImmutableArray<AttributeUsage> attributes = ExpectAttributes();
@@ -366,7 +394,7 @@ public sealed class Parser
         if (!ExpectIdentifier(DeclarationKeywords.Alias, out Token? keyword))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected keyword `{DeclarationKeywords.Alias}` for alias definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -375,7 +403,7 @@ public sealed class Parser
         if (!ExpectIdentifier(out Token? identifier))
         {
             diagnostic.Add(1, Diagnostic.Critical($"Expected identifier after keyword \"{keyword}\"", keyword.Position.After(), File));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -384,7 +412,7 @@ public sealed class Parser
         if (!ExpectType(AllowedType.Any | AllowedType.FunctionPointer | AllowedType.StackArrayWithoutLength, out TypeInstance? type))
         {
             diagnostic.Add(2, Diagnostic.Critical($"Expected type after alias identifier", identifier.Position.After(), File));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -402,7 +430,7 @@ public sealed class Parser
         if (!ExpectOperator(";"))
         {
             diagnostic.Add(3, Diagnostic.Warning($"You forgot the semicolon", aliasDefinition.Position.After(), File));
-            //CurrentTokenIndex = parseStart;
+            //savepoint.Restore();
             //return false;
         }
 
@@ -447,7 +475,7 @@ public sealed class Parser
 
     bool ExpectFunctionDefinition([NotNullWhen(true)] out FunctionDefinition? function, OrderedDiagnosticCollection diagnostic)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         function = null;
 
         ImmutableArray<AttributeUsage> attributes = ExpectAttributes();
@@ -457,14 +485,14 @@ public sealed class Parser
         if (!ExpectType(AllowedType.None, out TypeInstance? possibleType, out _))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected type for function definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectIdentifier(out Token? possibleNameT))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected identifier for function definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -474,7 +502,7 @@ public sealed class Parser
         if (!ExpectParameters(ParameterModifiers, true, out ParameterDefinitionCollection? parameters, parameterDiagnostics))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected parameter list for function definition", CurrentLocation, false), parameterDiagnostics);
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -487,7 +515,7 @@ public sealed class Parser
         if (!ExpectOperator(";") && !ExpectBlock(out block))
         {
             diagnostic.Add(1, Diagnostic.Critical($"Expected \";\" or block", parameters.Brackets.End.Position.After(), File));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -507,7 +535,7 @@ public sealed class Parser
 
     bool ExpectGeneralFunctionDefinition([NotNullWhen(true)] out GeneralFunctionDefinition? function, OrderedDiagnosticCollection diagnostic)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         function = null;
 
         ImmutableArray<Token> modifiers = ExpectModifiers();
@@ -515,7 +543,7 @@ public sealed class Parser
         if (!ExpectIdentifier(out Token? possibleNameT))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected identifier for general function definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -525,7 +553,7 @@ public sealed class Parser
             not BuiltinFunctionIdentifiers.Destructor)
         {
             diagnostic.Add(0, Diagnostic.Critical($"Invalid identifier `{possibleNameT.Content}` for general function definition", possibleNameT, File, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -533,7 +561,7 @@ public sealed class Parser
         if (!ExpectParameters(ImmutableArray.Create(ModifierKeywords.Temp), false, out ParameterDefinitionCollection? parameters, parameterDiagnostics))
         {
             diagnostic.Add(1, Diagnostic.Critical($"Expected parameter list for general function definition", CurrentLocation), parameterDiagnostics);
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -544,7 +572,7 @@ public sealed class Parser
         if (!ExpectBlock(out Block? block))
         {
             diagnostic.Add(2, Diagnostic.Error($"Body is required for general function definition", CurrentPosition, File, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -561,7 +589,7 @@ public sealed class Parser
 
     bool ExpectConstructorDefinition([NotNullWhen(true)] out ConstructorDefinition? function, OrderedDiagnosticCollection diagnostic)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         function = null;
 
         ImmutableArray<Token> modifiers = ExpectModifiers();
@@ -569,7 +597,7 @@ public sealed class Parser
         if (!ExpectType(AllowedType.None, out TypeInstance? type))
         {
             diagnostic.Add(0, Diagnostic.Error($"Expected a type for constructor definition", CurrentPosition, File, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -577,7 +605,7 @@ public sealed class Parser
         if (!ExpectParameters(ImmutableArray.Create(ModifierKeywords.Temp), true, out ParameterDefinitionCollection? parameters, parameterDiagnostics))
         {
             diagnostic.Add(0, Diagnostic.Error($"Expected a parameter list for constructor definition", CurrentPosition, File, false), parameterDiagnostics);
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -586,7 +614,7 @@ public sealed class Parser
         if (!ExpectBlock(out Block? block))
         {
             diagnostic.Add(0, Diagnostic.Error($"Body is required for constructor definition", CurrentPosition, File, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -604,7 +632,7 @@ public sealed class Parser
 
     bool ExpectStructDefinition(OrderedDiagnosticCollection diagnostic)
     {
-        int startTokenIndex = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
 
         ImmutableArray<AttributeUsage> attributes = ExpectAttributes();
 
@@ -613,14 +641,14 @@ public sealed class Parser
         if (!ExpectIdentifier(DeclarationKeywords.Struct, out Token? keyword))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected keyword `{DeclarationKeywords.Struct}` for struct definition", CurrentLocation, false));
-            CurrentTokenIndex = startTokenIndex;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectIdentifier(out Token? possibleStructName))
         {
             diagnostic.Add(1, Diagnostic.Critical($"Expected struct identifier after keyword `{keyword}`", keyword.Position.After(), File));
-            CurrentTokenIndex = startTokenIndex;
+            savepoint.Restore();
             return false;
         }
 
@@ -629,7 +657,7 @@ public sealed class Parser
         if (!ExpectOperator("{", out Token? bracketStart))
         {
             diagnostic.Add(2, Diagnostic.Critical($"Expected `{{` after struct identifier `{keyword}`", possibleStructName.Position.After(), File));
-            CurrentTokenIndex = startTokenIndex;
+            savepoint.Restore();
             return false;
         }
 
@@ -703,13 +731,13 @@ public sealed class Parser
 
     bool ExpectParameters(ImmutableArray<string> allowedParameterModifiers, bool allowDefaultValues, [NotNullWhen(true)] out ParameterDefinitionCollection? parameterDefinitions, OrderedDiagnosticCollection diagnostic)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         parameterDefinitions = null;
 
         if (!ExpectOperator("(", out Token? bracketStart))
         {
             diagnostic.Add(0, Diagnostic.Error("Expected a `(` for parameter list", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -726,14 +754,14 @@ public sealed class Parser
             if (!ExpectType(AllowedType.FunctionPointer, out TypeInstance? parameterType))
             {
                 diagnostic.Add(1, Diagnostic.Error("Expected parameter type", CurrentLocation, false));
-                CurrentTokenIndex = parseStart;
+                savepoint.Restore();
                 return false;
             }
 
             if (!ExpectIdentifier(out Token? parameterIdentifier))
             {
                 diagnostic.Add(1, Diagnostic.Error("Expected a parameter name", CurrentLocation, false));
-                CurrentTokenIndex = parseStart;
+                savepoint.Restore();
                 return false;
             }
 
@@ -745,13 +773,13 @@ public sealed class Parser
                 if (!allowDefaultValues)
                 {
                     diagnostic.Add(2, Diagnostic.Error("Default parameter values are not valid in the current context", assignmentOperator, File, false));
-                    CurrentTokenIndex = parseStart;
+                    savepoint.Restore();
                     return false;
                 }
                 if (!ExpectExpression(out defaultValue))
                 {
                     diagnostic.Add(2, Diagnostic.Error("Expected expression after \"=\" in parameter definition", assignmentOperator, File, false));
-                    CurrentTokenIndex = parseStart;
+                    savepoint.Restore();
                     return false;
                 }
                 expectOptionalParameters = true;
@@ -759,7 +787,7 @@ public sealed class Parser
             else if (expectOptionalParameters)
             {
                 diagnostic.Add(2, Diagnostic.Error("Parameters without default value after a parameter that has one is not supported", parameterIdentifier.Position.After(), File));
-                CurrentTokenIndex = parseStart;
+                savepoint.Restore();
                 return false;
             }
 
@@ -771,7 +799,7 @@ public sealed class Parser
             if (!ExpectOperator(","))
             {
                 diagnostic.Add(2, Diagnostic.Error("Expected \",\" or \")\"", PreviousToken!.Position.After(), File, false));
-                CurrentTokenIndex = parseStart;
+                savepoint.Restore();
                 return false;
             }
             else
@@ -788,19 +816,19 @@ public sealed class Parser
 
     bool ExpectLambda([NotNullWhen(true)] out LambdaExpression? lambdaStatement)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
         lambdaStatement = null;
 
         OrderedDiagnosticCollection parametersDiagnostics = new();
         if (!ExpectParameters(ParameterModifiers, false, out ParameterDefinitionCollection? parameters, parametersDiagnostics))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator("=>", out Token? arrow))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -816,7 +844,7 @@ public sealed class Parser
         }
         else
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -833,9 +861,12 @@ public sealed class Parser
 
     bool ExpectListValue([NotNullWhen(true)] out ListExpression? listValue)
     {
+        ParseRestorePoint savepoint = SavePoint();
+        listValue = null;
+
         if (!ExpectOperator("[", out Token? bracketStart))
         {
-            listValue = null;
+            savepoint.Restore();
             return false;
         }
 
@@ -843,12 +874,14 @@ public sealed class Parser
 
         Token? bracketEnd;
         EndlessCheck endlessSafe = new();
+        Position lastPosition = bracketStart.Position;
         while (true)
         {
             if (ExpectExpression(out Expression? v))
             {
                 values ??= ImmutableArray.CreateBuilder<Expression>();
                 values.Add(v);
+                lastPosition = v.Position;
 
                 if (!ExpectOperator(","))
                 {
@@ -873,7 +906,7 @@ public sealed class Parser
 
     bool ExpectLiteral([NotNullWhen(true)] out LiteralExpression? statement)
     {
-        int savedToken = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
 
         SkipCrapTokens();
 
@@ -979,7 +1012,7 @@ public sealed class Parser
             return true;
         }
 
-        CurrentTokenIndex = savedToken;
+        savepoint.Restore();
 
         statement = null;
         return false;
@@ -987,19 +1020,18 @@ public sealed class Parser
 
     bool ExpectIndex(Expression prevStatement, [NotNullWhen(true)] out IndexCallExpression? statement)
     {
-        int savedToken = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
+        statement = null;
 
         if (!ExpectOperator("[", out Token? bracketStart))
         {
-            statement = null;
-            CurrentTokenIndex = savedToken;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectExpression(out Expression? expression))
         {
-            statement = null;
-            CurrentTokenIndex = savedToken;
+            savepoint.Restore();
             return false;
         }
 
@@ -1013,10 +1045,14 @@ public sealed class Parser
 
     bool ExpectExpressionInBrackets([NotNullWhen(true)] out Expression? expressionInBrackets)
     {
+        ParseRestorePoint savepoint = SavePoint();
         expressionInBrackets = null;
 
         if (!ExpectOperator("(", out Token? bracketStart1))
-        { return false; }
+        {
+            savepoint.Restore();
+            return false;
+        }
 
         if (!ExpectExpression(out Expression? expression))
         { throw new SyntaxException("Expected expression after \"(\"", bracketStart1.Position.After(), File); }
@@ -1032,10 +1068,12 @@ public sealed class Parser
 
     bool ExpectNewExpression([NotNullWhen(true)] out Expression? newExpression)
     {
+        ParseRestorePoint savepoint = SavePoint();
         newExpression = null;
 
         if (!ExpectIdentifier(StatementKeywords.New, out Token? keywordNew))
         {
+            savepoint.Restore();
             return false;
         }
 
@@ -1044,33 +1082,9 @@ public sealed class Parser
         if (!ExpectType(AllowedType.None, out TypeInstance? instanceTypeName))
         { throw new SyntaxException($"Expected instance constructor after keyword \"{StatementKeywords.New}\"", keywordNew, File); }
 
-        if (ExpectOperator("(", out Token? bracketStart2))
+        if (ExpectArguments(out ArgumentListExpression? argumentList))
         {
-            bool expectParameter = false;
-            ImmutableArray<ArgumentExpression>.Builder parameters = ImmutableArray.CreateBuilder<ArgumentExpression>();
-
-            Token? bracketEnd2;
-            EndlessCheck endlessSafe = new();
-            while (!ExpectOperator(")", out bracketEnd2) || expectParameter)
-            {
-                if (!ExpectExpression(out Expression? parameter))
-                { throw new SyntaxException("Expected expression as parameter", CurrentToken?.Position ?? bracketStart2.Position.After(), File); }
-
-                // FIXME
-                parameters.Add(ArgumentExpression.Wrap(parameter));
-
-                if (ExpectOperator(")", out bracketEnd2))
-                { break; }
-
-                if (!ExpectOperator(","))
-                { throw new SyntaxException("Expected \",\" to separate parameters", parameter.Position.After(), File); }
-                else
-                { expectParameter = true; }
-
-                endlessSafe.Step();
-            }
-
-            newExpression = new ConstructorCallExpression(keywordNew, instanceTypeName, parameters.DrainToImmutable(), new TokenPair(bracketStart2, bracketEnd2), File);
+            newExpression = new ConstructorCallExpression(keywordNew, instanceTypeName, argumentList, File);
             return true;
         }
         else
@@ -1082,30 +1096,42 @@ public sealed class Parser
 
     bool ExpectFieldAccessor(Expression prevStatement, [NotNullWhen(true)] out FieldExpression? fieldAccessor)
     {
+        ParseRestorePoint savepoint = SavePoint();
         fieldAccessor = null;
 
         if (!ExpectOperator(".", out Token? tokenDot))
         {
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectIdentifier(out Token? fieldName))
-        { throw new SyntaxException("Expected a symbol after \".\"", tokenDot.Position.After(), File); }
+        {
+            fieldAccessor = new FieldExpression(
+                prevStatement,
+                new MissingIdentifier(Token.CreateAnonymous(string.Empty, TokenType.Identifier, tokenDot.Position.After()), File),
+                File
+            );
+            Diagnostics.Add(Diagnostic.Critical("Expected a symbol after `.`", tokenDot.Position.After(), File));
+            return true;
+        }
 
         fieldAccessor = new FieldExpression(
             prevStatement,
             new(fieldName, File),
-            File);
-
+            File
+        );
         return true;
     }
 
     bool ExpectAsStatement(Expression prevStatement, [NotNullWhen(true)] out ReinterpretExpression? basicTypeCast)
     {
+        ParseRestorePoint savepoint = SavePoint();
         basicTypeCast = null;
 
         if (!ExpectIdentifier(StatementKeywords.As, out Token? keyword))
         {
+            savepoint.Restore();
             return false;
         }
 
@@ -1195,32 +1221,32 @@ public sealed class Parser
 
     bool ExpectTypeCast([NotNullWhen(true)] out ManagedTypeCastExpression? typeCast)
     {
+        ParseRestorePoint savepoint = SavePoint();
         typeCast = default;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectOperator("(", out Token? leftBracket))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectType(AllowedType.Any | AllowedType.FunctionPointer | AllowedType.StackArrayWithoutLength, out TypeInstance? type))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator(")", out Token? rightBracket))
         // { throw new SyntaxException($"Expected ')' after type of the type cast", type.Position.After(), File); }
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOneValue(out Expression? value, false))
         // { throw new SyntaxException($"Expected one value for the type cast", rightTypeBracket.Position.After(), File); }
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1230,18 +1256,18 @@ public sealed class Parser
 
     bool ExpectVariableAddressGetter([NotNullWhen(true)] out GetReferenceExpression? statement)
     {
+        ParseRestorePoint savepoint = SavePoint();
         statement = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectOperator("&", out Token? refToken))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOneValue(out Expression? prevStatement, false))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1253,18 +1279,18 @@ public sealed class Parser
 
     bool ExpectVariableAddressFinder([NotNullWhen(true)] out DereferenceExpression? statement)
     {
+        ParseRestorePoint savepoint = SavePoint();
         statement = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectOperator("*", out Token? refToken))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOneValue(out Expression? prevStatement, false))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1299,12 +1325,12 @@ public sealed class Parser
 
     bool ExpectBlock([NotNullWhen(true)] out Block? block, bool consumeSemicolon = true)
     {
+        ParseRestorePoint savepoint = SavePoint();
         block = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectOperator("{", out Token? bracketStart))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1338,8 +1364,8 @@ public sealed class Parser
 
     bool ExpectVariableDeclaration([NotNullWhen(true)] out VariableDefinition? variableDeclaration)
     {
+        ParseRestorePoint savepoint = SavePoint();
         variableDeclaration = null;
-        int parseStart = CurrentTokenIndex;
 
         ImmutableArray<AttributeUsage> attributes = ExpectAttributes();
 
@@ -1353,13 +1379,13 @@ public sealed class Parser
         }
         else if (!ExpectType(AllowedType.StackArrayWithoutLength | AllowedType.FunctionPointer, out possibleType))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectIdentifier(out Token? possibleVariableName))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1390,12 +1416,12 @@ public sealed class Parser
 
     bool ExpectForStatement([NotNullWhen(true)] out ForLoopStatement? forLoop)
     {
+        ParseRestorePoint savepoint = SavePoint();
         forLoop = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectIdentifier(StatementKeywords.For, out Token? keyword))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1463,12 +1489,12 @@ public sealed class Parser
 
     bool ExpectWhileStatement([NotNullWhen(true)] out WhileLoopStatement? whileLoop)
     {
+        ParseRestorePoint savepoint = SavePoint();
         whileLoop = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectIdentifier(StatementKeywords.While, out Token? keyword))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1492,12 +1518,12 @@ public sealed class Parser
 
     bool ExpectIfStatement([NotNullWhen(true)] out IfBranchStatement? ifStatement)
     {
+        ParseRestorePoint savepoint = SavePoint();
         ifStatement = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectIdentifier(StatementKeywords.If, out Token? ifKeyword))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1655,10 +1681,12 @@ public sealed class Parser
 
     bool ExpectUnaryOperatorCall([NotNullWhen(true)] out UnaryOperatorCallExpression? result)
     {
+        ParseRestorePoint savepoint = SavePoint();
         result = null;
 
         if (!ExpectOperator(UnaryPrefixOperators, out Token? unaryPrefixOperator))
         {
+            savepoint.Restore();
             return false;
         }
 
@@ -1740,18 +1768,18 @@ public sealed class Parser
 
     bool ExpectSetter([NotNullWhen(true)] out SimpleAssignmentStatement? assignment)
     {
+        ParseRestorePoint savepoint = SavePoint();
         assignment = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectExpression(out Expression? leftStatement))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator("=", out Token? @operator))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1766,18 +1794,18 @@ public sealed class Parser
 
     bool ExpectCompoundSetter([NotNullWhen(true)] out CompoundAssignmentStatement? compoundAssignment)
     {
+        ParseRestorePoint savepoint = SavePoint();
         compoundAssignment = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectExpression(out Expression? leftStatement))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator(CompoundAssignmentOperators, out Token? @operator))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1792,30 +1820,23 @@ public sealed class Parser
 
     bool ExpectShortOperator([NotNullWhen(true)] out ShortOperatorCall? shortOperatorCall)
     {
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
+        shortOperatorCall = null;
 
-        if (!ExpectExpression(out Expression? leftStatement))
+        if (!ExpectExpression(out Expression? expression))
         {
-            CurrentTokenIndex = parseStart;
-            shortOperatorCall = null;
+            savepoint.Restore();
             return false;
         }
 
-        if (ExpectOperator("++", out Token? incrementOperator))
+        if (ExpectOperator(IncrementDecrementOperators, out Token? @operator))
         {
-            incrementOperator.AnalyzedType = TokenAnalyzedType.MathOperator;
-            shortOperatorCall = new ShortOperatorCall(incrementOperator, leftStatement, File);
+            @operator.AnalyzedType = TokenAnalyzedType.MathOperator;
+            shortOperatorCall = new ShortOperatorCall(@operator, expression, File);
             return true;
         }
 
-        if (ExpectOperator("--", out Token? decrementOperator))
-        {
-            decrementOperator.AnalyzedType = TokenAnalyzedType.MathOperator;
-            shortOperatorCall = new ShortOperatorCall(decrementOperator, leftStatement, File);
-            return true;
-        }
-
-        CurrentTokenIndex = parseStart;
+        savepoint.Restore();
         shortOperatorCall = null;
         return false;
     }
@@ -1829,7 +1850,7 @@ public sealed class Parser
 
         modifier.AnalyzedType = TokenAnalyzedType.Keyword;
 
-        if (!ExpectOneValue(out Expression? value))
+        if (!ExpectOneValue(out Expression? expression))
         {
             oneValue = new IdentifierExpression(modifier, File);
             Diagnostics.Add(Diagnostic.Warning($"is this ok?", oneValue));
@@ -1837,7 +1858,7 @@ public sealed class Parser
             // throw new SyntaxException($"Expected one value after modifier \"{modifier}\"", modifier.Position.After(), File);
         }
 
-        oneValue = new ArgumentExpression(modifier, value, File);
+        oneValue = new ArgumentExpression(modifier, expression, File);
         return true;
     }
 
@@ -1879,12 +1900,27 @@ public sealed class Parser
 
     bool ExpectAnyCall(Expression prevStatement, [NotNullWhen(true)] out AnyCallExpression? anyCall)
     {
+        ParseRestorePoint savepoint = SavePoint();
         anyCall = null;
-        int parseStart = CurrentTokenIndex;
+
+        if (!ExpectArguments(out ArgumentListExpression? argumentList))
+        {
+            savepoint.Restore();
+            return false;
+        }
+
+        anyCall = new AnyCallExpression(prevStatement, argumentList, File);
+        return true;
+    }
+
+    bool ExpectArguments([NotNullWhen(true)] out ArgumentListExpression? argumentList)
+    {
+        ParseRestorePoint savepoint = SavePoint();
+        argumentList = null;
 
         if (!ExpectOperator("(", out Token? bracketStart))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1907,7 +1943,12 @@ public sealed class Parser
                 parameter = ArgumentExpression.Wrap(simpleParameter);
             }
             else
-            { throw new SyntaxException("Expected expression as a parameter", CurrentToken?.Position ?? PreviousToken!.Position.After(), File); }
+            {
+                throw new SyntaxException($"Expected expression as an argument", CurrentLocation);
+                Diagnostics.Add(Diagnostic.Error($"Expected expression as an argument", CurrentLocation));
+                savepoint.Restore();
+                return false;
+            }
 
             parameters.Add(parameter);
 
@@ -1915,7 +1956,12 @@ public sealed class Parser
             { break; }
 
             if (!ExpectOperator(",", out Token? comma))
-            { throw new SyntaxException("Expected \",\" to separate parameters", parameter.Position.After(), File); }
+            {
+                throw new SyntaxException($"Expected `,` to separate arguments", parameter.Location.After());
+                Diagnostics.Add(Diagnostic.Error($"Expected `,` to separate arguments", parameter.Location.After()));
+                savepoint.Restore();
+                return false;
+            }
             else
             { expectParameter = true; }
             commas.Add(comma);
@@ -1923,7 +1969,7 @@ public sealed class Parser
             endlessSafe.Step();
         }
 
-        anyCall = new AnyCallExpression(prevStatement, parameters.DrainToImmutable(), commas.DrainToImmutable(), new TokenPair(bracketStart, bracketEnd), File);
+        argumentList = new ArgumentListExpression(parameters.DrainToImmutable(), commas.DrainToImmutable(), new TokenPair(bracketStart, bracketEnd), File);
         return true;
     }
 
@@ -1931,18 +1977,18 @@ public sealed class Parser
         => ExpectKeywordCall(name, parameterCount, parameterCount, out keywordCall);
     bool ExpectKeywordCall(string name, int minParameterCount, int maxParameterCount, [NotNullWhen(true)] out KeywordCallStatement? keywordCall)
     {
+        ParseRestorePoint savepoint = SavePoint();
         keywordCall = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectIdentifier(out Token? possibleFunctionName))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (possibleFunctionName.Content != name)
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -1976,18 +2022,18 @@ public sealed class Parser
 
     bool ExpectAttribute([NotNullWhen(true)] out AttributeUsage? attribute)
     {
+        ParseRestorePoint savepoint = SavePoint();
         attribute = null;
-        int parseStart = CurrentTokenIndex;
 
         if (!ExpectOperator("[", out Token? bracketStart))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectIdentifier(out Token? attributeT))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -2030,8 +2076,8 @@ public sealed class Parser
 
     bool ExpectField([NotNullWhen(true)] out FieldDefinition? field, OrderedDiagnosticCollection diagnostic)
     {
+        ParseRestorePoint savepoint = SavePoint();
         field = null;
-        int parseStart = CurrentTokenIndex;
 
         ImmutableArray<AttributeUsage> attributes = ExpectAttributes();
 
@@ -2040,21 +2086,21 @@ public sealed class Parser
         if (!ExpectType(AllowedType.FunctionPointer, out TypeInstance? possibleType))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected type for field definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectIdentifier(out Token? fieldName))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Expected identifier for field definition", CurrentLocation, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (ExpectOperator("(", out Token? unexpectedThing))
         {
             diagnostic.Add(0, Diagnostic.Critical($"Unexpected `(` after field identifier", unexpectedThing, File, false));
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
@@ -2117,17 +2163,17 @@ public sealed class Parser
     bool ExpectInstructionLabel([NotNullWhen(true)] out InstructionLabelDeclaration? instructionLabel)
     {
         instructionLabel = null;
-        int parseStart = CurrentTokenIndex;
+        ParseRestorePoint savepoint = SavePoint();
 
         if (!ExpectIdentifier(out Token? identifier))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator(":", out Token? colon))
         {
-            CurrentTokenIndex = parseStart;
+            savepoint.Restore();
             return false;
         }
 
