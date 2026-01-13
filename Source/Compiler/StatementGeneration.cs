@@ -4512,7 +4512,7 @@ public partial class StatementCompiler
                         CompiledTopLevelStatements.AddRange(v);
                     }
                 }
-                else
+                else if (!Settings.IgnoreTopLevelStatements)
                 {
                     foreach ((ImmutableArray<Statement> statements, Uri file) in TopLevelStatements)
                     {
@@ -4606,7 +4606,7 @@ public partial class StatementCompiler
                     )
                 );
             }
-            else
+            else if (!Settings.IgnoreTopLevelStatements)
             {
                 CompiledTopLevelStatements.Insert(0, new CompiledFunctionCall()
                 {
@@ -4616,6 +4616,10 @@ public partial class StatementCompiler
                     Type = result.Function.Type,
                     SaveValue = false,
                 });
+            }
+            else
+            {
+                Diagnostics.Add(Diagnostic.Warning($"Heap initialization code not generated because top level statements are ignored by the settings. Use a memory with an already initialized heap when you execute the code.", firstHeapUsageLocation));
             }
         }
     }

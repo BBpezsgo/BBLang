@@ -47,6 +47,7 @@ public struct CompilerSettings
     public ImmutableArray<UserDefinedAttribute> UserDefinedAttributes { get; set; }
     public bool CompileEverything { get; set; }
     public bool IsExpression { get; set; }
+    public bool IgnoreTopLevelStatements { get; set; }
     public ImmutableArray<ExpressionVariable> ExpressionVariables { get; set; }
     public IDictionary<Uri, CacheItem>? Cache { get; set; }
 
@@ -68,6 +69,7 @@ public struct CompilerSettings
         TokenizerSettings = other.TokenizerSettings;
         CompileEverything = other.CompileEverything;
         IsExpression = other.IsExpression;
+        IgnoreTopLevelStatements = other.IgnoreTopLevelStatements;
         ExpressionVariables = other.ExpressionVariables;
         Cache = other.Cache;
     }

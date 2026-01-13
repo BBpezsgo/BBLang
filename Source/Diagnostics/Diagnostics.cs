@@ -165,22 +165,28 @@ public static class DiagnosticsCollectionExtensions
         { Output.LogDiagnostic(diagnostic, sourceProviders); }
     }
 
+    static void WriteTo(IDiagnostic diagnostic, StringBuilder writer, int depth)
+    {
+        writer.Append(' ', depth * 2);
+        writer.AppendLine(diagnostic.ToString());
+        foreach (IDiagnostic item in diagnostic.SubErrors)
+        {
+            WriteTo(item, writer, depth + 1);
+        }
+    }
+
     public static void WriteErrorsTo(this IReadOnlyDiagnosticsCollection diagnosticsCollection, StringBuilder writer)
     {
         foreach (DiagnosticWithoutContext diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
         {
-            if (diagnostic.Level == DiagnosticsLevel.Error)
-            {
-                writer.AppendLine(diagnostic.Message);
-            }
+            if (diagnostic.Level != DiagnosticsLevel.Error) continue;
+            WriteTo(diagnostic, writer, 0);
         }
 
         foreach (Diagnostic diagnostic in diagnosticsCollection.Diagnostics)
         {
-            if (diagnostic.Level == DiagnosticsLevel.Error)
-            {
-                writer.AppendLine(diagnostic.ToString());
-            }
+            if (diagnostic.Level != DiagnosticsLevel.Error) continue;
+            WriteTo(diagnostic, writer, 0);
         }
     }
 }
