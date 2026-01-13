@@ -190,8 +190,9 @@ public sealed class Parser
             SkipCrapTokens();
 
             EndlessCheck endlessSafe = new();
-            while (ParseCodeBlock())
+            while (CurrentToken != null && ParseCodeBlock())
             {
+                SkipCrapTokens();
                 endlessSafe.Step();
             }
 
