@@ -1110,7 +1110,7 @@ public sealed class Parser
         {
             fieldAccessor = new FieldExpression(
                 prevStatement,
-                new MissingIdentifier(Token.CreateAnonymous(string.Empty, TokenType.Identifier, tokenDot.Position.After()), File),
+                new MissingIdentifierExpression(Token.CreateAnonymous(string.Empty, TokenType.Identifier, tokenDot.Position.After()), File),
                 File
             );
             Diagnostics.Add(Diagnostic.Critical("Expected a symbol after `.`", tokenDot.Position.After(), File));
@@ -1925,16 +1925,21 @@ public sealed class Parser
             return false;
         }
 
-        bool expectParameter = false;
+        if (ExpectOperator(")", out Token? bracketEnd))
+        {
+            argumentList = new ArgumentListExpression(ImmutableArray<ArgumentExpression>.Empty, ImmutableArray<Token>.Empty, new TokenPair(bracketStart, bracketEnd), File);
+            return true;
+        }
+
         ImmutableArray<ArgumentExpression>.Builder parameters = ImmutableArray.CreateBuilder<ArgumentExpression>();
         ImmutableArray<Token>.Builder commas = ImmutableArray.CreateBuilder<Token>();
 
         EndlessCheck endlessSafe = new();
-        Token? bracketEnd;
-        while (!ExpectOperator(")", out bracketEnd) || expectParameter)
+        Position lastPosition = bracketStart.Position;
+
+        while (true)
         {
             ArgumentExpression? parameter;
-
             if (ExpectModifiedValue(out ArgumentExpression? modifiedStatement, ArgumentModifiers))
             {
                 parameter = modifiedStatement;
@@ -1945,10 +1950,8 @@ public sealed class Parser
             }
             else
             {
-                throw new SyntaxException($"Expected expression as an argument", CurrentLocation);
+                parameter = new MissingArgumentExpression(lastPosition.After(), File);
                 Diagnostics.Add(Diagnostic.Error($"Expected expression as an argument", CurrentLocation));
-                savepoint.Restore();
-                return false;
             }
 
             parameters.Add(parameter);
@@ -1963,9 +1966,9 @@ public sealed class Parser
                 savepoint.Restore();
                 return false;
             }
-            else
-            { expectParameter = true; }
             commas.Add(comma);
+
+            lastPosition = comma.Position;
 
             endlessSafe.Step();
         }

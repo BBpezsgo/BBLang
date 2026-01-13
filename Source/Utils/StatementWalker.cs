@@ -24,6 +24,9 @@ public static partial class StatementWalker
                 foreach (Statement w in Visit(v.Expression, callback)) yield return w;
                 foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
                 break;
+            case MissingArgumentExpression v:
+                foreach (Statement w in Visit(v.Value, callback)) yield return w;
+                break;
             case ArgumentExpression v:
                 foreach (Statement w in Visit(v.Value, callback)) yield return w;
                 break;
@@ -133,6 +136,8 @@ public static partial class StatementWalker
                 break;
             case ArgumentListExpression v:
                 foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
+                break;
+            case MissingExpression:
                 break;
             default: throw new NotImplementedException(statement.GetType().Name);
         }

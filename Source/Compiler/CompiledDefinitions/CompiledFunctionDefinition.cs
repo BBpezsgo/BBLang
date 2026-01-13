@@ -65,6 +65,13 @@ public class CompiledFunctionDefinition : FunctionDefinition,
 
         result.Append(Identifier.Content);
 
+        if (Template is not null)
+        {
+            result.Append('<');
+            result.AppendJoin(", ", Template.Parameters.Select(v => v.Content));
+            result.Append('>');
+        }
+
         result.Append('(');
         if (Parameters.Length > 0)
         {

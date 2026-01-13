@@ -8,6 +8,12 @@ public static class DeclarationKeywords
     public const string Struct = "struct";
     public const string Using = "using";
     public const string Alias = "alias";
+
+    public static readonly ImmutableArray<string> List = ImmutableArray.Create(
+        Struct,
+        Using,
+        Alias
+    );
 }
 
 public static class TypeKeywords
@@ -61,6 +67,11 @@ public static class ProtectionKeywords
 {
     public const string Private = "private";
     public const string Export = "export";
+
+    public static readonly ImmutableArray<string> List = ImmutableArray.Create(
+        Private,
+        Export
+    );
 }
 
 public static class ModifierKeywords
@@ -70,6 +81,14 @@ public static class ModifierKeywords
     public const string This = "this";
     public const string Const = "const";
     public const string Inline = "inline";
+
+    public static readonly ImmutableArray<string> List = ImmutableArray.Create(
+        Temp,
+        Ref,
+        This,
+        Const,
+        Inline
+    );
 }
 
 public static class StatementKeywords
@@ -90,6 +109,25 @@ public static class StatementKeywords
     public const string Var = "var";
     public const string Break = "break";
     public const string Sizeof = "sizeof";
+
+    public static readonly ImmutableArray<string> List = ImmutableArray.Create(
+        If,
+        Else,
+        While,
+        For,
+        Return,
+        Yield,
+        Goto,
+        Crash,
+        Delete,
+        New,
+        Type,
+        This,
+        As,
+        Var,
+        Break,
+        Sizeof
+    );
 }
 
 public static class LanguageConstants
