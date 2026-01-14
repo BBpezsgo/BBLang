@@ -133,16 +133,7 @@ public sealed class Parser
     Parser(ImmutableArray<Token> tokens, Uri file, DiagnosticsCollection diagnostics, bool isExpression)
     {
         OriginalTokens = tokens;
-        Tokens = tokens
-            .Where(v => v.TokenType
-                is not TokenType.Comment
-                and not TokenType.CommentMultiline
-                and not TokenType.Whitespace
-                and not TokenType.LineBreak
-                and not TokenType.PreprocessArgument
-                and not TokenType.PreprocessIdentifier
-                and not TokenType.PreprocessSkipped)
-            .ToList();
+        Tokens = tokens.ToList();
         File = file;
         IsExpression = isExpression;
         Diagnostics = diagnostics;
@@ -2061,10 +2052,10 @@ public sealed class Parser
             }
         }
 
-        if (!ExpectOperator("]"))
-        { throw new SyntaxException("Unbalanced ]", bracketStart, File); }
+        if (!ExpectOperator("]", out Token? bracketEnd))
+        { throw new SyntaxException("Unbalanced `]`", bracketStart, File); }
 
-        attribute = new AttributeUsage(attributeT, parameters?.ToImmutableArray() ?? ImmutableArray<LiteralExpression>.Empty, File);
+        attribute = new AttributeUsage(attributeT, parameters?.ToImmutableArray() ?? ImmutableArray<LiteralExpression>.Empty, new TokenPair(bracketStart, bracketEnd), File);
         return true;
     }
     ImmutableArray<AttributeUsage> ExpectAttributes()
@@ -2251,6 +2242,10 @@ public sealed class Parser
     {
         while (CurrentToken is not null &&
                CurrentToken.TokenType is
+               TokenType.Whitespace or
+               TokenType.LineBreak or
+               TokenType.Comment or
+               TokenType.CommentMultiline or
                TokenType.PreprocessIdentifier or
                TokenType.PreprocessArgument or
                TokenType.PreprocessSkipped)

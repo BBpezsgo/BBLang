@@ -12,18 +12,21 @@ public class AttributeUsage :
 {
     public Token Identifier { get; }
     public ImmutableArray<LiteralExpression> Parameters { get; }
+    public TokenPair Brackets { get; }
     public Uri File { get; }
 
     public Position Position =>
         new Position(Parameters.As<IPositioned>().DefaultIfEmpty(Identifier))
-        .Union(Identifier);
+        .Union(Identifier)
+        .Union(Brackets);
 
     public Location Location => new(Position, File);
 
-    public AttributeUsage(Token identifier, ImmutableArray<LiteralExpression> parameters, Uri file)
+    public AttributeUsage(Token identifier, ImmutableArray<LiteralExpression> parameters, TokenPair brackets, Uri file)
     {
         Identifier = identifier;
         Parameters = parameters;
+        Brackets = brackets;
         File = file;
     }
 

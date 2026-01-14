@@ -5,7 +5,9 @@ public struct SinglePosition :
     IComparable<SinglePosition>,
     IComparable
 {
+    /// <summary>Zero-based</summary>
     public int Line;
+    /// <summary>Zero-based</summary>
     public int Character;
 
     public readonly bool IsUndefined => Line < 0 || Character < 0;
@@ -64,8 +66,8 @@ public struct SinglePosition :
     public static SinglePosition Max(SinglePosition a, SinglePosition b) => a > b ? a : b;
     public static SinglePosition Min(SinglePosition a, SinglePosition b) => a < b ? a : b;
 
-    public override readonly string ToString() => $"({Line + 1}:{Character})";
-    public readonly string ToStringMin() => $"{Line + 1}:{Character}";
+    public override readonly string ToString() => $"({ToStringMin()})";
+    public readonly string ToStringMin() => $"{Line + 1}:{Character + 1}";
 
     public override readonly bool Equals(object? obj) => obj is SinglePosition position && Equals(position);
     public readonly bool Equals(SinglePosition other) => Line == other.Line && Character == other.Character;
