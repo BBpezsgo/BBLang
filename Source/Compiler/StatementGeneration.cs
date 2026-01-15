@@ -1614,9 +1614,7 @@ public partial class StatementCompiler
                     success = false;
                     continue;
                 }
-                if (item is CompiledEmptyStatement) continue;
-                ImmutableArray<CompiledStatement> reduced = ReduceStatements(item, true);
-                res.AddRange(reduced);
+                res.AddRange(ReduceStatements(item, Diagnostics));
             }
             if (!success) return false;
 
@@ -1638,8 +1636,7 @@ public partial class StatementCompiler
                     success = false;
                     continue;
                 }
-                ImmutableArray<CompiledStatement> reduced = ReduceStatements(item, true);
-                res.AddRange(reduced);
+                res.AddRange(ReduceStatements(item, Diagnostics));
             }
             if (!success) return false;
         }
@@ -4411,16 +4408,14 @@ public partial class StatementCompiler
                 success = false;
                 continue;
             }
+
             if (Settings.IsExpression)
             {
                 res.Add(compiledStatement);
             }
             else
             {
-                if (compiledStatement is CompiledEmptyStatement) continue;
-
-                ImmutableArray<CompiledStatement> reduced = ReduceStatements(compiledStatement, true);
-                res.AddRange(reduced);
+                res.AddRange(ReduceStatements(compiledStatement, Diagnostics));
             }
         }
         if (!success)

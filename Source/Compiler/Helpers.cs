@@ -4647,27 +4647,33 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
     #endregion
 
-    static ImmutableArray<CompiledStatement> ReduceStatements<TStatement>(ImmutableArray<TStatement> statements, bool forceDiscardValue = false)
+    static ImmutableArray<CompiledStatement> ReduceStatements<TStatement>(ImmutableArray<TStatement> statements, DiagnosticsCollection diagnostics, bool didNotify = false)
         where TStatement : CompiledStatement
     {
         ImmutableArray<CompiledStatement>.Builder result = ImmutableArray.CreateBuilder<CompiledStatement>();
 
         foreach (TStatement statement in statements)
         {
-            result.AddRange(ReduceStatements(statement, forceDiscardValue));
+            result.AddRange(ReduceStatements(statement, diagnostics, didNotify));
         }
 
         return result.ToImmutable();
     }
 
-    static ImmutableArray<CompiledStatement> ReduceStatements(CompiledStatement statement, bool forceDiscardValue = false)
+    static ImmutableArray<CompiledStatement> ReduceStatements(CompiledStatement statement, DiagnosticsCollection diagnostics, bool didNotify = false)
     {
+        if (statement is CompiledEmptyStatement)
+        {
+            return ImmutableArray<CompiledStatement>.Empty;
+        }
+
         if (statement is CompiledBlock compiledBlock)
         {
-            if (!compiledBlock.Statements.Any(v => v is CompiledVariableDefinition or CompiledLabelDeclaration))
+            if (!compiledBlock.Statements.Any(v => v is CompiledVariableDefinition))
             {
-                return ReduceStatements(compiledBlock.Statements);
+                return ReduceStatements(compiledBlock.Statements, diagnostics, didNotify);
             }
+            return ImmutableArray.Create(statement);
         }
 
         if (statement is not CompiledExpression statementWithValue)
@@ -4675,41 +4681,56 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return ImmutableArray.Create(statement);
         }
 
-        if (statementWithValue.SaveValue && !forceDiscardValue)
+        if (statementWithValue
+            is CompiledRuntimeCall
+            or CompiledFunctionCall
+            or CompiledExternalFunctionCall)
         {
             return ImmutableArray.Create(statement);
         }
 
+        if (statementWithValue.SaveValue)
+        {
+            return ImmutableArray.Create(statement);
+        }
+
+        if (!didNotify)
+        {
+            diagnostics.Add(Diagnostic.Warning($"Trimming unnecessary expression", statementWithValue));
+            didNotify = true;
+        }
+
+        if (statementWithValue
+            is CompiledSizeof
+            or CompiledConstantValue
+            or CompiledRegisterAccess
+            or CompiledVariableAccess
+            or CompiledExpressionVariableAccess
+            or CompiledParameterAccess
+            or CompiledFunctionReference
+            or CompiledLabelReference
+            or CompiledFieldAccess
+            or CompiledStackAllocation
+            or CompiledString
+            or CompiledList
+            or CompiledStackString)
+        {
+            return ImmutableArray<CompiledStatement>.Empty;
+        }
+
         return statementWithValue switch
         {
-            CompiledArgument v => ReduceStatements(v.Value, true),
-            CompiledBinaryOperatorCall v => ReduceStatements(v.Left, true).AddRange(ReduceStatements(v.Right, true)),
-            CompiledUnaryOperatorCall v => ReduceStatements(v.Left, true),
-            CompiledElementAccess v => ReduceStatements(v.Base, true).AddRange(ReduceStatements(v.Index, true)),
-            CompiledGetReference v => ReduceStatements(v.Of, true),
-            CompiledDereference v => ReduceStatements(v.Address, true),
-            CompiledConstructorCall v => ReduceStatements(v.Arguments, true),
-            CompiledCast v => ReduceStatements(v.Value, true),
-            CompiledReinterpretation v => ReduceStatements(v.Value, true),
-            CompiledDummyExpression v => ReduceStatements(v.Statement),
-
-            CompiledRuntimeCall or
-            CompiledFunctionCall or
-            CompiledExternalFunctionCall => ImmutableArray.Create(statement),
-
-            CompiledSizeof or
-            CompiledConstantValue or
-            CompiledRegisterAccess or
-            CompiledVariableAccess or
-            CompiledExpressionVariableAccess or
-            CompiledParameterAccess or
-            CompiledFunctionReference or
-            CompiledLabelReference or
-            CompiledFieldAccess or
-            CompiledStackAllocation or
-            CompiledString or
-            CompiledStackString => ImmutableArray<CompiledStatement>.Empty,
-            _ => throw new NotImplementedException(),
+            CompiledArgument v => ReduceStatements(v.Value, diagnostics, didNotify),
+            CompiledBinaryOperatorCall v => ReduceStatements(v.Left, diagnostics, didNotify).AddRange(ReduceStatements(v.Right, diagnostics, didNotify)),
+            CompiledUnaryOperatorCall v => ReduceStatements(v.Left, diagnostics, didNotify),
+            CompiledElementAccess v => ReduceStatements(v.Base, diagnostics, didNotify).AddRange(ReduceStatements(v.Index, diagnostics, didNotify)),
+            CompiledGetReference v => ReduceStatements(v.Of, diagnostics, didNotify),
+            CompiledDereference v => ReduceStatements(v.Address, diagnostics, didNotify),
+            CompiledConstructorCall v => ReduceStatements(v.Arguments, diagnostics, didNotify),
+            CompiledCast v => ReduceStatements(v.Value, diagnostics, didNotify),
+            CompiledReinterpretation v => ReduceStatements(v.Value, diagnostics, didNotify),
+            CompiledDummyExpression v => ReduceStatements(v.Statement, diagnostics, didNotify),
+            _ => throw new NotImplementedException(statementWithValue.GetType().Name),
         };
     }
 
