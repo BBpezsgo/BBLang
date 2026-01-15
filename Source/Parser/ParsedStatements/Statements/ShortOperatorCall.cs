@@ -60,28 +60,14 @@ public class ShortOperatorCall : AssignmentStatement, IReadable, IReferenceableT
 
     public override SimpleAssignmentStatement ToAssignment()
     {
-        BinaryOperatorCallExpression operatorCall = GetOperatorCall();
+        LiteralExpression one = LiteralExpression.CreateAnonymous(LiteralType.Integer, "1", Operator.Position, File);
+        BinaryOperatorCallExpression operatorCall = Operator.Content switch
+        {
+            "++" => new BinaryOperatorCallExpression(Token.CreateAnonymous("+", TokenType.Operator, Operator.Position), ArgumentExpression.Wrap(Expression), ArgumentExpression.Wrap(one), File),
+            "--" => new BinaryOperatorCallExpression(Token.CreateAnonymous("-", TokenType.Operator, Operator.Position), ArgumentExpression.Wrap(Expression), ArgumentExpression.Wrap(one), File),
+            _ => throw new NotImplementedException(),
+        };
         Token assignmentToken = Token.CreateAnonymous("=", TokenType.Operator, Operator.Position);
         return new SimpleAssignmentStatement(assignmentToken, Expression, operatorCall, File);
-    }
-
-    public BinaryOperatorCallExpression GetOperatorCall()
-    {
-        switch (Operator.Content)
-        {
-            case "++":
-            {
-                LiteralExpression one = LiteralExpression.CreateAnonymous(LiteralType.Integer, "1", Operator.Position, File);
-                return new BinaryOperatorCallExpression(Token.CreateAnonymous("+", TokenType.Operator, Operator.Position), Expression, one, File);
-            }
-
-            case "--":
-            {
-                LiteralExpression one = LiteralExpression.CreateAnonymous(LiteralType.Integer, "1", Operator.Position, File);
-                return new BinaryOperatorCallExpression(Token.CreateAnonymous("-", TokenType.Operator, Operator.Position), Expression, one, File);
-            }
-
-            default: throw new NotImplementedException();
-        }
     }
 }

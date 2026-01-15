@@ -30,7 +30,7 @@ public class LanguageException : Exception
 
     public override string ToString()
     {
-        StringBuilder result = new(LanguageException.Format(Message, Position, File));
+        StringBuilder result = new(Format(Message, Position, File));
 
         if (InnerException != null)
         { result.Append($" {InnerException}"); }
@@ -39,7 +39,7 @@ public class LanguageException : Exception
     }
 
     public static string Format(string? message, Location location)
-        => LanguageException.Format(message, location.Position, location.File);
+        => Format(message, location.Position, location.File);
 
     public static string Format(string? message, Position position, Uri? file)
     {

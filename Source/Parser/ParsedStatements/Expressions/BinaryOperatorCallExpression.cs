@@ -31,20 +31,20 @@ public class BinaryOperatorCallExpression : Expression, IReadable, IReferenceabl
     #endregion
 
     public Token Operator { get; }
-    public Expression Left { get; }
+    public ArgumentExpression Left { get; }
     /// <summary>
     /// Set by the <see cref="Parser"/>
     /// </summary>
-    public Expression Right { get; set; }
+    public ArgumentExpression Right { get; set; }
     public CompiledOperatorDefinition? Reference { get; set; }
 
     public override Position Position => new(Operator, Left, Right);
-    public ImmutableArray<Expression> Arguments => ImmutableArray.Create(Left, Right);
+    public ImmutableArray<ArgumentExpression> Arguments => ImmutableArray.Create(Left, Right);
 
     public BinaryOperatorCallExpression(
         Token op,
-        Expression left,
-        Expression right,
+        ArgumentExpression left,
+        ArgumentExpression right,
         Uri file) : base(file)
     {
         Operator = op;

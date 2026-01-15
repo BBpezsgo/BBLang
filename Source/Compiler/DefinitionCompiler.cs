@@ -535,6 +535,7 @@ public partial class StatementCompiler
                 TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(@struct.Identifier.Content, method.File, @struct.Template?.Parameters), method.File),
                 Token.CreateAnonymous(StatementKeywords.This),
                 null,
+                method.File,
                 method
             ));
 
@@ -662,7 +663,8 @@ public partial class StatementCompiler
                     ImmutableArray.Create<Token>(Token.CreateAnonymous(ModifierKeywords.This)),
                     new TypeInstancePointer(new TypeInstanceSimple(Token.CreateAnonymous(@struct.Identifier.Content), @struct.File), Token.CreateAnonymous("*"), @struct.File),
                     Token.CreateAnonymous("this"),
-                    null
+                    null,
+                    @struct.File
                 )
             ),
             new CompiledParameter(
@@ -682,7 +684,8 @@ public partial class StatementCompiler
                         @struct.File,
                         TokenPair.CreateAnonymous("(", ")")),
                     Token.CreateAnonymous("func"),
-                    null
+                    null,
+                    @struct.File
                 )
             ),
             new CompiledParameter(
@@ -691,7 +694,8 @@ public partial class StatementCompiler
                     ImmutableArray<Token>.Empty,
                     new TypeInstancePointer(new TypeInstanceSimple(Token.CreateAnonymous(TypeKeywords.Any), @struct.File), Token.CreateAnonymous("*"), @struct.File),
                     Token.CreateAnonymous("state"),
-                    null
+                    null,
+                    @struct.File
                 )
             )
         );
@@ -879,6 +883,7 @@ public partial class StatementCompiler
                         TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, method.File, compiledStruct.Template?.Parameters),
                         Token.CreateAnonymous(StatementKeywords.This),
                         null,
+                        method.File,
                         method
                     ));
 
@@ -904,6 +909,7 @@ public partial class StatementCompiler
                         TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, method.File, compiledStruct.Template?.Parameters), method.File),
                         Token.CreateAnonymous(StatementKeywords.This),
                         null,
+                        method.File,
                         method
                     ));
 
@@ -967,6 +973,7 @@ public partial class StatementCompiler
                     TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, method.File, compiledStruct.Template?.Parameters), method.File),
                     Token.CreateAnonymous(StatementKeywords.This),
                     null,
+                    method.File,
                     method
                 ));
 
@@ -1013,6 +1020,7 @@ public partial class StatementCompiler
                     TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, constructor.File, compiledStruct.Template?.Parameters), constructor.File),
                     Token.CreateAnonymous(StatementKeywords.This),
                     null,
+                    constructor.File,
                     constructor
                 ));
 

@@ -14,7 +14,7 @@ public class Token :
     public Position Position { get; }
     public TokenAnalyzedType AnalyzedType { get; set; }
 
-    Token(TokenType type, string content, bool isAnonymous, Position position)
+    protected Token(TokenType type, string content, bool isAnonymous, Position position)
     {
         TokenType = type;
         Content = content;

@@ -1876,7 +1876,7 @@ public partial class StatementCompiler
 
             SetStatementType(@operator, operatorDefinition.Type);
 
-            if (!CompileFunctionCall(@operator, @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap), result, out compiledStatement)) return false;
+            if (!CompileFunctionCall(@operator, @operator.Arguments, result, out compiledStatement)) return false;
 
             return true;
         }
@@ -1888,11 +1888,14 @@ public partial class StatementCompiler
                 expectedType = null;
             }
 
-            Expression left = @operator.Left;
-            Expression right = @operator.Right;
+            ArgumentExpression left = @operator.Left;
+            ArgumentExpression right = @operator.Right;
 
-            if (!CompileExpression(left, out CompiledExpression? compiledLeft, expectedType)) return false;
-            if (!CompileExpression(right, out CompiledExpression? compiledRight, expectedType)) return false;
+            if (left.Modifier is not null) Diagnostics.Add(Diagnostic.Warning($"Invalid modifier `{left.Modifier}`", left.Modifier, left.File));
+            if (right.Modifier is not null) Diagnostics.Add(Diagnostic.Warning($"Invalid modifier `{right.Modifier}`", right.Modifier, right.File));
+
+            if (!CompileExpression(left.Value, out CompiledExpression? compiledLeft, expectedType)) return false;
+            if (!CompileExpression(right.Value, out CompiledExpression? compiledRight, expectedType)) return false;
 
             GeneralType leftType = compiledLeft.Type;
             GeneralType rightType = compiledRight.Type;
@@ -1919,7 +1922,7 @@ public partial class StatementCompiler
             leftType = BuiltinType.CreateNumeric(leftNType, leftBitWidth);
             rightType = BuiltinType.CreateNumeric(rightNType, rightBitWidth);
 
-            if (!CompileExpression(left, out compiledLeft, leftType)) return false;
+            if (!CompileExpression(left.Value, out compiledLeft, leftType)) return false;
 
             if (leftNType != NumericType.Float &&
                 rightNType == NumericType.Float)
@@ -1929,7 +1932,7 @@ public partial class StatementCompiler
                 leftNType = NumericType.Float;
             }
 
-            if (!CompileExpression(right, out compiledRight, rightType)) return false;
+            if (!CompileExpression(right.Value, out compiledRight, rightType)) return false;
 
             if (leftType.SameAs(BasicType.F32) &&
                 !rightType.SameAs(BasicType.F32))
@@ -2428,7 +2431,8 @@ public partial class StatementCompiler
                     ImmutableArray<Token>.Empty,
                     null!,
                     Token.CreateAnonymous("closure"),
-                    null
+                    null,
+                    lambdaStatement.File
                 )));
 
                 int closureSize = 0;
@@ -4153,7 +4157,7 @@ public partial class StatementCompiler
 
         if (function.Block is null)
         {
-            //Diagnostics.Add(Diagnostic.Critical($"Function \"{function.ToReadable()}\" does not have a body", function));
+            Diagnostics.Add(Diagnostic.Critical($"Function \"{function.ToReadable()}\" does not have a body", function));
             goto end;
         }
 
@@ -4185,7 +4189,8 @@ public partial class StatementCompiler
                     ImmutableArray.Create<Token>(Token.CreateAnonymous(ModifierKeywords.This)),
                     new TypeInstancePointer(new TypeInstanceSimple(Token.CreateAnonymous(GetGeneratorState(function).Struct.Identifier.Content), function.File), Token.CreateAnonymous("*"), function.File),
                     Token.CreateAnonymous("this"),
-                    null
+                    null,
+                    function.File
                 )
             ));
             paramIndex++;

@@ -221,7 +221,7 @@ public sealed class Parser
 
         SkipCrapTokens();
 
-        if (CurrentToken == null) throw new SyntaxException($"Expected url after keyword \"{DeclarationKeywords.Using}\"", keyword.Position.After(), File);
+        if (CurrentToken == null) throw new SyntaxException($"Expected url after keyword `{DeclarationKeywords.Using}`", keyword.Position.After(), File);
 
         keyword.AnalyzedType = TokenAnalyzedType.Keyword;
 
@@ -247,21 +247,15 @@ public sealed class Parser
 
         if (tokens.Count == 0)
         {
-            if (!ExpectOperator(";"))
-            {
-                throw new SyntaxException($"Expected library name after \"{DeclarationKeywords.Using}\"", keyword, File);
-            }
-            else
-            {
-                Diagnostics.Add(Diagnostic.Error($"Expected library name after \"{DeclarationKeywords.Using}\"", keyword, File));
-            }
-            return false;
+            Diagnostics.Add(Diagnostic.Error($"Expected library name after `{DeclarationKeywords.Using}`", keyword, File));
+            usingDefinition = new UsingDefinition(keyword, ImmutableArray<Token>.Empty, File);
+            return true;
         }
 
         usingDefinition = new UsingDefinition(keyword, tokens.ToImmutableArray(), File);
 
         if (!ExpectOperator(";"))
-        { Diagnostics.Add(Diagnostic.Warning($"You forgot the semicolon (after \"{DeclarationKeywords.Using}\")", usingDefinition.Position.After(), File)); }
+        { Diagnostics.Add(Diagnostic.Warning($"You forgot the semicolon", usingDefinition.Position.After(), File)); }
 
         return true;
     }
@@ -290,7 +284,7 @@ public sealed class Parser
         { TopLevelStatements.Add(statement); }
         else
         {
-            Diagnostics.Add(Diagnostic.Error($"Expected something but not \"{CurrentToken}\"", CurrentToken, File).WithSuberrors(diagnostics.Compile()));
+            Diagnostics.Add(Diagnostic.Error($"Expected something but not `{CurrentToken}`", CurrentToken, File).WithSuberrors(diagnostics.Compile()));
             return false;
         }
 
@@ -394,7 +388,7 @@ public sealed class Parser
 
         if (!ExpectIdentifier(out Token? identifier))
         {
-            diagnostic.Add(1, Diagnostic.Critical($"Expected identifier after keyword \"{keyword}\"", keyword.Position.After(), File));
+            diagnostic.Add(1, Diagnostic.Critical($"Expected identifier after keyword `{keyword}`", keyword.Position.After(), File));
             savepoint.Restore();
             return false;
         }
@@ -437,31 +431,42 @@ public sealed class Parser
             return false;
         }
 
+        if (ExpectOperator(">", out Token? endBracket))
+        {
+            templateInfo = new TemplateInfo(new TokenPair(startBracket, endBracket), ImmutableArray<Token>.Empty);
+            Diagnostics.Add(Diagnostic.Warning($"Empty template", templateInfo, File));
+            return true;
+        }
+
         List<Token> parameters = new();
+        Position lastPosition = startBracket.Position;
 
-        Token? endBracket;
-
-        bool expectParameter = false;
-        while (!ExpectOperator(">", out endBracket) || expectParameter)
+        while (true)
         {
             if (!ExpectIdentifier(out Token? parameter))
-            { throw new SyntaxException("Expected identifier or \">\"", PreviousToken!.Position.After(), File); }
+            {
+                Diagnostics.Add(Diagnostic.Error("Expected identifier or `>`", lastPosition.After(), File));
+                parameter = new MissingToken(TokenType.Identifier, lastPosition.After());
+            }
 
             parameter.AnalyzedType = TokenAnalyzedType.TypeParameter;
-
             parameters.Add(parameter);
 
             if (ExpectOperator(">", out endBracket))
             { break; }
 
-            if (!ExpectOperator(","))
-            { throw new SyntaxException("Expected \",\" or \">\"", parameter.Position.After(), File); }
-            else
-            { expectParameter = true; }
+            if (!ExpectOperator(",", out Token? comma))
+            {
+                throw new SyntaxException("Expected `,` or `>`", parameter.Position.After(), File);
+                Diagnostics.Add(Diagnostic.Error("Expected `,` or `>`", parameter.Position.After(), File));
+                endBracket = new MissingToken(TokenType.Operator, parameter.Position.After(), ">");
+                break;
+            }
+
+            lastPosition = comma.Position;
         }
 
-        templateInfo = new(new TokenPair(startBracket, endBracket), parameters.ToImmutableArray());
-
+        templateInfo = new TemplateInfo(new TokenPair(startBracket, endBracket), parameters.ToImmutableArray());
         return true;
     }
 
@@ -639,18 +644,16 @@ public sealed class Parser
 
         if (!ExpectIdentifier(out Token? possibleStructName))
         {
-            diagnostic.Add(1, Diagnostic.Critical($"Expected struct identifier after keyword `{keyword}`", keyword.Position.After(), File));
-            savepoint.Restore();
-            return false;
+            possibleStructName = new MissingToken(TokenType.Identifier, keyword.Position.After());
+            Diagnostics.Add(Diagnostic.Critical($"Expected identifier after keyword `{keyword}`", possibleStructName, File));
         }
 
         ExpectTemplateInfo(out TemplateInfo? templateInfo);
 
         if (!ExpectOperator("{", out Token? bracketStart))
         {
-            diagnostic.Add(2, Diagnostic.Critical($"Expected `{{` after struct identifier `{keyword}`", possibleStructName.Position.After(), File));
-            savepoint.Restore();
-            return false;
+            bracketStart = new MissingToken(TokenType.Operator, possibleStructName.Position.After(), "{");
+            Diagnostics.Add(Diagnostic.Critical($"Expected `{{` after struct identifier `{keyword}`", bracketStart, File));
         }
 
         possibleStructName.AnalyzedType = TokenAnalyzedType.Struct;
@@ -671,7 +674,13 @@ public sealed class Parser
             {
                 fields.Add(field);
                 if (ExpectOperator(";", out Token? semicolon))
-                { field.Semicolon = semicolon; }
+                {
+                    field.Semicolon = semicolon;
+                }
+                else
+                {
+                    Diagnostics.Add(Diagnostic.Warning($"You forgot the `;`", field.Position.After(), File));
+                }
             }
             else if (ExpectFunctionDefinition(out FunctionDefinition? methodDefinition, diagnostics))
             {
@@ -692,7 +701,8 @@ public sealed class Parser
             else
             {
                 Diagnostics.Add(Diagnostic.Critical("Expected field definition or \"}\"", CurrentToken?.Position ?? PreviousToken!.Position.After(), File).WithSuberrors(diagnostics.Compile()));
-                return false;
+                bracketEnd = new MissingToken(TokenType.Operator, PreviousToken!.Position.After(), "}");
+                break;
             }
 
             endlessSafe.Step();
@@ -733,28 +743,44 @@ public sealed class Parser
             return false;
         }
 
-        List<ParameterDefinition> parameters = new();
+        if (ExpectOperator(")", out Token? bracketEnd))
+        {
+            parameterDefinitions = new ParameterDefinitionCollection(ImmutableArray<ParameterDefinition>.Empty, new TokenPair(bracketStart, bracketEnd));
+            return true;
+        }
 
-        bool expectParameter = false;
+        List<ParameterDefinition> parameters = new();
+        Position lastPosition = bracketStart.Position;
         bool expectOptionalParameters = false;
-        Token? bracketEnd;
-        while (!ExpectOperator(")", out bracketEnd) || expectParameter)
+
+        while (true)
         {
             ImmutableArray<Token> parameterModifiers = ExpectModifiers();
-            CheckParameterModifiers(parameterModifiers, parameters.Count, allowedParameterModifiers);
+
+            foreach (Token modifier in parameterModifiers)
+            {
+                if (!allowedParameterModifiers.Contains(modifier.Content))
+                { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` not valid in the current context", modifier, File)); }
+                else if (modifier.Content == ModifierKeywords.This && parameters.Count > 0)
+                { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` only valid on the first parameter", modifier, File)); }
+            }
 
             if (!ExpectType(AllowedType.FunctionPointer, out TypeInstance? parameterType))
             {
-                diagnostic.Add(1, Diagnostic.Error("Expected parameter type", CurrentLocation, false));
+                parameterType = new MissingTypeInstance(lastPosition.After(), File);
+                diagnostic.Add(1, Diagnostic.Error("Expected parameter type", parameterType, false));
                 savepoint.Restore();
                 return false;
+                //Diagnostics.Add(Diagnostic.Error("Expected parameter type", parameterType));
             }
 
             if (!ExpectIdentifier(out Token? parameterIdentifier))
             {
-                diagnostic.Add(1, Diagnostic.Error("Expected a parameter name", CurrentLocation, false));
+                parameterIdentifier = new MissingToken(TokenType.Identifier, parameterType.Position.After());
+                diagnostic.Add(1, Diagnostic.Error("Expected a parameter name", parameterIdentifier, File, false));
                 savepoint.Restore();
                 return false;
+                //Diagnostics.Add(Diagnostic.Error("Expected a parameter name", parameterIdentifier, File));
             }
 
             parameterIdentifier.AnalyzedType = TokenAnalyzedType.ParameterName;
@@ -762,40 +788,38 @@ public sealed class Parser
             Expression? defaultValue = null;
             if (ExpectOperator("=", out Token? assignmentOperator))
             {
-                if (!allowDefaultValues)
-                {
-                    diagnostic.Add(2, Diagnostic.Error("Default parameter values are not valid in the current context", assignmentOperator, File, false));
-                    savepoint.Restore();
-                    return false;
-                }
                 if (!ExpectExpression(out defaultValue))
                 {
-                    diagnostic.Add(2, Diagnostic.Error("Expected expression after \"=\" in parameter definition", assignmentOperator, File, false));
-                    savepoint.Restore();
-                    return false;
+                    defaultValue = new MissingExpression(assignmentOperator.Position.After(), File);
+                    Diagnostics.Add(Diagnostic.Error("Expected expression", defaultValue));
                 }
+
+                if (!allowDefaultValues)
+                {
+                    Diagnostics.Add(Diagnostic.Error("Default parameter values are not valid in the current context", defaultValue));
+                }
+
                 expectOptionalParameters = true;
             }
             else if (expectOptionalParameters)
             {
-                diagnostic.Add(2, Diagnostic.Error("Parameters without default value after a parameter that has one is not supported", parameterIdentifier.Position.After(), File));
-                savepoint.Restore();
-                return false;
+                Diagnostics.Add(Diagnostic.Error("Parameters without default value after a parameter that has one is not supported", parameterIdentifier.Position.After(), File));
             }
 
-            parameters.Add(new ParameterDefinition(parameterModifiers, parameterType, parameterIdentifier, defaultValue));
+            ParameterDefinition parameter = new(parameterModifiers, parameterType, parameterIdentifier, defaultValue, File);
+            parameters.Add(parameter);
 
             if (ExpectOperator(")", out bracketEnd))
             { break; }
 
             if (!ExpectOperator(","))
             {
-                diagnostic.Add(2, Diagnostic.Error("Expected \",\" or \")\"", PreviousToken!.Position.After(), File, false));
+                diagnostic.Add(2, Diagnostic.Error("Expected `,` or `)`", parameter.Position.After(), File, false));
                 savepoint.Restore();
                 return false;
             }
-            else
-            { expectParameter = true; }
+
+            lastPosition = parameter.Position;
         }
 
         parameterDefinitions = new ParameterDefinitionCollection(parameters.ToImmutableArray(), new TokenPair(bracketStart, bracketEnd));
@@ -862,37 +886,46 @@ public sealed class Parser
             return false;
         }
 
-        ImmutableArray<Expression>.Builder? values = null;
+        if (ExpectOperator("]", out Token? bracketEnd))
+        {
+            listValue = new ListExpression(ImmutableArray<Expression>.Empty, new TokenPair(bracketStart, bracketEnd), File);
+            return true;
+        }
 
-        Token? bracketEnd;
+        ImmutableArray<Expression>.Builder values = ImmutableArray.CreateBuilder<Expression>();
         EndlessCheck endlessSafe = new();
         Position lastPosition = bracketStart.Position;
+
         while (true)
         {
-            if (ExpectExpression(out Expression? v))
-            {
-                values ??= ImmutableArray.CreateBuilder<Expression>();
-                values.Add(v);
-                lastPosition = v.Position;
+            if (ExpectOperator("]", out bracketEnd))
+            { break; }
 
-                if (!ExpectOperator(","))
-                {
-                    if (!ExpectOperator("]", out bracketEnd))
-                    { throw new SyntaxException("Unbalanced \"[\"", bracketStart, File); }
-                    break;
-                }
+            if (!ExpectExpression(out Expression? value))
+            {
+                value = new MissingExpression(lastPosition.After(), File);
+                Diagnostics.Add(Diagnostic.Error("Expected expression or `]`", value));
             }
-            else
+
+            values.Add(value);
+            lastPosition = value.Position;
+
+            if (!ExpectOperator(",", out Token? comma))
             {
                 if (!ExpectOperator("]", out bracketEnd))
-                { throw new SyntaxException("Unbalanced \"[\"", bracketStart, File); }
+                {
+                    bracketEnd = new MissingToken(TokenType.Operator, lastPosition.After(), "]");
+                    Diagnostics.Add(Diagnostic.Error("Expected `,` or `]`", bracketEnd, File));
+                }
                 break;
             }
+
+            lastPosition = comma.Position;
 
             endlessSafe.Step();
         }
 
-        listValue = new ListExpression(values?.DrainToImmutable() ?? ImmutableArray<Expression>.Empty, new TokenPair(bracketStart, bracketEnd), File);
+        listValue = new ListExpression(values.DrainToImmutable(), new TokenPair(bracketStart, bracketEnd), File);
         return true;
     }
 
@@ -932,7 +965,7 @@ public sealed class Parser
         {
             if (v.Length < 3)
             {
-                Diagnostics.Add(Diagnostic.Error($"Invalid hex literal \"{CurrentToken}\"", CurrentToken, File));
+                Diagnostics.Add(Diagnostic.Error($"Invalid hex literal `{CurrentToken}`", CurrentToken, File));
                 v = "0";
             }
             else
@@ -943,7 +976,7 @@ public sealed class Parser
 
             if (!int.TryParse(v, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int value))
             {
-                Diagnostics.Add(Diagnostic.Error($"Invalid hex number \"{v}\"", CurrentToken.Position[2..], File));
+                Diagnostics.Add(Diagnostic.Error($"Invalid hex number `{v}`", CurrentToken.Position[2..], File));
                 value = 0;
             }
 
@@ -959,7 +992,7 @@ public sealed class Parser
         {
             if (v.Length < 3)
             {
-                Diagnostics.Add(Diagnostic.Error($"Invalid binary literal \"{CurrentToken}\"", CurrentToken, File));
+                Diagnostics.Add(Diagnostic.Error($"Invalid binary literal `{CurrentToken}`", CurrentToken, File));
                 v = "0";
             }
             else
@@ -970,7 +1003,7 @@ public sealed class Parser
 
             // if (!int.TryParse(v, NumberStyles.BinaryNumber, CultureInfo.InvariantCulture, out int value))
             // {
-            //     Diagnostics.Add(Diagnostic.Error($"Invalid binary number \"{v}\"", CurrentToken.Position[2..], File));
+            //     Diagnostics.Add(Diagnostic.Error($"Invalid binary number `{v}`", CurrentToken.Position[2..], File));
             //     value = 0;
             // }
             int value = Convert.ToInt32(v, 2);
@@ -1028,7 +1061,10 @@ public sealed class Parser
         }
 
         if (!ExpectOperator("]", out Token? bracketEnd))
-        { throw new SyntaxException("Unbalanced [", bracketStart, File); }
+        {
+            bracketEnd = new MissingToken(TokenType.Operator, expression.Position.After(), "]");
+            Diagnostics.Add(Diagnostic.Error("Expected `]`", bracketEnd, File));
+        }
 
         // fixme
         statement = new IndexCallExpression(prevStatement, ArgumentExpression.Wrap(expression), new TokenPair(bracketStart, bracketEnd), File);
@@ -1040,19 +1076,22 @@ public sealed class Parser
         ParseRestorePoint savepoint = SavePoint();
         expressionInBrackets = null;
 
-        if (!ExpectOperator("(", out Token? bracketStart1))
+        if (!ExpectOperator("(", out Token? bracketStart))
         {
             savepoint.Restore();
             return false;
         }
 
         if (!ExpectExpression(out Expression? expression))
-        { throw new SyntaxException("Expected expression after \"(\"", bracketStart1.Position.After(), File); }
+        { throw new SyntaxException("Expected expression after \"(\"", bracketStart.Position.After(), File); }
 
-        if (!ExpectOperator(")", out Token? bracketEnd1))
-        { throw new SyntaxException("Unbalanced \"(\"", bracketStart1, File); }
+        if (!ExpectOperator(")", out Token? bracketEnd))
+        {
+            bracketEnd = new MissingToken(TokenType.Operator, expression.Position.After(), ")");
+            Diagnostics.Add(Diagnostic.Error("Expected `)`", bracketEnd, File));
+        }
 
-        expression.SurroundingBrackets = new TokenPair(bracketStart1, bracketEnd1);
+        expression.SurroundingBrackets = new TokenPair(bracketStart, bracketEnd);
 
         expressionInBrackets = expression;
         return true;
@@ -1072,7 +1111,10 @@ public sealed class Parser
         keywordNew.AnalyzedType = TokenAnalyzedType.Keyword;
 
         if (!ExpectType(AllowedType.None, out TypeInstance? instanceTypeName))
-        { throw new SyntaxException($"Expected instance constructor after keyword \"{StatementKeywords.New}\"", keywordNew, File); }
+        {
+            instanceTypeName = new MissingTypeInstance(keywordNew.Position.After(), File);
+            Diagnostics.Add(Diagnostic.Error($"Expected instance constructor after keyword `{StatementKeywords.New}`", instanceTypeName));
+        }
 
         if (ExpectArguments(out ArgumentListExpression? argumentList))
         {
@@ -1099,12 +1141,13 @@ public sealed class Parser
 
         if (!ExpectIdentifier(out Token? fieldName))
         {
+            fieldName = new MissingToken(TokenType.Identifier, tokenDot.Position.After());
             fieldAccessor = new FieldExpression(
                 prevStatement,
-                new MissingIdentifierExpression(Token.CreateAnonymous(string.Empty, TokenType.Identifier, tokenDot.Position.After()), File),
+                new MissingIdentifierExpression(fieldName, File),
                 File
             );
-            Diagnostics.Add(Diagnostic.Critical("Expected a symbol after `.`", tokenDot.Position.After(), File));
+            Diagnostics.Add(Diagnostic.Critical("Expected a symbol after `.`", fieldName, File));
             return true;
         }
 
@@ -1128,9 +1171,60 @@ public sealed class Parser
         }
 
         if (!ExpectType(AllowedType.StackArrayWithoutLength, out TypeInstance? type))
-        { throw new SyntaxException($"Expected type after keyword \"{keyword}\"", keyword.Position.After(), File); }
+        {
+            type = new MissingTypeInstance(keyword.Position.After(), File);
+            Diagnostics.Add(Diagnostic.Error($"Expected type after keyword `{keyword}`", type));
+        }
 
         basicTypeCast = new ReinterpretExpression(prevStatement, keyword, type, File);
+        return true;
+    }
+
+    bool ExpectIdentifierExpression([NotNullWhen(true)] out IdentifierExpression? expression)
+    {
+        ParseRestorePoint savepoint = SavePoint();
+        expression = null;
+
+        if (!ExpectIdentifier(out Token? simpleIdentifier))
+        {
+            savepoint.Restore();
+            return false;
+        }
+
+        if (simpleIdentifier.Content
+            is StatementKeywords.This
+            or StatementKeywords.Sizeof)
+        {
+            simpleIdentifier.AnalyzedType = TokenAnalyzedType.Keyword;
+            expression = new IdentifierExpression(simpleIdentifier, File);
+            return true;
+        }
+
+        if (StatementKeywords.List.Contains(simpleIdentifier.Content))
+        {
+            savepoint.Restore();
+            return false;
+        }
+
+        if (ProtectionKeywords.List.Contains(simpleIdentifier.Content))
+        {
+            savepoint.Restore();
+            return false;
+        }
+
+        if (ModifierKeywords.List.Contains(simpleIdentifier.Content))
+        {
+            savepoint.Restore();
+            return false;
+        }
+
+        if (DeclarationKeywords.List.Contains(simpleIdentifier.Content))
+        {
+            savepoint.Restore();
+            return false;
+        }
+
+        expression = new IdentifierExpression(simpleIdentifier, File);
         return true;
     }
 
@@ -1170,14 +1264,9 @@ public sealed class Parser
         {
             statementWithValue = pointer;
         }
-        else if (ExpectIdentifier(out Token? simpleIdentifier))
+        else if (ExpectIdentifierExpression(out IdentifierExpression? identifierExpression))
         {
-            IdentifierExpression identifierStatement = new(simpleIdentifier, File);
-
-            if (simpleIdentifier.Content == StatementKeywords.This)
-            { simpleIdentifier.AnalyzedType = TokenAnalyzedType.Keyword; }
-
-            statementWithValue = identifierStatement;
+            statementWithValue = identifierExpression;
         }
 
         if (statementWithValue == null)
@@ -1294,22 +1383,22 @@ public sealed class Parser
 
     void SetStatementThings(Statement statement)
     {
-        if (statement == null)
-        {
-            if (CurrentToken != null)
-            { throw new SyntaxException($"Unknown statement null", CurrentToken, File); }
-            else
-            { throw new SyntaxException($"Unknown statement null", Position.UnknownPosition, File); }
-        }
-
-        if (statement is LiteralExpression)
-        { throw new SyntaxException($"Unexpected kind of statement \"{statement.GetType().Name}\"", statement, File); }
-
-        if (statement is IdentifierExpression)
-        { throw new SyntaxException($"Unexpected kind of statement \"{statement.GetType().Name}\"", statement, File); }
-
-        if (statement is NewInstanceExpression)
-        { throw new SyntaxException($"Unexpected kind of statement \"{statement.GetType().Name}\"", statement, File); }
+        if (statement
+            is LiteralExpression
+            or IdentifierExpression
+            or NewInstanceExpression
+            or ConstructorCallExpression
+            or BinaryOperatorCallExpression
+            or UnaryOperatorCallExpression
+            or IndexCallExpression
+            or FieldExpression
+            or DereferenceExpression
+            or GetReferenceExpression
+            or LambdaExpression
+            or ListExpression
+            or ManagedTypeCastExpression
+            or ReinterpretExpression)
+        { Diagnostics.Add(Diagnostic.Warning("Unexpected expression", statement)); }
 
         if (statement is Expression statementWithReturnValue)
         { statementWithReturnValue.SaveValue = false; }
@@ -1327,18 +1416,20 @@ public sealed class Parser
         }
 
         ImmutableArray<Statement>.Builder statements = ImmutableArray.CreateBuilder<Statement>();
-
         EndlessCheck endlessSafe = new();
         Token? bracketEnd;
+        Position lastPosition = bracketStart.Position;
+
         while (!ExpectOperator("}", out bracketEnd))
         {
             if (!ExpectStatement(out Statement? statement))
             {
-                SkipCrapTokens();
-                throw new SyntaxException($"Expected a statement", CurrentToken?.Position ?? bracketStart.Position.After(), File);
+                statement = new MissingStatement(lastPosition.After(), File);
+                Diagnostics.Add(Diagnostic.Error($"Expected a statement", statement));
             }
 
             statements.Add(statement);
+            lastPosition = statement.Position;
 
             endlessSafe.Step();
         }
@@ -1388,21 +1479,27 @@ public sealed class Parser
         if (ExpectOperator("=", out Token? eqOperatorToken))
         {
             if (!ExpectExpression(out initialValue))
-            { throw new SyntaxException("Expected initial value after \"=\" in variable declaration", eqOperatorToken, File); }
+            {
+                initialValue = new MissingExpression(eqOperatorToken.Position.After(), File);
+                Diagnostics.Add(Diagnostic.Error("Expected initial value after `=` in variable declaration", initialValue));
+            }
         }
         else
         {
             if (possibleType == StatementKeywords.Var)
-            { throw new SyntaxException("Initial value for variable declaration with implicit type is required", possibleType, File); }
+            {
+                Diagnostics.Add(Diagnostic.Error("Initial value for variable declaration with implicit type is required", possibleType, File));
+            }
         }
 
         variableDeclaration = new VariableDefinition(
             attributes,
             modifiers,
             possibleType,
-            new(possibleVariableName, File),
+            new IdentifierExpression(possibleVariableName, File),
             initialValue,
-            File);
+            File
+        );
         return true;
     }
 
@@ -1417,64 +1514,107 @@ public sealed class Parser
             return false;
         }
 
+        Diagnostic? error = null;
+
         keyword.AnalyzedType = TokenAnalyzedType.Statement;
 
         if (!ExpectOperator("(", out Token? bracketStart))
-        { throw new SyntaxException($"Expected \"(\" after \"{keyword}\" keyword", keyword.Position.After(), File); }
+        {
+            bracketStart = new MissingToken(TokenType.Operator, keyword.Position.After(), "(");
+            error ??= Diagnostic.Error($"Expected `(` after `{keyword}`", bracketStart, File);
+        }
 
         Statement? initialization;
         Expression? condition;
         Statement? step;
+        Position lastPosition = bracketStart.Position;
 
         if (ExpectOperator(";", out Token? semicolon1))
         {
             initialization = null;
+            lastPosition = semicolon1.Position;
         }
         else
         {
             if (!ExpectStatementUnchecked(out initialization))
-            { throw new SyntaxException("Expected a statement", bracketStart.Position.After(), File); }
+            {
+                initialization = new MissingStatement(lastPosition.After(), File);
+                error ??= (Diagnostic.Error($"Expected a statement or `;`", initialization));
+            }
 
             SetStatementThings(initialization);
+            lastPosition = initialization.Position;
 
             if (!ExpectOperator(";", out semicolon1))
-            { throw new SyntaxException($"Expected \";\" after for-loop initialization", initialization.Position.After(), File); }
-            initialization.Semicolon = semicolon1;
+            {
+                if (error is null) Diagnostics.Add(Diagnostic.Warning($"Expected `;`", lastPosition.After(), File));
+            }
+            else
+            {
+                initialization.Semicolon = semicolon1;
+                lastPosition = semicolon1.Position;
+            }
         }
 
         if (ExpectOperator(";", out Token? semicolon2))
         {
             condition = null;
+            lastPosition = semicolon2.Position;
         }
         else
         {
             if (!ExpectExpression(out condition))
-            { throw new SyntaxException($"Expected condition after \"{keyword}\" initialization", semicolon1.Position.After(), File); }
+            {
+                condition = new MissingExpression(lastPosition.After(), File);
+                error ??= (Diagnostic.Error($"Expected a condition or `;`", condition));
+            }
+
+            lastPosition = condition.Position;
 
             if (!ExpectOperator(";", out semicolon2))
-            { throw new SyntaxException($"Expected \";\" after \"{keyword}\" condition", condition.Position.After(), File); }
-            condition.Semicolon = semicolon2;
+            {
+                if (error is null) Diagnostics.Add(Diagnostic.Warning($"Expected `;`", lastPosition.After(), File));
+            }
+            else
+            {
+                condition.Semicolon = semicolon2;
+                lastPosition = semicolon2.Position;
+            }
         }
 
         if (ExpectOperator(")", out Token? bracketEnd))
         {
             step = null;
+            lastPosition = bracketEnd.Position;
         }
         else
         {
             if (!ExpectStatementUnchecked(out step))
-            { throw new SyntaxException($"Expected a statement after \"{keyword}\" condition", semicolon2.Position.After(), File); }
+            {
+                step = new MissingStatement(lastPosition.After(), File);
+                error ??= (Diagnostic.Error($"Expected a statement or `)`", step));
+            }
 
             SetStatementThings(step);
+            lastPosition = step.Position;
 
             if (!ExpectOperator(")", out bracketEnd))
-            { throw new SyntaxException($"Expected \")\" after \"{keyword}\" assignment", step.Position.After(), File); }
-            step.Semicolon = semicolon2;
+            {
+                error ??= (Diagnostic.Error($"Expected `)`", step.Position.After(), File));
+            }
+            else
+            {
+                lastPosition = bracketEnd.Position;
+            }
         }
 
         if (!ExpectBlock(out Block? block))
-        { throw new SyntaxException($"Expected block", bracketEnd.Position.After(), File); }
+        {
+            block = new MissingBlock(lastPosition.After(), File);
+            error ??= (Diagnostic.Error($"Expected block", block));
+        }
 
+        Diagnostics.Add(error);
         forLoop = new ForLoopStatement(keyword, initialization, condition, step, block, File);
         return true;
     }
@@ -1491,19 +1631,33 @@ public sealed class Parser
         }
 
         keyword.AnalyzedType = TokenAnalyzedType.Statement;
+        Diagnostic? error = null;
 
         if (!ExpectOperator("(", out Token? bracketStart))
-        { throw new SyntaxException($"Expected \"(\" after \"{keyword}\" keyword", keyword.Position.After(), File); }
+        {
+            bracketStart = new MissingToken(TokenType.Operator, keyword.Position.After(), "(");
+            error ??= Diagnostic.Error($"Expected `(`", bracketStart, File);
+        }
 
         if (!ExpectExpression(out Expression? condition))
-        { throw new SyntaxException($"Expected condition after \"{bracketStart}\"", bracketStart.Position.After(), File); }
+        {
+            condition = new MissingExpression(bracketStart.Position.After(), File);
+            error ??= Diagnostic.Error($"Expected condition after `{bracketStart}`", condition);
+        }
 
         if (!ExpectOperator(")", out Token? bracketEnd))
-        { throw new SyntaxException($"Expected \")\" after while-loop condition", condition.Position.After(), File); }
+        {
+            bracketEnd = new MissingToken(TokenType.Operator, condition.Position.After(), ")");
+            error ??= Diagnostic.Error($"Expected `)`", bracketEnd, File);
+        }
 
         if (!ExpectStatement(out Statement? block))
-        { throw new SyntaxException($"Expected a statement after \"{keyword}\" condition", bracketEnd.Position.After(), File); }
+        {
+            block = new MissingStatement(bracketEnd.Position.After(), File);
+            error ??= Diagnostic.Error($"Expected a statement", block);
+        }
 
+        Diagnostics.Add(error);
         whileLoop = new WhileLoopStatement(keyword, condition, block, File);
         return true;
     }
@@ -1521,17 +1675,31 @@ public sealed class Parser
 
         ifKeyword.AnalyzedType = TokenAnalyzedType.Statement;
 
+        Diagnostic? error = null;
+
         if (!ExpectOperator("(", out Token? bracketStart))
-        { throw new SyntaxException($"Expected \"(\" after keyword \"{ifKeyword}\"", ifKeyword.Position.After(), File); }
+        {
+            bracketStart = new MissingToken(TokenType.Operator, ifKeyword.Position.After(), "(");
+            error ??= Diagnostic.Error($"Expected a `(`", bracketStart, File);
+        }
 
         if (!ExpectExpression(out Expression? condition))
-        { throw new SyntaxException($"Expected condition after \"{ifKeyword} (\"", bracketStart.Position.After(), File); }
+        {
+            condition = new MissingExpression(bracketStart.Position.After(), File);
+            error ??= Diagnostic.Error($"Expected a condition", condition);
+        }
 
         if (!ExpectOperator(")", out Token? bracketEnd))
-        { throw new SyntaxException($"Expected \")\" after \"{ifKeyword}\" condition", condition.Position.After(), File); }
+        {
+            bracketEnd = new MissingToken(TokenType.Operator, condition.Position.After(), ")");
+            error ??= Diagnostic.Error($"Expected a `)`", bracketEnd, File);
+        }
 
         if (!ExpectStatement(out Statement? ifBlock))
-        { throw new SyntaxException($"Expected a statement after \"{ifKeyword}\" condition", bracketEnd.Position.After(), File); }
+        {
+            ifBlock = new MissingBlock(bracketEnd.Position.After(), File);
+            error ??= Diagnostic.Error($"Expected a statement", ifBlock);
+        }
 
         ElseBranchStatement? elseBranch = null;
 
@@ -1540,11 +1708,15 @@ public sealed class Parser
             elseKeyword.AnalyzedType = TokenAnalyzedType.Statement;
 
             if (!ExpectStatement(out Statement? elseBlock))
-            { throw new SyntaxException($"Expected a statement after \"{elseKeyword}\" condition", elseKeyword.Position.After(), File); }
+            {
+                elseBlock = new MissingBlock(elseKeyword.Position.After(), File);
+                error ??= Diagnostic.Error($"Expected a statement", elseBlock);
+            }
 
             elseBranch = new ElseBranchStatement(elseKeyword, elseBlock, File);
         }
 
+        Diagnostics.Add(error);
         ifStatement = new IfBranchStatement(ifKeyword, condition, ifBlock, elseBranch, File);
         return true;
     }
@@ -1683,7 +1855,7 @@ public sealed class Parser
         }
 
         if (!ExpectOneValue(out Expression? statement))
-        { throw new SyntaxException($"Expected value after operator \"{unaryPrefixOperator}\" (not \"{CurrentToken}\")", unaryPrefixOperator.Position.After(), File); }
+        { throw new SyntaxException($"Expected value after unary prefix operator `{unaryPrefixOperator}`", unaryPrefixOperator.Position.After(), File); }
 
         unaryPrefixOperator.AnalyzedType = TokenAnalyzedType.MathOperator;
 
@@ -1701,18 +1873,23 @@ public sealed class Parser
             return true;
         }
 
-        if (!ExpectModifiedOrOneValue(out Expression? leftStatement, GeneralStatementModifiers)) return false;
+        if (!ExpectArgument(out ArgumentExpression? leftStatement, GeneralStatementModifiers)) return false;
 
         while (true)
         {
             if (!ExpectOperator(BinaryOperators, out Token? binaryOperator)) break;
 
-            if (!ExpectModifiedOrOneValue(out Expression? rightStatement, GeneralStatementModifiers))
+            if (!ExpectArgument(out ArgumentExpression? rightStatement, GeneralStatementModifiers))
             {
                 if (!ExpectUnaryOperatorCall(out UnaryOperatorCallExpression? rightUnaryOperatorCall))
-                { throw new SyntaxException($"Expected value after operator \"{binaryOperator}\" (not \"{CurrentToken}\")", binaryOperator.Position.After(), File); }
+                {
+                    rightStatement = new MissingArgumentExpression(binaryOperator.Position.After(), File);
+                    Diagnostics.Add(Diagnostic.Error($"Expected value after binary operator `{binaryOperator}`", rightStatement));
+                }
                 else
-                { rightStatement = rightUnaryOperatorCall; }
+                {
+                    rightStatement = ArgumentExpression.Wrap(rightUnaryOperatorCall);
+                }
             }
 
             binaryOperator.AnalyzedType = TokenAnalyzedType.MathOperator;
@@ -1722,11 +1899,11 @@ public sealed class Parser
             BinaryOperatorCallExpression? rightmostStatement = FindRightmostStatement(leftStatement, rightSidePrecedence);
             if (rightmostStatement != null)
             {
-                rightmostStatement.Right = new BinaryOperatorCallExpression(binaryOperator, rightmostStatement.Right, rightStatement, File);
+                rightmostStatement.Right = ArgumentExpression.Wrap(new BinaryOperatorCallExpression(binaryOperator, rightmostStatement.Right, rightStatement, File));
             }
             else
             {
-                leftStatement = new BinaryOperatorCallExpression(binaryOperator, leftStatement, rightStatement, File);
+                leftStatement = ArgumentExpression.Wrap(new BinaryOperatorCallExpression(binaryOperator, leftStatement, rightStatement, File));
             }
         }
 
@@ -1775,10 +1952,13 @@ public sealed class Parser
             return false;
         }
 
-        if (!ExpectExpression(out Expression? valueToAssign))
-        { throw new SyntaxException("Expected expression after assignment operator", @operator, File); }
-
         @operator.AnalyzedType = TokenAnalyzedType.OtherOperator;
+
+        if (!ExpectExpression(out Expression? valueToAssign))
+        {
+            valueToAssign = new MissingExpression(@operator.Position.After(), File);
+            Diagnostics.Add(Diagnostic.Error("Expected an expression after assignment operator", valueToAssign));
+        }
 
         assignment = new SimpleAssignmentStatement(@operator, leftStatement, valueToAssign, File);
         return true;
@@ -1801,10 +1981,13 @@ public sealed class Parser
             return false;
         }
 
-        if (!ExpectExpression(out Expression? valueToAssign))
-        { throw new SyntaxException("Expected expression after compound assignment operator", @operator, File); }
-
         @operator.AnalyzedType = TokenAnalyzedType.MathOperator;
+
+        if (!ExpectExpression(out Expression? valueToAssign))
+        {
+            valueToAssign = new MissingExpression(@operator.Position.After(), File);
+            Diagnostics.Add(Diagnostic.Error("Expected an expression after compound assignment operator", valueToAssign));
+        }
 
         compoundAssignment = new CompoundAssignmentStatement(@operator, leftStatement, valueToAssign, File);
         return true;
@@ -1821,54 +2004,39 @@ public sealed class Parser
             return false;
         }
 
-        if (ExpectOperator(IncrementDecrementOperators, out Token? @operator))
+        if (!ExpectOperator(IncrementDecrementOperators, out Token? @operator))
         {
-            @operator.AnalyzedType = TokenAnalyzedType.MathOperator;
-            shortOperatorCall = new ShortOperatorCall(@operator, expression, File);
-            return true;
-        }
-
-        savepoint.Restore();
-        shortOperatorCall = null;
-        return false;
-    }
-
-    bool ExpectModifiedOrOneValue([NotNullWhen(true)] out Expression? oneValue, ImmutableArray<string> validModifiers)
-    {
-        if (!ExpectIdentifier(out Token? modifier, validModifiers))
-        {
-            return ExpectOneValue(out oneValue);
-        }
-
-        modifier.AnalyzedType = TokenAnalyzedType.Keyword;
-
-        if (!ExpectOneValue(out Expression? expression))
-        {
-            oneValue = new IdentifierExpression(modifier, File);
-            Diagnostics.Add(Diagnostic.Warning($"is this ok?", oneValue));
-            return true;
-            // throw new SyntaxException($"Expected one value after modifier \"{modifier}\"", modifier.Position.After(), File);
-        }
-
-        oneValue = new ArgumentExpression(modifier, expression, File);
-        return true;
-    }
-
-    bool ExpectModifiedValue([NotNullWhen(true)] out ArgumentExpression? modifiedStatement, ImmutableArray<string> validModifiers)
-    {
-        if (!ExpectIdentifier(out Token? modifier, validModifiers))
-        {
-            modifiedStatement = null;
+            savepoint.Restore();
             return false;
         }
 
-        modifier.AnalyzedType = TokenAnalyzedType.Keyword;
+        @operator.AnalyzedType = TokenAnalyzedType.MathOperator;
 
-        if (!ExpectOneValue(out Expression? value))
-        { throw new SyntaxException($"Expected one value after modifier \"{modifier}\"", modifier.Position.After(), File); }
-
-        modifiedStatement = new ArgumentExpression(modifier, value, File);
+        shortOperatorCall = new ShortOperatorCall(@operator, expression, File);
         return true;
+    }
+
+    bool ExpectArgument([NotNullWhen(true)] out ArgumentExpression? argumentExpression, ImmutableArray<string> validModifiers)
+    {
+        if (ExpectIdentifier(out Token? modifier, validModifiers))
+        {
+            modifier.AnalyzedType = TokenAnalyzedType.Keyword;
+
+            if (!ExpectOneValue(out Expression? value))
+            { throw new SyntaxException($"Expected one value after modifier `{modifier}`", modifier.Position.After(), File); }
+
+            argumentExpression = new ArgumentExpression(modifier, value, File);
+            return true;
+        }
+
+        if (ExpectExpression(out Expression? simpleParameter))
+        {
+            argumentExpression = ArgumentExpression.Wrap(simpleParameter);
+            return true;
+        }
+
+        argumentExpression = null;
+        return false;
     }
 
     static BinaryOperatorCallExpression? FindRightmostStatement(Statement? statement, int rightSidePrecedence)
@@ -1883,12 +2051,10 @@ public sealed class Parser
         return right;
     }
 
-    static int OperatorPrecedence(string @operator)
-    {
-        if (LanguageOperators.Precedencies.TryGetValue(@operator, out int precedence))
-        { return precedence; }
-        throw new InternalExceptionWithoutContext($"Precedence for operator \"{@operator}\" not found");
-    }
+    static int OperatorPrecedence(string @operator) =>
+        LanguageOperators.Precedencies.TryGetValue(@operator, out int precedence)
+        ? precedence
+        : throw new InternalExceptionWithoutContext($"Precedence for operator `{@operator}` not found");
 
     bool ExpectAnyCall(Expression prevStatement, [NotNullWhen(true)] out AnyCallExpression? anyCall)
     {
@@ -1922,7 +2088,7 @@ public sealed class Parser
             return true;
         }
 
-        ImmutableArray<ArgumentExpression>.Builder parameters = ImmutableArray.CreateBuilder<ArgumentExpression>();
+        ImmutableArray<ArgumentExpression>.Builder arguments = ImmutableArray.CreateBuilder<ArgumentExpression>();
         ImmutableArray<Token>.Builder commas = ImmutableArray.CreateBuilder<Token>();
 
         EndlessCheck endlessSafe = new();
@@ -1930,30 +2096,21 @@ public sealed class Parser
 
         while (true)
         {
-            ArgumentExpression? parameter;
-            if (ExpectModifiedValue(out ArgumentExpression? modifiedStatement, ArgumentModifiers))
+            if (!ExpectArgument(out ArgumentExpression? argument, ArgumentModifiers))
             {
-                parameter = modifiedStatement;
-            }
-            else if (ExpectExpression(out Expression? simpleParameter))
-            {
-                parameter = ArgumentExpression.Wrap(simpleParameter);
-            }
-            else
-            {
-                parameter = new MissingArgumentExpression(lastPosition.After(), File);
-                Diagnostics.Add(Diagnostic.Error($"Expected expression as an argument", CurrentLocation));
+                argument = new MissingArgumentExpression(lastPosition.After(), File);
+                Diagnostics.Add(Diagnostic.Error($"Expected expression as an argument", argument));
             }
 
-            parameters.Add(parameter);
+            arguments.Add(argument);
 
             if (ExpectOperator(")", out bracketEnd))
             { break; }
 
             if (!ExpectOperator(",", out Token? comma))
             {
-                throw new SyntaxException($"Expected `,` to separate arguments", parameter.Location.After());
-                Diagnostics.Add(Diagnostic.Error($"Expected `,` to separate arguments", parameter.Location.After()));
+                throw new SyntaxException($"Expected `,` or `)`", argument.Location.After());
+                Diagnostics.Add(Diagnostic.Error($"Expected `,` or `)`", argument.Location.After()));
                 savepoint.Restore();
                 return false;
             }
@@ -1964,51 +2121,60 @@ public sealed class Parser
             endlessSafe.Step();
         }
 
-        argumentList = new ArgumentListExpression(parameters.DrainToImmutable(), commas.DrainToImmutable(), new TokenPair(bracketStart, bracketEnd), File);
+        argumentList = new ArgumentListExpression(arguments.DrainToImmutable(), commas.DrainToImmutable(), new TokenPair(bracketStart, bracketEnd), File);
         return true;
     }
 
     bool ExpectKeywordCall(string name, int parameterCount, [NotNullWhen(true)] out KeywordCallStatement? keywordCall)
         => ExpectKeywordCall(name, parameterCount, parameterCount, out keywordCall);
-    bool ExpectKeywordCall(string name, int minParameterCount, int maxParameterCount, [NotNullWhen(true)] out KeywordCallStatement? keywordCall)
+    bool ExpectKeywordCall(string name, int minArgumentCount, int maxArgumentCount, [NotNullWhen(true)] out KeywordCallStatement? keywordCall)
     {
         ParseRestorePoint savepoint = SavePoint();
         keywordCall = null;
 
-        if (!ExpectIdentifier(out Token? possibleFunctionName))
+        if (!ExpectIdentifier(out Token? keyword))
         {
             savepoint.Restore();
             return false;
         }
 
-        if (possibleFunctionName.Content != name)
+        if (keyword.Content != name)
         {
             savepoint.Restore();
             return false;
         }
 
-        possibleFunctionName.AnalyzedType = TokenAnalyzedType.Statement;
+        keyword.AnalyzedType = TokenAnalyzedType.Statement;
 
-        ImmutableArray<Expression>.Builder? parameters = null;
+        ImmutableArray<Expression>.Builder arguments = ImmutableArray.CreateBuilder<Expression>();
 
         EndlessCheck endlessSafe = new();
-        while (true)
+        while (arguments.Count < maxArgumentCount)
         {
             endlessSafe.Step();
 
-            if (!ExpectExpression(out Expression? parameter)) break;
+            if (!ExpectExpression(out Expression? argument)) break;
 
-            parameters ??= ImmutableArray.CreateBuilder<Expression>();
-            parameters.Add(parameter);
+            arguments.Add(argument);
         }
 
-        keywordCall = new(possibleFunctionName, parameters?.DrainToImmutable() ?? ImmutableArray<Expression>.Empty, File);
+        keywordCall = new(keyword, arguments.DrainToImmutable(), File);
 
-        if (keywordCall.Arguments.Length < minParameterCount)
-        { Diagnostics.Add(Diagnostic.Error($"This keyword-call (\"{possibleFunctionName}\") requires minimum {minParameterCount} parameters but you passed {parameters?.Count ?? 0}", keywordCall, File)); }
+        if (minArgumentCount == maxArgumentCount)
+        {
+            if (keywordCall.Arguments.Length != minArgumentCount)
+            {
+                Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires {minArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File));
+            }
+        }
+        else
+        {
+            if (keywordCall.Arguments.Length < minArgumentCount)
+            { Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires minimum {minArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File)); }
 
-        if (keywordCall.Arguments.Length > maxParameterCount)
-        { Diagnostics.Add(Diagnostic.Error($"This keyword-call (\"{possibleFunctionName}\") requires maximum {maxParameterCount} parameters but you passed {parameters?.Count ?? 0}", keywordCall, File)); }
+            if (keywordCall.Arguments.Length > maxArgumentCount)
+            { Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires maximum {maxArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File)); }
+        }
 
         return true;
     }
@@ -2034,28 +2200,48 @@ public sealed class Parser
 
         attributeT.AnalyzedType = TokenAnalyzedType.Attribute;
 
-        List<LiteralExpression>? parameters = null;
+        List<LiteralExpression> parameters = new();
+        Position lastPosition = attributeT.Position;
         if (ExpectOperator("(", out Token? bracketParametersStart))
         {
-            EndlessCheck endlessSafe = new();
-            while (!ExpectOperator(")"))
+            lastPosition = bracketParametersStart.Position;
+
+            if (!ExpectOperator(")", out Token? bracketParametersEnd))
             {
-                ExpectLiteral(out LiteralExpression? param);
-                if (param == null)
-                { throw new SyntaxException("Expected parameter", bracketParametersStart, File); }
-                ExpectOperator(",");
+                EndlessCheck endlessSafe = new();
 
-                parameters ??= new();
-                parameters.Add(param);
+                while (true)
+                {
+                    if (!ExpectLiteral(out LiteralExpression? argument))
+                    {
+                        argument = new MissingLiteral(lastPosition.After(), File);
+                        Diagnostics.Add(Diagnostic.Error($"Expected literal as an argument", argument));
+                    }
 
-                endlessSafe.Step();
+                    parameters.Add(argument);
+
+                    if (ExpectOperator(")", out bracketParametersEnd))
+                    { break; }
+
+                    if (!ExpectOperator(",", out Token? comma))
+                    { throw new SyntaxException($"Expected `,` or `)`", argument.Location.After()); }
+
+                    lastPosition = comma.Position;
+
+                    endlessSafe.Step();
+                }
             }
+
+            lastPosition = bracketParametersEnd.Position;
         }
 
         if (!ExpectOperator("]", out Token? bracketEnd))
-        { throw new SyntaxException("Unbalanced `]`", bracketStart, File); }
+        {
+            bracketEnd = new MissingToken(TokenType.Operator, lastPosition.After(), "]");
+            throw new SyntaxException("Expected `]`", bracketEnd, File);
+        }
 
-        attribute = new AttributeUsage(attributeT, parameters?.ToImmutableArray() ?? ImmutableArray<LiteralExpression>.Empty, new TokenPair(bracketStart, bracketEnd), File);
+        attribute = new AttributeUsage(attributeT, parameters.ToImmutableArray(), new TokenPair(bracketStart, bracketEnd), File);
         return true;
     }
     ImmutableArray<AttributeUsage> ExpectAttributes()
@@ -2133,25 +2319,12 @@ public sealed class Parser
         return result?.DrainToImmutable() ?? ImmutableArray<Token>.Empty;
     }
 
-    void CheckParameterModifiers(IEnumerable<Token> modifiers, int parameterIndex, ImmutableArray<string> validModifiers)
-    {
-        foreach (Token modifier in modifiers)
-        {
-            if (!validModifiers.Contains(modifier.Content))
-            { Diagnostics.Add(Diagnostic.Error($"Modifier \"{modifier}\" not valid in the current context", modifier, File)); }
-
-            if (modifier.Content == ModifierKeywords.This &&
-                parameterIndex != 0)
-            { Diagnostics.Add(Diagnostic.Error($"Modifier \"{ModifierKeywords.This}\" only valid on the first parameter", modifier, File)); }
-        }
-    }
-
     void CheckModifiers(IEnumerable<Token> modifiers, ImmutableArray<string> validModifiers)
     {
         foreach (Token modifier in modifiers)
         {
             if (!validModifiers.Contains(modifier.Content))
-            { Diagnostics.Add(Diagnostic.Error($"Modifier \"{modifier}\" not valid in the current context", modifier, File)); }
+            { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` is not valid in the current context", modifier, File)); }
         }
     }
 
@@ -2322,7 +2495,7 @@ public sealed class Parser
             {
                 if ((flags & AllowedType.Any) == 0)
                 {
-                    error = Diagnostic.Error($"Type \"{TypeKeywords.Any}\" is not valid in the current context", possibleType, File);
+                    error = Diagnostic.Error($"Type `{TypeKeywords.Any}` is not valid in the current context", possibleType, File);
                     return false;
                 }
             }

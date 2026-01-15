@@ -497,7 +497,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         FunctionQuery<CompiledOperatorDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, Token>(
             @operator.Operator.Content,
-            @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap),
+            @operator.Arguments,
             FunctionArgumentConverter,
             relevantFile,
             null,
@@ -3388,6 +3388,10 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         value = CompiledValue.Null;
         return false;
     }
+    public static bool TryComputeSimple(ArgumentExpression statement, out CompiledValue value)
+    {
+        return TryComputeSimple(statement.Value, out value);
+    }
     public static bool TryComputeSimple(Expression? statement, out CompiledValue value)
     {
         value = CompiledValue.Null;
@@ -3397,6 +3401,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             BinaryOperatorCallExpression v => TryComputeSimple(v, out value),
             UnaryOperatorCallExpression v => TryComputeSimple(v, out value),
             IndexCallExpression v => TryComputeSimple(v, out value),
+            ArgumentExpression v => TryComputeSimple(v, out value),
             _ => false,
         };
     }

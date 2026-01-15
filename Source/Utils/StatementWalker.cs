@@ -138,6 +138,7 @@ public static partial class StatementWalker
                 foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
                 break;
             case MissingExpression:
+            case MissingStatement:
                 break;
             default: throw new NotImplementedException(statement.GetType().Name);
         }

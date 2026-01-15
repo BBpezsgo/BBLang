@@ -38,6 +38,7 @@ public interface IReferenceableTo : IInFile
 
 public enum LiteralType
 {
+    Invalid,
     Integer,
     Float,
     String,

@@ -27,7 +27,7 @@ public class ParameterDefinition :
     public Position Position =>
         new Position(Identifier, Type)
         .Union(Modifiers);
-    public Uri File => Context?.File ?? throw new NullReferenceException($"{nameof(Context.File)} is null");
+    public Uri File { get; }
 
     public Location Location => new(Position, File);
 
@@ -38,15 +38,17 @@ public class ParameterDefinition :
         Identifier = other.Identifier;
         Context = other.Context;
         DefaultValue = other.DefaultValue;
+        File = other.File;
     }
 
-    public ParameterDefinition(ImmutableArray<Token> modifiers, TypeInstance type, Token identifier, Expression? defaultValue, FunctionThingDefinition? context = null)
+    public ParameterDefinition(ImmutableArray<Token> modifiers, TypeInstance type, Token identifier, Expression? defaultValue, Uri file, FunctionThingDefinition? context = null)
     {
         Modifiers = modifiers;
         Type = type;
         Identifier = identifier;
         Context = context;
         DefaultValue = defaultValue;
+        File = file;
     }
 
     public override string ToString() => $"{string.Join(' ', Modifiers)} {Type} {Identifier}".TrimStart();

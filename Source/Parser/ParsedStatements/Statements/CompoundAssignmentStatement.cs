@@ -56,13 +56,13 @@ public class CompoundAssignmentStatement : AssignmentStatement, IReferenceableTo
 
     public override SimpleAssignmentStatement ToAssignment()
     {
-        BinaryOperatorCallExpression statementToAssign = GetOperatorCall();
-        return new SimpleAssignmentStatement(Token.CreateAnonymous("=", TokenType.Operator, Operator.Position), Left, statementToAssign, File);
+        BinaryOperatorCallExpression statementToAssign = new(
+            Token.CreateAnonymous(Operator.Content.Replace("=", string.Empty, StringComparison.Ordinal), TokenType.Operator, Operator.Position),
+            ArgumentExpression.Wrap(Left),
+            ArgumentExpression.Wrap(Right),
+            File
+        );
+        Token assignmentOperator = Token.CreateAnonymous("=", TokenType.Operator, Operator.Position);
+        return new SimpleAssignmentStatement(assignmentOperator, Left, statementToAssign, File);
     }
-
-    public BinaryOperatorCallExpression GetOperatorCall() => new(
-        Token.CreateAnonymous(Operator.Content.Replace("=", string.Empty, StringComparison.Ordinal), TokenType.Operator, Operator.Position),
-        Left,
-        Right,
-        File);
 }
