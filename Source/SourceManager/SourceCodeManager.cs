@@ -91,18 +91,18 @@ public class SourceCodeManager
             catch (Exception ex)
             {
                 if (finishedFile.Initiator is null)
-                { Diagnostics.Add(DiagnosticWithoutContext.Critical(ex.Message)); }
+                { Diagnostics.Add(DiagnosticWithoutContext.Error(ex.Message)); }
                 else
-                { Diagnostics.Add(Diagnostic.Critical(ex.Message, finishedFile.Initiator)); }
+                { Diagnostics.Add(Diagnostic.Error(ex.Message, finishedFile.Initiator)); }
                 break;
             }
 
             if (content is null)
             {
                 if (finishedFile.Initiator is null)
-                { Diagnostics.Add(DiagnosticWithoutContext.Critical($"File \"{finishedFile.Uri}\" not found")); }
+                { Diagnostics.Add(DiagnosticWithoutContext.Error($"File \"{finishedFile.Uri}\" not found")); }
                 else
-                { Diagnostics.Add(Diagnostic.Critical($"File \"{finishedFile.Uri}\" not found", finishedFile.Initiator)); }
+                { Diagnostics.Add(Diagnostic.Error($"File \"{finishedFile.Uri}\" not found", finishedFile.Initiator)); }
                 break;
             }
 

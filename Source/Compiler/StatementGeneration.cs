@@ -25,7 +25,7 @@ public partial class StatementCompiler
 
         if (!TryGetBuiltinFunction(BuiltinFunctions.Allocate, ImmutableArray.Create<GeneralType>(SizeofStatementType), type.Location.File, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? error, AddCompilable))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", type));
+            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", type));
             return false;
         }
 
@@ -37,7 +37,7 @@ public partial class StatementCompiler
         CompiledFunctionDefinition allocator = result.Function;
         if (!allocator.ReturnSomething)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
+            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
             return false;
         }
 
@@ -88,7 +88,7 @@ public partial class StatementCompiler
 
         if (!TryGetBuiltinFunction(BuiltinFunctions.Allocate, ImmutableArray.Create<GeneralType>(intType), sizeLocation.File, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? error, AddCompilable))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", sizeLocation));
+            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", sizeLocation));
             return false;
         }
 
@@ -100,7 +100,7 @@ public partial class StatementCompiler
         CompiledFunctionDefinition allocator = result.Function;
         if (!allocator.ReturnSomething)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
+            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
             return false;
         }
 
@@ -146,7 +146,7 @@ public partial class StatementCompiler
 
         if (!TryGetBuiltinFunction(BuiltinFunctions.Free, parameterTypes, location.File, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFoundError, AddCompilable))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Free}\")] not found", location).WithSuberrors(notFoundError.ToError(location)));
+            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Free}\")] not found", location).WithSuberrors(notFoundError.ToError(location)));
             return false;
         }
 
@@ -381,7 +381,7 @@ public partial class StatementCompiler
         // TODO:
         // if (arguments.Count < partial)
         // {
-        //     Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {compiledFunction.ParameterCount} passed {arguments.Count}", caller));
+        //     Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {compiledFunction.ParameterCount} passed {arguments.Count}", caller));
         //     return false;
         // }
 
@@ -725,7 +725,7 @@ public partial class StatementCompiler
 
         if (arguments.Length < partial)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {callee.ParameterCount} passed {arguments.Length}", caller));
+            Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {callee.ParameterCount} passed {arguments.Length}", caller));
             return false;
         }
 
@@ -946,7 +946,7 @@ public partial class StatementCompiler
         }
 
         if (LanguageConstants.KeywordList.Contains(newVariable.Identifier.Content))
-        { Diagnostics.Add(Diagnostic.Critical($"Illegal variable name \"{newVariable.Identifier.Content}\"", newVariable.Identifier, newVariable.File)); }
+        { Diagnostics.Add(Diagnostic.Error($"Illegal variable name \"{newVariable.Identifier.Content}\"", newVariable.Identifier, newVariable.File)); }
 
         GeneralType? type = null;
         if (newVariable.Type != StatementKeywords.Var)
@@ -1021,7 +1021,7 @@ public partial class StatementCompiler
 
         if (GetConstant(newVariable.Identifier.Content, newVariable.File, out _, out _))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Symbol name \"{newVariable.Identifier}\" conflicts with an another symbol name", newVariable.Identifier));
+            Diagnostics.Add(Diagnostic.Error($"Symbol name \"{newVariable.Identifier}\" conflicts with an another symbol name", newVariable.Identifier));
             return false;
         }
 
@@ -1049,7 +1049,7 @@ public partial class StatementCompiler
 
                 if (!externalConstant.Value.TryCast(type, out CompiledValue castedValue))
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"Can't cast external constant value {externalConstant.Value} of type \"{externalConstant.Value.Type}\" to {type}", newVariable));
+                    Diagnostics.Add(Diagnostic.Error($"Can't cast external constant value {externalConstant.Value} of type \"{externalConstant.Value.Type}\" to {type}", newVariable));
                     return false;
                 }
 
@@ -1114,7 +1114,7 @@ public partial class StatementCompiler
 
         if (type is null)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Initial value for variable declaration with implicit type is required", newVariable));
+            Diagnostics.Add(Diagnostic.Error($"Initial value for variable declaration with implicit type is required", newVariable));
             type = BuiltinType.Any;
         }
 
@@ -1161,7 +1161,7 @@ public partial class StatementCompiler
 
             if (GeneratorStructDefinition is null)
             {
-                Diagnostics.Add(Diagnostic.Critical($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", compiledVariable));
+                Diagnostics.Add(Diagnostic.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", compiledVariable));
                 return false;
             }
 
@@ -1227,7 +1227,7 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length > 1)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to \"{StatementKeywords.Return}\": required {0} or {1} passed {keywordCall.Arguments.Length}", keywordCall));
+                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Return}\": required {0} or {1} passed {keywordCall.Arguments.Length}", keywordCall));
                 return false;
             }
 
@@ -1359,7 +1359,7 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to \"{StatementKeywords.Crash}\": required {1} passed {keywordCall.Arguments}", keywordCall));
+                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Crash}\": required {1} passed {keywordCall.Arguments}", keywordCall));
                 return false;
             }
 
@@ -1403,7 +1403,7 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to \"{StatementKeywords.Goto}\": required {1} passed {keywordCall.Arguments.Length}", keywordCall));
+                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Goto}\": required {1} passed {keywordCall.Arguments.Length}", keywordCall));
                 return false;
             }
 
@@ -1423,7 +1423,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Unknown keyword \"{keywordCall.Identifier}\"", keywordCall.Identifier));
+        Diagnostics.Add(Diagnostic.Error($"Unknown keyword \"{keywordCall.Identifier}\"", keywordCall.Identifier));
         return false;
     }
     bool CompileStatement(SimpleAssignmentStatement setter, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
@@ -1666,7 +1666,7 @@ public partial class StatementCompiler
     {
         if (statement is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", statement, false));
+            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", statement, false));
             compiledStatement = null;
             return false;
         }
@@ -1701,7 +1701,7 @@ public partial class StatementCompiler
 
             if (anyCall.Arguments.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
+                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
                 return false;
             }
 
@@ -1727,7 +1727,7 @@ public partial class StatementCompiler
             }
             else
             {
-                Diagnostics.Add(Diagnostic.Critical($"Type \"{argument}\" not found", argument));
+                Diagnostics.Add(Diagnostic.Error($"Type \"{argument}\" not found", argument));
                 return false;
             }
 
@@ -1813,7 +1813,7 @@ public partial class StatementCompiler
             }
             else
             {
-                Diagnostics.Add(Diagnostic.Critical($"This isn't a function", anyCall.Expression));
+                Diagnostics.Add(Diagnostic.Error($"This isn't a function", anyCall.Expression));
             }
 
             return false;
@@ -1824,7 +1824,7 @@ public partial class StatementCompiler
         if (anyCall.Arguments.Arguments.Length != functionType.Parameters.Length)
         {
             if (notFound is not null) Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Arguments.Length}", new Position(anyCall.Arguments.Arguments.As<IPositioned>().DefaultIfEmpty(anyCall.Arguments.Brackets)), anyCall.File));
+            Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Arguments.Length}", new Position(anyCall.Arguments.Arguments.As<IPositioned>().DefaultIfEmpty(anyCall.Arguments.Brackets)), anyCall.File));
             return false;
         }
 
@@ -1847,7 +1847,7 @@ public partial class StatementCompiler
         }))
         {
             if (notFound is not null) Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            Diagnostics.Add(Diagnostic.Critical($"Argument types of caller \"...({string.Join(", ", compiledArguments.Select(v => v.Type))})\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
+            Diagnostics.Add(Diagnostic.Error($"Argument types of caller \"...({string.Join(", ", compiledArguments.Select(v => v.Type))})\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
             return false;
         }
 
@@ -1978,7 +1978,7 @@ public partial class StatementCompiler
                     if (!leftBType.TryGetNumericType(out NumericType leftNType1) ||
                         !rightBType.TryGetNumericType(out NumericType rightNType1))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
+                        Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
                         return false;
                     }
                     NumericType numericType = leftNType1 > rightNType1 ? leftNType1 : rightNType1;
@@ -2035,13 +2035,13 @@ public partial class StatementCompiler
 
                     if (!leftType.TryGetNumericType(out leftNType))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Type \"{leftType}\" aint a numeric type", @operator.Left));
+                        Diagnostics.Add(Diagnostic.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
                         ok = false;
                     }
 
                     if (!rightType.TryGetNumericType(out rightNType))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Type \"{rightType}\" aint a numeric type", @operator.Right));
+                        Diagnostics.Add(Diagnostic.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
                         ok = false;
                     }
 
@@ -2113,7 +2113,7 @@ public partial class StatementCompiler
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
+            Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
             return false;
         }
     }
@@ -2145,7 +2145,7 @@ public partial class StatementCompiler
 
             if (UnaryOperatorCallExpression.ParameterCount != operatorDefinition.ParameterCount)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to operator \"{operatorDefinition.ToReadable()}\": required {operatorDefinition.ParameterCount} passed {UnaryOperatorCallExpression.ParameterCount}", @operator));
+                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to operator \"{operatorDefinition.ToReadable()}\": required {operatorDefinition.ParameterCount} passed {UnaryOperatorCallExpression.ParameterCount}", @operator));
                 return false;
             }
 
@@ -2292,14 +2292,14 @@ public partial class StatementCompiler
                 }
                 default:
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
+                    Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
                     return false;
                 }
             }
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File).WithSuberrors(operatorNotFoundError.ToError(@operator)));
+            Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File).WithSuberrors(operatorNotFoundError.ToError(@operator)));
             return false;
         }
     }
@@ -2386,7 +2386,7 @@ public partial class StatementCompiler
                     };
                     if (!frame.Value.CurrentReturnType.SameAs(_compiledStatementWithValue.Type))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Lambda expression value's type ({_compiledStatementWithValue.Type}) doesn't match the return type {frame.Value.CurrentReturnType}", _compiledStatementWithValue));
+                        Diagnostics.Add(Diagnostic.Error($"Lambda expression value's type ({_compiledStatementWithValue.Type}) doesn't match the return type {frame.Value.CurrentReturnType}", _compiledStatementWithValue));
                     }
                 }
             }
@@ -2861,7 +2861,7 @@ public partial class StatementCompiler
 
         if (variable is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", variable, false));
+            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", variable, false));
             return false;
         }
 
@@ -2986,7 +2986,7 @@ public partial class StatementCompiler
                 //Debugger.Break();
                 if (GeneratorStructDefinition is null)
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
+                    Diagnostics.Add(Diagnostic.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
                     return false;
                 }
 
@@ -3138,7 +3138,7 @@ public partial class StatementCompiler
             }
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Symbol \"{variable.Content}\" not found", variable)
+        Diagnostics.Add(Diagnostic.Error($"Symbol \"{variable.Content}\" not found", variable)
             .WithSuberrors(
                 constantNotFoundError.ToError(variable),
                 parameterNotFoundError.ToError(variable),
@@ -3173,7 +3173,7 @@ public partial class StatementCompiler
         GeneralType addressType = to.Type;
         if (!addressType.Is(out PointerType? pointerType))
         {
-            Diagnostics.Add(Diagnostic.Critical($"This isn't a pointer", pointer.Expression));
+            Diagnostics.Add(Diagnostic.Error($"This isn't a pointer", pointer.Expression));
             return false;
         }
 
@@ -3260,7 +3260,7 @@ public partial class StatementCompiler
 
             default:
             {
-                Diagnostics.Add(Diagnostic.Critical($"Unknown type \"{instanceType}\"", newInstance.Type, newInstance.File));
+                Diagnostics.Add(Diagnostic.Error($"Unknown type \"{instanceType}\"", newInstance.Type, newInstance.File));
                 return false;
             }
         }
@@ -3329,7 +3329,7 @@ public partial class StatementCompiler
 
         if (field.Identifier is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", field.Identifier, false));
+            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", field.Identifier, false));
             return false;
         }
 
@@ -3337,7 +3337,7 @@ public partial class StatementCompiler
         {
             if (!arrayType.Length.HasValue)
             {
-                Diagnostics.Add(Diagnostic.Critical("I will eventually implement this", field));
+                Diagnostics.Add(Diagnostic.Error("I will eventually implement this", field));
                 return false;
             }
 
@@ -3365,7 +3365,7 @@ public partial class StatementCompiler
 
             if (!prevType.Is(out StructType? structPointerType))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Could not get the field offsets of type \"{prevType}\"", field.Object));
+                Diagnostics.Add(Diagnostic.Error($"Could not get the field offsets of type \"{prevType}\"", field.Object));
                 return false;
             }
 
@@ -3391,7 +3391,7 @@ public partial class StatementCompiler
 
         if (!prev.Type.Is(out StructType? structType))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Type `{prev.Type}` doesn't have any fields", field.Identifier, field.File));
+            Diagnostics.Add(Diagnostic.Error($"Type `{prev.Type}` doesn't have any fields", field.Identifier, field.File));
             return false;
         }
 
@@ -3464,7 +3464,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Index getter for type \"{baseStatement.Type}\" not found", index));
+        Diagnostics.Add(Diagnostic.Error($"Index getter for type \"{baseStatement.Type}\" not found", index));
         return false;
     }
     bool CompileExpression(ArgumentExpression modifiedStatement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
@@ -3494,7 +3494,7 @@ public partial class StatementCompiler
             }
             else if (!item.Type.SameAs(itemType))
             {
-                Diagnostics.Add(Diagnostic.Critical($"List element at index {i} should be a {itemType} and not {item.Type}", item));
+                Diagnostics.Add(Diagnostic.Error($"List element at index {i} should be a {itemType} and not {item.Type}", item));
             }
 
             result.Add(item);
@@ -3502,7 +3502,7 @@ public partial class StatementCompiler
 
         if (itemType is null)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Could not infer the list element type", listValue));
+            Diagnostics.Add(Diagnostic.Error($"Could not infer the list element type", listValue));
             itemType = BuiltinType.Any;
         }
 
@@ -3630,7 +3630,7 @@ public partial class StatementCompiler
     {
         if (statement is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", statement, false));
+            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", statement, false));
             compiledStatement = null;
             return false;
         }
@@ -3663,7 +3663,7 @@ public partial class StatementCompiler
 
         if (target is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Incomplete AST", target, false));
+            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", target, false));
             compiledStatement = null;
             CompileExpression(value, out _);
             return false;
@@ -3676,7 +3676,7 @@ public partial class StatementCompiler
             case IndexCallExpression v: return CompileSetter(v, value, out compiledStatement);
             case DereferenceExpression v: return CompileSetter(v, value, out compiledStatement);
             default:
-                Diagnostics.Add(Diagnostic.Critical($"The left side of the assignment operator should be a variable, field or memory address. Passed \"{target.GetType().Name}\"", target));
+                Diagnostics.Add(Diagnostic.Error($"The left side of the assignment operator should be a variable, field or memory address. Passed \"{target.GetType().Name}\"", target));
                 return false;
         }
     }
@@ -3717,7 +3717,7 @@ public partial class StatementCompiler
             target.AnalyzedType = TokenAnalyzedType.ConstantName;
             SetStatementReference(target, constant);
 
-            Diagnostics.Add(Diagnostic.Critical($"Can not set constant value: it is readonly", target));
+            Diagnostics.Add(Diagnostic.Error($"Can not set constant value: it is readonly", target));
             return false;
         }
 
@@ -3772,7 +3772,7 @@ public partial class StatementCompiler
                 //Debugger.Break();
                 if (GeneratorStructDefinition is null)
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
+                    Diagnostics.Add(Diagnostic.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
                     return false;
                 }
 
@@ -3859,7 +3859,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Symbol \"{target.Content}\" not found", target)
+        Diagnostics.Add(Diagnostic.Error($"Symbol \"{target.Content}\" not found", target)
             .WithSuberrors(
                 parameterNotFoundError.ToError(target),
                 variableNotFoundError.ToError(target),
@@ -3883,7 +3883,7 @@ public partial class StatementCompiler
 
         if (prevType.Is<ArrayType>() && target.Identifier.Content == "Length")
         {
-            Diagnostics.Add(Diagnostic.Critical("Array type's length is readonly", target));
+            Diagnostics.Add(Diagnostic.Error("Array type's length is readonly", target));
             return false;
         }
 
@@ -3898,7 +3898,7 @@ public partial class StatementCompiler
 
             if (!prevType.Is(out StructType? structPointerType))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Could not get the field offsets of type \"{prevType}\"", target.Object));
+                Diagnostics.Add(Diagnostic.Error($"Could not get the field offsets of type \"{prevType}\"", target.Object));
                 return false;
             }
 
@@ -3972,7 +3972,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Type `{prevType}` doesn't have any fields", target.Identifier));
+        Diagnostics.Add(Diagnostic.Error($"Type `{prevType}` doesn't have any fields", target.Identifier));
         return false;
     }
     bool CompileSetter(IndexCallExpression target, Expression value, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
@@ -4057,7 +4057,7 @@ public partial class StatementCompiler
 
         if (!prev.Type.Is<PointerType>())
         {
-            Diagnostics.Add(Diagnostic.Critical($"Type \"{prev.Type}\" isn't a pointer", target.Expression));
+            Diagnostics.Add(Diagnostic.Error($"Type \"{prev.Type}\" isn't a pointer", target.Expression));
             return false;
         }
 
@@ -4160,7 +4160,7 @@ public partial class StatementCompiler
 
         if (function.Block is null)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function \"{function.ToReadable()}\" does not have a body", function));
+            Diagnostics.Add(Diagnostic.Error($"Function \"{function.ToReadable()}\" does not have a body", function));
             goto end;
         }
 
@@ -4600,9 +4600,9 @@ public partial class StatementCompiler
             if (!TryGetBuiltinFunction(BuiltinFunctions.InitializeHeap, ImmutableArray.Create<GeneralType>(), entryFile, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFoundError, AddCompilable))
             {
                 Diagnostics.Add(
-                    Diagnostic.Critical($"Failed to generate heap initialization code", firstHeapUsageLocation)
+                    Diagnostic.Error($"Failed to generate heap initialization code", firstHeapUsageLocation)
                     .WithSuberrors(
-                        Diagnostic.Critical($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.InitializeHeap}\")] not found", firstHeapUsageLocation)
+                        Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.InitializeHeap}\")] not found", firstHeapUsageLocation)
                         .WithSuberrors(
                             notFoundError.ToError(firstHeapUsageLocation)
                         )

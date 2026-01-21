@@ -8,50 +8,37 @@ public class DiagnosticWithoutContext :
     public DiagnosticsLevel Level { get; }
     public string Message { get; }
 
-    public IEnumerable<IDiagnostic> SubErrors => Enumerable.Empty<IDiagnostic>();
+    public ImmutableArray<IDiagnostic> SubErrors { get; }
+    IEnumerable<IDiagnostic> IDiagnostic.SubErrors => SubErrors;
 
 #if DEBUG
     bool _isDebugged;
 #endif
 
-    DiagnosticWithoutContext(DiagnosticsLevel level, string message, bool @break)
+    DiagnosticWithoutContext(DiagnosticsLevel level, string message, bool @break, ImmutableArray<IDiagnostic> suberrors)
     {
         Level = level;
         Message = message;
+        SubErrors = suberrors;
 
         if (@break)
         { Break(); }
     }
 
-    public DiagnosticWithoutContext(DiagnosticsLevel level, string message)
-    {
-        Level = level;
-        Message = message;
-
-        if (level == DiagnosticsLevel.Error)
-        { Break(); }
-    }
+    public DiagnosticWithoutContext(DiagnosticsLevel level, string message, ImmutableArray<IDiagnostic> suberrors)
+        : this(level, message, level == DiagnosticsLevel.Error, suberrors) { }
 
     [DoesNotReturn]
     public void Throw() => throw new LanguageExceptionWithoutContext(Message);
 
     public static DiagnosticWithoutContext Internal(string message, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, @break);
-
-    public static DiagnosticWithoutContext Critical(string message, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, @break);
+        => new(DiagnosticsLevel.Error, message, @break, ImmutableArray<IDiagnostic>.Empty);
 
     public static DiagnosticWithoutContext Error(string message, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, @break);
+        => new(DiagnosticsLevel.Error, message, @break, ImmutableArray<IDiagnostic>.Empty);
 
-    public static DiagnosticWithoutContext Warning(string message, bool @break = false)
-        => new(DiagnosticsLevel.Warning, message, @break);
-
-    public static DiagnosticWithoutContext Information(string message, bool @break = false)
-        => new(DiagnosticsLevel.Information, message, @break);
-
-    public static DiagnosticWithoutContext Hint(string message, bool @break = false)
-        => new(DiagnosticsLevel.Hint, message, @break);
+    public static DiagnosticWithoutContext Warning(string message, bool @break = true)
+        => new(DiagnosticsLevel.Warning, message, @break, ImmutableArray<IDiagnostic>.Empty);
 
     public DiagnosticWithoutContext Break()
     {

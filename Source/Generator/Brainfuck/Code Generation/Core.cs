@@ -388,7 +388,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
             case CompiledFieldAccess field: return TryGetAddress(field, out address, out size);
             default:
             {
-                Diagnostics.Add(Diagnostic.Critical($"Unknown statement \"{statement.GetType().Name}\"", statement));
+                Diagnostics.Add(Diagnostic.Error($"Unknown statement \"{statement.GetType().Name}\"", statement));
                 address = default;
                 size = default;
                 return false;
@@ -447,7 +447,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
             return false;
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Variable is not an array", index.Base));
+        Diagnostics.Add(Diagnostic.Error($"Variable is not an array", index.Base));
         address = default;
         size = default;
         return default;
@@ -516,7 +516,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
         if (!CompiledValue.TryShrinkTo8bit(ref addressToSet))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Address value must be a byte (not \"{addressToSet.Type}\")", pointer.Address));
+            Diagnostics.Add(Diagnostic.Error($"Address value must be a byte (not \"{addressToSet.Type}\")", pointer.Address));
             address = default;
             size = default;
             return default;

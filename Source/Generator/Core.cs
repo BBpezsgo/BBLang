@@ -69,6 +69,11 @@ public interface IReferenceable<TBy> : IReferenceable
     IEnumerable<Reference> IReferenceable.References => References.Select(v => (Reference)v);
 }
 
+public interface IHaveCompiledTypeExpression
+{
+    CompiledTypeExpression TypeExpression { get; }
+}
+
 public interface IHaveCompiledType
 {
     GeneralType Type { get; }

@@ -322,7 +322,7 @@ public sealed partial class Parser
                 new MissingIdentifierExpression(fieldName, File),
                 File
             );
-            Diagnostics.Add(Diagnostic.Critical("Expected a symbol after `.`", fieldName, File, false));
+            Diagnostics.Add(Diagnostic.Error("Expected a symbol after `.`", fieldName, File, false));
             return true;
         }
 

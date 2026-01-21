@@ -64,6 +64,11 @@ public class PossibleDiagnostic
         return new(Message, location, SubErrors);
     }
 
+    public IDiagnostic ToError(bool? shouldBreak = null) =>
+        IsPopulated ?
+        new Diagnostic(DiagnosticsLevel.Error, Message, Position, File, shouldBreak ?? ShouldBreak, SubErrors.ToImmutableArray(v => v.ToError(shouldBreak))) :
+        new DiagnosticWithoutContext(DiagnosticsLevel.Error, Message, SubErrors.ToImmutableArray(v => v.ToError(shouldBreak)));
+
     public Diagnostic ToError(IPositioned position, Uri file, bool? shouldBreak = null) =>
         IsPopulated ?
         new(DiagnosticsLevel.Error, Message, Position, File, shouldBreak ?? ShouldBreak, SubErrors.ToImmutableArray(v => v.ToError(position, file, shouldBreak))) :

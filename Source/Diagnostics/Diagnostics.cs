@@ -108,6 +108,17 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
         _diagnostics.Add(diagnostic);
     }
 
+    public void Add(IDiagnostic? diagnostic)
+    {
+        if (diagnostic is null) return;
+        switch (diagnostic)
+        {
+            case Diagnostic v: Add(v); break;
+            case DiagnosticWithoutContext v: Add(v); break;
+            default: throw new UnreachableException();
+        }
+    }
+
     public bool Update(Diagnostic old, Diagnostic diagnostic)
     {
         if (diagnostic is null) return false;

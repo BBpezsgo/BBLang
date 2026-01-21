@@ -331,7 +331,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (!CanReturn)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Can't return for some reason", keywordCall.Location));
+            Diagnostics.Add(Diagnostic.Error($"Can't return for some reason", keywordCall.Location));
             return;
         }
 
@@ -404,7 +404,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         if (BreakInstructions.Count == 0)
         {
-            Diagnostics.Add(Diagnostic.Critical($"The keyword \"{StatementKeywords.Break}\" does not available in the current context", keywordCall));
+            Diagnostics.Add(Diagnostic.Error($"The keyword \"{StatementKeywords.Break}\" does not available in the current context", keywordCall));
             return;
         }
 
@@ -668,13 +668,13 @@ public partial class CodeGeneratorForMain : CodeGenerator
         GeneralType prevType = anyCall.Function.Type;
         if (!prevType.Is(out FunctionType? functionType))
         {
-            Diagnostics.Add(Diagnostic.Critical($"This isn't a function", anyCall.Function));
+            Diagnostics.Add(Diagnostic.Error($"This isn't a function", anyCall.Function));
             return;
         }
 
         if (anyCall.Arguments.Length != functionType.Parameters.Length)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Length}", anyCall));
+            Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Length}", anyCall));
             return;
         }
 
@@ -694,7 +694,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             return false;
         }))
         {
-            Diagnostics.Add(Diagnostic.Critical($"Argument types of caller \"{anyCall}\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
+            Diagnostics.Add(Diagnostic.Error($"Argument types of caller \"{anyCall}\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
             return;
         }
 
@@ -1024,7 +1024,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
             default:
             {
-                Diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{@operator.Operator}\"", @operator));
+                Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator}\"", @operator));
                 return;
             }
         }
@@ -1222,7 +1222,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         GeneralType addressType = pointer.Address.Type;
         if (!addressType.Is(out PointerType? pointerType))
         {
-            Diagnostics.Add(Diagnostic.Critical($"This isn't a pointer", pointer.Address));
+            Diagnostics.Add(Diagnostic.Error($"This isn't a pointer", pointer.Address));
             return;
         }
 
@@ -1444,7 +1444,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             if (!prevType.Is(out StructType? structPointerType))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Could not get the field offsets of type \"{prevType}\"", field.Object));
+                Diagnostics.Add(Diagnostic.Error($"Could not get the field offsets of type \"{prevType}\"", field.Object));
                 return;
             }
 
@@ -1505,7 +1505,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             if (!indexType.Is<BuiltinType>())
             {
-                Diagnostics.Add(Diagnostic.Critical($"Index must be a builtin type (i.e. int) and not \"{indexType}\"", index.Index));
+                Diagnostics.Add(Diagnostic.Error($"Index must be a builtin type (i.e. int) and not \"{indexType}\"", index.Index));
                 return;
             }
 
@@ -1554,7 +1554,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             return;
         }
 
-        Diagnostics.Add(Diagnostic.Critical($"Index getter for type \"{prevType}\" not found", index));
+        Diagnostics.Add(Diagnostic.Error($"Index getter for type \"{prevType}\" not found", index));
     }
     void GenerateAddressResolver(Address address)
     {
@@ -1595,7 +1595,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
                 if (!indexType.Is<BuiltinType>())
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"Index type must be builtin (ie. \"int\") and not \"{indexType}\"", runtimeIndex.IndexValue));
+                    Diagnostics.Add(Diagnostic.Error($"Index type must be builtin (ie. \"int\") and not \"{indexType}\"", runtimeIndex.IndexValue));
                     return;
                 }
 
@@ -1702,12 +1702,12 @@ public partial class CodeGeneratorForMain : CodeGenerator
         {
             if (!statementBuiltinType.Type.IsInteger())
             {
-                Diagnostics.Add(Diagnostic.Critical($"Invalid integer type {statementBuiltinType} to resize from", typeCast));
+                Diagnostics.Add(Diagnostic.Error($"Invalid integer type {statementBuiltinType} to resize from", typeCast));
                 return;
             }
             if (!targetbuiltinType.Type.IsInteger())
             {
-                Diagnostics.Add(Diagnostic.Critical($"Invalid integer type {targetbuiltinType} to resize from", typeCast));
+                Diagnostics.Add(Diagnostic.Error($"Invalid integer type {targetbuiltinType} to resize from", typeCast));
                 return;
             }
 
@@ -1787,7 +1787,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                     return;
                 }
 
-                Diagnostics.Add(Diagnostic.Critical($"Can't modify the size of the value. You tried to convert from \"{statementBuiltinType}\" (size of {statementSize}) to \"{targetbuiltinType}\" (size of {targetSize})", typeCast));
+                Diagnostics.Add(Diagnostic.Error($"Can't modify the size of the value. You tried to convert from \"{statementBuiltinType}\" (size of {statementSize}) to \"{targetbuiltinType}\" (size of {targetSize})", typeCast));
                 return;
             }
         }
@@ -1973,7 +1973,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
             default:
             {
-                Diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{@operator.Operator}\"", @operator));
+                Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator}\"", @operator));
                 return;
             }
         }
@@ -2315,7 +2315,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         if (FindBitWidth(statementToSet.Address.Type, statementToSet.Address) != PointerBitWidth)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Type \"{statementToSet.Address.Type}\" cant be a pointer", statementToSet.Address));
+            Diagnostics.Add(Diagnostic.Error($"Type \"{statementToSet.Address.Type}\" cant be a pointer", statementToSet.Address));
             return;
         }
 
@@ -2434,7 +2434,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             if (size <= 0)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Variable has a size of {size}", newVariable));
+                Diagnostics.Add(Diagnostic.Error($"Variable has a size of {size}", newVariable));
                 return default;
             }
 
@@ -2509,7 +2509,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (body is null)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Function \"{function.ToReadable()}\" does not have a body", (ILocated)function));
+            Diagnostics.Add(Diagnostic.Error($"Function \"{function.ToReadable()}\" does not have a body", (ILocated)function));
             return;
         }
 
@@ -2836,7 +2836,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                     goto ok;
                 }
 
-                if (!Diagnostics.HasErrors) Diagnostics.Add(Diagnostic.Critical($"Function {undefinedOffset.Called} wasn't compiled for some reason", undefinedOffset.CallerLocation));
+                if (!Diagnostics.HasErrors) Diagnostics.Add(Diagnostic.Error($"Function {undefinedOffset.Called} wasn't compiled for some reason", undefinedOffset.CallerLocation));
                 goto failed;
             ok:;
             }

@@ -10,7 +10,7 @@ public partial class StatementCompiler
     CompiledStruct CompileStructNoFields(StructDefinition @struct)
     {
         if (LanguageConstants.KeywordList.Contains(@struct.Identifier.Content))
-        { Diagnostics.Add(Diagnostic.Critical($"Illegal struct name \"{@struct.Identifier.Content}\"", @struct.Identifier, @struct.File)); }
+        { Diagnostics.Add(Diagnostic.Error($"Illegal struct name \"{@struct.Identifier.Content}\"", @struct.Identifier, @struct.File)); }
 
         @struct.Identifier.AnalyzedType = TokenAnalyzedType.Struct;
 
@@ -114,12 +114,12 @@ public partial class StatementCompiler
 
                     if (builtinFunction.Parameters.Length != (function as ICompiledFunctionDefinition).Parameters.Length)
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Wrong number of arguments passed to function \"{builtinName}\"", function.Identifier, function.File));
+                        Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{builtinName}\"", function.Identifier, function.File));
                     }
 
                     if (!builtinFunction.Type.Invoke(type))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Wrong type defined for function \"{builtinName}\"", (function as IHaveType)?.Type.Location ?? new Location(function.Identifier.Position, function.File)));
+                        Diagnostics.Add(Diagnostic.Error($"Wrong type defined for function \"{builtinName}\"", (function as IHaveType)?.Type.Location ?? new Location(function.Identifier.Position, function.File)));
                     }
 
                     for (int i = 0; i < builtinFunction.Parameters.Length; i++)
@@ -132,7 +132,7 @@ public partial class StatementCompiler
                         if (definedParameterType.Invoke(passedParameterType))
                         { continue; }
 
-                        Diagnostics.Add(Diagnostic.Critical($"Wrong type of parameter passed to function \"{builtinName}\". Parameter index: {i} Required type: \"{definedParameterType}\" Passed: \"{passedParameterType}\"", (function as FunctionThingDefinition).Parameters[i].Type, function.Parameters[i].File));
+                        Diagnostics.Add(Diagnostic.Error($"Wrong type of parameter passed to function \"{builtinName}\". Parameter index: {i} Required type: \"{definedParameterType}\" Passed: \"{passedParameterType}\"", (function as FunctionThingDefinition).Parameters[i].Type, function.Parameters[i].File));
                     }
                     break;
                 }
@@ -274,13 +274,13 @@ public partial class StatementCompiler
 
         if (externalFunction.ParametersSize != passedParametersSize)
         {
-            diagnostics?.Add(Diagnostic.Critical($"Wrong size of parameters defined ({passedParametersSize}) for external function \"{externalFunction.ToReadable()}\" {definition.ToReadable()}", definition.Identifier, definition.File));
+            diagnostics?.Add(Diagnostic.Error($"Wrong size of parameters defined ({passedParametersSize}) for external function \"{externalFunction.ToReadable()}\" {definition.ToReadable()}", definition.Identifier, definition.File));
             return;
         }
 
         if (externalFunction.ReturnValueSize != passedReturnType)
         {
-            diagnostics?.Add(Diagnostic.Critical($"Wrong size of return type defined ({passedReturnType}) for external function \"{externalFunction.ToReadable()}\" {definition.ToReadable()}", definition.Identifier, definition.File));
+            diagnostics?.Add(Diagnostic.Error($"Wrong size of return type defined ({passedReturnType}) for external function \"{externalFunction.ToReadable()}\" {definition.ToReadable()}", definition.Identifier, definition.File));
             return;
         }
     }
@@ -520,14 +520,14 @@ public partial class StatementCompiler
         {
             if (!method.Attributes.TryGetAttribute(AttributeConstants.BuiltinIdentifier, out AttributeUsage? builtinAttribute) || !builtinAttribute.TryGetValue(out string? v) || v != "next")
             {
-                Diagnostics.Add(Diagnostic.Critical($"Generator struct shouldn't have any methods other than one \"next\" method", method));
+                Diagnostics.Add(Diagnostic.Error($"Generator struct shouldn't have any methods other than one \"next\" method", method));
                 continue;
             }
 
             foreach (ParameterDefinition parameter in method.Parameters.Parameters)
             {
                 if (parameter.Modifiers.Contains(ModifierKeywords.This))
-                { Diagnostics.Add(Diagnostic.Critical($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, @struct.File)); }
+                { Diagnostics.Add(Diagnostic.Error($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, @struct.File)); }
             }
 
             ImmutableArray<ParameterDefinition> parameters = method.Parameters.Parameters.Insert(0, new ParameterDefinition(
@@ -559,13 +559,13 @@ public partial class StatementCompiler
 
             if (CompiledFunctions.Any(compiledMethod.IsSame))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Function with name \"{compiledMethod.ToReadable()}\" already defined", method.Identifier, @struct.File));
+                Diagnostics.Add(Diagnostic.Error($"Function with name \"{compiledMethod.ToReadable()}\" already defined", method.Identifier, @struct.File));
                 continue;
             }
 
             if (nextFunction is not null)
             {
-                Diagnostics.Add(Diagnostic.Critical($"Generator struct should only have only one \"next\" function", method.Identifier, @struct.File));
+                Diagnostics.Add(Diagnostic.Error($"Generator struct should only have only one \"next\" function", method.Identifier, @struct.File));
                 continue;
             }
 
@@ -768,7 +768,7 @@ public partial class StatementCompiler
         {
             if (IsSymbolDefined(@struct))
             {
-                Diagnostics.Add(Diagnostic.Critical("Symbol already exists", @struct.Identifier, @struct.File));
+                Diagnostics.Add(Diagnostic.Error("Symbol already exists", @struct.Identifier, @struct.File));
                 continue;
             }
 
@@ -779,7 +779,7 @@ public partial class StatementCompiler
         {
             if (IsSymbolDefined(@aliasDefinition))
             {
-                Diagnostics.Add(Diagnostic.Critical("Symbol already exists", @aliasDefinition.Identifier, @aliasDefinition.File));
+                Diagnostics.Add(Diagnostic.Error("Symbol already exists", @aliasDefinition.Identifier, @aliasDefinition.File));
                 continue;
             }
 
@@ -829,7 +829,7 @@ public partial class StatementCompiler
 
             if (CompiledOperators.Any(other => FunctionEquality(compiled, other)))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Operator \"{compiled.ToReadable()}\" already defined", @operator.Identifier, @operator.File));
+                Diagnostics.Add(Diagnostic.Error($"Operator \"{compiled.ToReadable()}\" already defined", @operator.Identifier, @operator.File));
                 continue;
             }
 
@@ -845,7 +845,7 @@ public partial class StatementCompiler
 
             if (CompiledFunctions.Any(other => FunctionEquality(compiled, other)))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Function \"{compiled.ToReadable()}\" already defined", function.Identifier, function.File));
+                Diagnostics.Add(Diagnostic.Error($"Function \"{compiled.ToReadable()}\" already defined", function.Identifier, function.File));
                 continue;
             }
 
@@ -869,7 +869,7 @@ public partial class StatementCompiler
                 {
                     if (parameter.Modifiers.Contains(ModifierKeywords.This))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, compiledStruct.File));
+                        Diagnostics.Add(Diagnostic.Error($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, compiledStruct.File));
                         continue;
                     }
                 }
@@ -930,13 +930,13 @@ public partial class StatementCompiler
 
                     if (CompiledGeneralFunctions.Any(methodWithRef.IsSame))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Function with name \"{methodWithRef.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
+                        Diagnostics.Add(Diagnostic.Error($"Function with name \"{methodWithRef.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
                         continue;
                     }
 
                     if (CompiledGeneralFunctions.Any(methodWithPointer.IsSame))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Function with name \"{methodWithPointer.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
+                        Diagnostics.Add(Diagnostic.Error($"Function with name \"{methodWithPointer.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
                         continue;
                     }
 
@@ -952,7 +952,7 @@ public partial class StatementCompiler
 
                     if (CompiledGeneralFunctions.Any(methodWithRef.IsSame))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Function with name \"{methodWithRef.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
+                        Diagnostics.Add(Diagnostic.Error($"Function with name \"{methodWithRef.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
                         continue;
                     }
 
@@ -965,7 +965,7 @@ public partial class StatementCompiler
                 foreach (ParameterDefinition parameter in method.Parameters.Parameters)
                 {
                     if (parameter.Modifiers.Contains(ModifierKeywords.This))
-                    { Diagnostics.Add(Diagnostic.Critical($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, compiledStruct.File)); }
+                    { Diagnostics.Add(Diagnostic.Error($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, compiledStruct.File)); }
                 }
 
                 ImmutableArray<ParameterDefinition> parameters = method.Parameters.Parameters.Insert(0, new ParameterDefinition(
@@ -997,7 +997,7 @@ public partial class StatementCompiler
 
                 if (CompiledFunctions.Any(methodWithPointer.IsSame))
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"Function with name \"{methodWithPointer.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
+                    Diagnostics.Add(Diagnostic.Error($"Function with name \"{methodWithPointer.ToReadable()}\" already defined", method.Identifier, compiledStruct.File));
                     continue;
                 }
 
@@ -1010,7 +1010,7 @@ public partial class StatementCompiler
                 {
                     if (parameter.Modifiers.Contains(ModifierKeywords.This))
                     {
-                        Diagnostics.Add(Diagnostic.Critical($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, compiledStruct.File));
+                        Diagnostics.Add(Diagnostic.Error($"Keyword \"{ModifierKeywords.This}\" is not valid in the current context", parameter.Identifier, compiledStruct.File));
                         continue;
                     }
                 }
@@ -1041,7 +1041,7 @@ public partial class StatementCompiler
 
                 if (CompiledConstructors.Any(compiledConstructor.IsSame))
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"Constructor \"{compiledConstructor.ToReadable()}\" already defined", constructor.Type, compiledStruct.File));
+                    Diagnostics.Add(Diagnostic.Error($"Constructor \"{compiledConstructor.ToReadable()}\" already defined", constructor.Type, compiledStruct.File));
                     continue;
                 }
 
@@ -1058,7 +1058,7 @@ public partial class StatementCompiler
 
                 if (CompiledOperators.Any(other => FunctionEquality(compiled, other)))
                 {
-                    Diagnostics.Add(Diagnostic.Critical($"Operator \"{compiled.ToReadable()}\" already defined", @operator.Identifier, @operator.File));
+                    Diagnostics.Add(Diagnostic.Error($"Operator \"{compiled.ToReadable()}\" already defined", @operator.Identifier, @operator.File));
                     continue;
                 }
 
@@ -1123,7 +1123,7 @@ public partial class StatementCompiler
 
         if (expressionAst.Usings.Any())
         {
-            Diagnostics.Add(Diagnostic.Critical($"Cannot import files from an interactive expression", expressionAst.Usings.First()));
+            Diagnostics.Add(Diagnostic.Error($"Cannot import files from an interactive expression", expressionAst.Usings.First()));
             return CompilerResult.MakeEmpty(entryFile);
         }
 
@@ -1136,12 +1136,12 @@ public partial class StatementCompiler
 
         if (parsedExpression.AST.TopLevelStatements.Length > 1)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Expression should consists of one value only", parsedExpression.AST.TopLevelStatements[1]));
+            Diagnostics.Add(Diagnostic.Error($"Expression should consists of one value only", parsedExpression.AST.TopLevelStatements[1]));
             return CompilerResult.MakeEmpty(entryFile);
         }
         else if (parsedExpression.AST.TopLevelStatements.Length == 0)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Expression doesn't have any values", new Location(Position.Zero, entryFile)));
+            Diagnostics.Add(Diagnostic.Error($"Expression doesn't have any values", new Location(Position.Zero, entryFile)));
             return CompilerResult.MakeEmpty(entryFile);
         }
 

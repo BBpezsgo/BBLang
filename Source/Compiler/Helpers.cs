@@ -676,7 +676,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         variableDeclaration.Identifier.AnalyzedType = TokenAnalyzedType.ConstantName;
 
         if (GetConstant(variableDeclaration.Identifier.Content, variableDeclaration.File, out _, out _))
-        { Diagnostics.Add(Diagnostic.Critical($"Constant \"{variableDeclaration.Identifier}\" already defined", variableDeclaration.Identifier, variableDeclaration.File)); }
+        { Diagnostics.Add(Diagnostic.Error($"Constant \"{variableDeclaration.Identifier}\" already defined", variableDeclaration.Identifier, variableDeclaration.File)); }
 
         CompileVariableAttributes(variableDeclaration);
 
@@ -698,7 +698,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             else if (variableDeclaration.InitialValue is null)
             {
-                Diagnostics.Add(Diagnostic.Critical($"External constant \"{variableDeclaration.ExternalConstantName}\" not found", variableDeclaration));
+                Diagnostics.Add(Diagnostic.Error($"External constant \"{variableDeclaration.ExternalConstantName}\" not found", variableDeclaration));
                 constantValue = default;
             }
         }
@@ -725,7 +725,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         if (variableDeclaration.InitialValue is null)
         {
-            Diagnostics.Add(Diagnostic.Critical($"Constant value must have initial value", variableDeclaration));
+            Diagnostics.Add(Diagnostic.Error($"Constant value must have initial value", variableDeclaration));
             constantValue = default;
         }
         else
@@ -733,7 +733,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompileExpression(variableDeclaration.InitialValue, out CompiledExpression? compiledInitialValue, constantType);
             if (!TryCompute(compiledInitialValue, out constantValue))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Constant value must be evaluated at compile-time", variableDeclaration.InitialValue));
+                Diagnostics.Add(Diagnostic.Error($"Constant value must be evaluated at compile-time", variableDeclaration.InitialValue));
                 constantValue = default;
             }
         }
@@ -1603,7 +1603,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             if (!attribute.TryGetValue(out string? literalTypeName))
             {
-                Diagnostics.Add(Diagnostic.Critical($"Attribute \"{attribute.Identifier}\" needs one string argument", attribute));
+                Diagnostics.Add(Diagnostic.Error($"Attribute \"{attribute.Identifier}\" needs one string argument", attribute));
                 return default;
             }
             return literalTypeName;
@@ -1698,7 +1698,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         if (!prevType.Is(out FunctionType? functionType))
         {
             type = null;
-            diagnostics.Add(Diagnostic.Critical($"This isn't a function", anyCall.Expression));
+            diagnostics.Add(Diagnostic.Error($"This isn't a function", anyCall.Expression));
             diagnostics.AddRange(subdiagnostics);
             return false;
         }
@@ -1754,7 +1754,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             else if (!currentItemType.SameAs(itemType))
             {
-                diagnostics.Add(Diagnostic.Critical($"List element at index {i} should be a {itemType} and not {currentItemType}", item));
+                diagnostics.Add(Diagnostic.Error($"List element at index {i} should be a {itemType} and not {currentItemType}", item));
             }
         }
 
@@ -1863,7 +1863,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 if (!leftBType.TryGetNumericType(out NumericType leftNType1) ||
                     !rightBType.TryGetNumericType(out NumericType rightNType1))
                 {
-                    diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
+                    diagnostics.Add(Diagnostic.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
                     return false;
                 }
                 NumericType numericType = leftNType1 > rightNType1 ? leftNType1 : rightNType1;
@@ -1908,7 +1908,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                         break;
 
                     default:
-                        diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
+                        diagnostics.Add(Diagnostic.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
                         type = BuiltinType.Void;
                         break;
                 }
@@ -1926,13 +1926,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         if (!leftType.TryGetNumericType(out NumericType leftNType))
         {
-            diagnostics.Add(Diagnostic.Critical($"Type \"{leftType}\" aint a numeric type", @operator.Left));
+            diagnostics.Add(Diagnostic.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
             ok = false;
         }
 
         if (!rightType.TryGetNumericType(out NumericType rightNType))
         {
-            diagnostics.Add(Diagnostic.Critical($"Type \"{rightType}\" aint a numeric type", @operator.Right));
+            diagnostics.Add(Diagnostic.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
             ok = false;
         }
 
@@ -2023,7 +2023,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             default:
             {
-                diagnostics.Add(Diagnostic.Critical($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
+                diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
                 return false;
             }
         }
@@ -2285,7 +2285,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return true;
         }
 
-        diagnostics.Add(Diagnostic.Critical($"Symbol \"{identifier.Content}\" not found", identifier)
+        diagnostics.Add(Diagnostic.Error($"Symbol \"{identifier.Content}\" not found", identifier)
             .WithSuberrors(
                 parameterNotFoundError.ToError(identifier),
                 variableNotFoundError.ToError(identifier),
@@ -2370,12 +2370,12 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 return true;
             }
 
-            diagnostics.Add(Diagnostic.Critical($"Field definition \"{field.Identifier}\" not found in type \"{prevStatementType}\"", field.Identifier, field.File));
+            diagnostics.Add(Diagnostic.Error($"Field definition \"{field.Identifier}\" not found in type \"{prevStatementType}\"", field.Identifier, field.File));
             return false;
         }
         else
         {
-            diagnostics.Add(Diagnostic.Critical($"Type \"{prevStatementType}\" does not have a field \"{field.Identifier}\"", field));
+            diagnostics.Add(Diagnostic.Error($"Type \"{prevStatementType}\" does not have a field \"{field.Identifier}\"", field));
             return false;
         }
     }
@@ -2422,7 +2422,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             case LambdaExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
             default:
                 type = null;
-                diagnostics.Add(Diagnostic.Critical($"Statement \"{statement.GetType().Name}\" does not have a type", statement));
+                diagnostics.Add(Diagnostic.Error($"Statement \"{statement.GetType().Name}\" does not have a type", statement));
                 return false;
         }
     }

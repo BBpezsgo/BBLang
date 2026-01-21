@@ -164,7 +164,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         if (!address.Type.Is(out FunctionType? addressType))
         {
-            Diagnostics.Add(Diagnostic.Critical($"This should be a function pointer and not \"{address.Type}\"", address));
+            Diagnostics.Add(Diagnostic.Error($"This should be a function pointer and not \"{address.Type}\"", address));
             return;
         }
 
@@ -342,7 +342,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             Code.Emit(Opcode.MathSub, Register.StackPointer, InstructionOperand.Immediate(size));
             ScopeSizes.LastRef += size;
             if (ScopeSizes.Last >= Settings.StackSize)
-            { Diagnostics.Add(new DiagnosticWithoutContext(DiagnosticsLevel.Warning, "Stack will overflow")); }
+            { Diagnostics.Add(DiagnosticWithoutContext.Warning("Stack will overflow")); }
             return;
         }
 
@@ -704,7 +704,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Code.Emit(Opcode.Push, value);
         ScopeSizes.LastRef += (int)value.BitWidth;
         if (ScopeSizes.Last >= Settings.StackSize)
-        { Diagnostics.Add(new DiagnosticWithoutContext(DiagnosticsLevel.Warning, "Stack will overflow")); }
+        { Diagnostics.Add(DiagnosticWithoutContext.Warning("Stack will overflow")); }
     }
     void Push(PreparationInstructionOperand value)
     {
@@ -718,7 +718,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             _ => throw new UnreachableException(),
         };
         if (ScopeSizes.Last >= Settings.StackSize)
-        { Diagnostics.Add(new DiagnosticWithoutContext(DiagnosticsLevel.Warning, "Stack will overflow")); }
+        { Diagnostics.Add(DiagnosticWithoutContext.Warning("Stack will overflow")); }
     }
 
     void CheckPointerNull(bool preservePointer = true)

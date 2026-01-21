@@ -160,14 +160,30 @@ public class LanguageException : Exception
         return result.ToString();
     }
 
-    public Diagnostic ToDiagnostic() => new(
-        DiagnosticsLevel.Error,
-        Message,
-        Position,
-        File,
-        false,
-        InnerException is LanguageException innerLanguageException
-            ? ImmutableArray.Create(innerLanguageException.ToDiagnostic())
-            : ImmutableArray<Diagnostic>.Empty
-    );
+    public IDiagnostic ToDiagnostic()
+    {
+        if (File is null && Position == Position.UnknownPosition)
+        {
+            return new DiagnosticWithoutContext(
+                DiagnosticsLevel.Error,
+                Message,
+                InnerException is LanguageException innerLanguageException
+                    ? ImmutableArray.Create(innerLanguageException.ToDiagnostic())
+                    : ImmutableArray<IDiagnostic>.Empty
+            );
+        }
+        else
+        {
+            return new Diagnostic(
+                DiagnosticsLevel.Error,
+                Message,
+                Position,
+                File,
+                false,
+                InnerException is LanguageException innerLanguageException
+                    ? ImmutableArray.Create(innerLanguageException.ToDiagnostic())
+                    : ImmutableArray<IDiagnostic>.Empty
+            );
+        }
+    }
 }
