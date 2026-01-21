@@ -144,24 +144,24 @@ static class TestResults
         using StreamWriter file = File.CreateText(resultFile);
 
         file.WriteLine("# Test Results");
+        file.WriteLine();
 
-        file.WriteLine($"[![](https://svg.test-summary.com/dashboard.svg?p={passingTestCount}&f={failedTestCount}&s={notRunTestCount})](#)");
+        file.WriteLine($"![{passingTestCount} passed, {failedTestCount} failed, {notRunTestCount} skipped](https://svg.test-summary.com/dashboard.svg?p={passingTestCount}&f={failedTestCount}&s={notRunTestCount})");
 
-        file.Write($"[![](https://img.shields.io/badge/Passing-{passingTestCount}-brightgreen?style=plastic])](#) ");
-        file.Write($"[![](https://img.shields.io/badge/Failing-{failedTestCount}-red?style=plastic])](#) ");
-        file.Write($"[![](https://img.shields.io/badge/Skipped-{notRunTestCount}-silver?style=plastic])](#)");
+        file.Write($"![{passingTestCount} passed](https://img.shields.io/badge/Passing-{passingTestCount}-brightgreen?style=plastic]) ");
+        file.Write($"![{failedTestCount} failed](https://img.shields.io/badge/Failing-{failedTestCount}-red?style=plastic]) ");
+        file.Write($"![{notRunTestCount} skipped](https://img.shields.io/badge/Skipped-{notRunTestCount}-silver?style=plastic])");
         file.WriteLine();
 
         file.WriteLine();
 
-        file.WriteLine("| File | Bytecode | Brainfuck | MSIL |");
-        file.WriteLine("|:----:|:--------:|:---------:|:----:|");
+        file.WriteLine("| File | Bytecode | Brainfuck |");
+        file.WriteLine("| :--: | :------: | :-------: |");
 
         foreach ((int serialNumber, List<(string? Category, string Outcome, string? ErrorMessage)>? fileResults) in sortedTestFiles)
         {
             (string? Outcome, string? ErrorMessage) bytecodeResult = (null, null);
             (string? Outcome, string? ErrorMessage) brainfuckResult = (null, null);
-            (string? Outcome, string? ErrorMessage) ilResult = (null, null);
 
             foreach ((string? category, string outcome, string? errorMessage) in fileResults)
             {
@@ -169,13 +169,11 @@ static class TestResults
                 {
                     case "Main": bytecodeResult = (outcome, errorMessage); break;
                     case "Brainfuck": brainfuckResult = (outcome, errorMessage); break;
-                    case "IL": ilResult = (outcome, errorMessage); break;
                 }
             }
 
             if (bytecodeResult.Outcome == "NotExecuted" &&
-                brainfuckResult.Outcome == "NotExecuted" &&
-                ilResult.Outcome == "NotExecuted")
+                brainfuckResult.Outcome == "NotExecuted")
             { continue; }
 
             static string? TranslateOutcome(string? outcome) => outcome switch
@@ -188,7 +186,6 @@ static class TestResults
 
             bytecodeResult.Outcome = TranslateOutcome(bytecodeResult.Outcome);
             brainfuckResult.Outcome = TranslateOutcome(brainfuckResult.Outcome);
-            ilResult.Outcome = TranslateOutcome(ilResult.Outcome);
 
             string translatedName = $"https://github.com/BBpezsgo/BBLang/blob/master/TestFiles/{serialNumber.ToString().PadLeft(2, '0')}.{LanguageConstants.LanguageExtension}";
             translatedName = $"[{serialNumber}]({translatedName})";
@@ -198,33 +195,13 @@ static class TestResults
             file.Write(" | ");
 
             file.Write(bytecodeResult.Outcome);
-            //if (bytecodeResult.ErrorMessage is not null)
-            //{
-            //    file.Write(' ');
-            //    file.Write(bytecodeResult.ErrorMessage.ReplaceLineEndings(" "));
-            //}
 
             file.Write(" | ");
 
             file.Write(brainfuckResult.Outcome);
-            //if (brainfuckResult.ErrorMessage is not null)
-            //{
-            //    file.Write(' ');
-            //    file.Write(brainfuckResult.ErrorMessage.ReplaceLineEndings(" "));
-            //}
-
-            file.Write(" | ");
-
-            file.Write(ilResult.Outcome);
-            //if (ilResult.ErrorMessage is not null)
-            //{
-            //    file.Write(' ');
-            //    file.Write(ilResult.ErrorMessage.ReplaceLineEndings(" "));
-            //}
 
             file.Write(" |");
             file.WriteLine();
         }
     }
-
 }
