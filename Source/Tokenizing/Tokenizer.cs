@@ -26,204 +26,10 @@ public partial class Tokenizer
         }
     }
 
-    bool ExpectPreprocessArguments
-    {
-        get
-        {
-            for (int i = Tokens.Count - 1; i >= 0; i--)
-            {
-                Token token = Tokens[i];
+    readonly TokenizerPreprocessorContext PreprocessorContext;
 
-                if (token.TokenType == TokenType.Whitespace)
-                {
-                    if (token.Content.Contains('\r') || token.Content.Contains('\n'))
-                    { break; }
-                    continue;
-                }
-
-                if (token.TokenType == TokenType.CommentMultiline)
-                { continue; }
-
-                if (token.TokenType == TokenType.PreprocessIdentifier)
-                { return token.Position.Range.End.Line == CurrentLine; }
-
-                break;
-            }
-
-            return false;
-        }
-    }
-
-    PreprocessorTag? LastPreprocess
-    {
-        get
-        {
-            Token? argument = null;
-
-            for (int i = Tokens.Count - 1; i >= 0; i--)
-            {
-                Token token = Tokens[i];
-
-                if (token.TokenType == TokenType.Whitespace)
-                {
-                    if (token.Content.Contains('\r') || token.Content.Contains('\n'))
-                    { break; }
-                    continue;
-                }
-
-                if (token.TokenType == TokenType.CommentMultiline)
-                { continue; }
-
-                if (argument is null &&
-                    token.TokenType == TokenType.PreprocessArgument)
-                {
-                    argument = token;
-                    continue;
-                }
-
-                if (token.TokenType == TokenType.PreprocessIdentifier)
-                { return new PreprocessorTag(token, argument); }
-
-                break;
-            }
-
-            return null;
-        }
-    }
-
-    enum PreprocessPhase
-    {
-        If,
-        Elseif,
-        Else,
-    }
-
-    class PreprocessThing
-    {
-        public PreprocessPhase Phase;
-        public bool Condition;
-    }
-
-    readonly List<PreprocessorTag> UnprocessedPreprocessorTags = new();
-
-    void HandlePreprocess(bool finished)
-    {
-        PreprocessorTag? last = LastPreprocess;
-        if (last is null) return;
-
-        switch (last.Identifier.Content)
-        {
-            case "#if":
-            {
-                if (!finished)
-                { break; }
-
-                if (last.Argument is null)
-                { Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{last.Identifier}\"", last.Identifier.Position.After(), File)); }
-
-                bool condition = PreprocessorVariables.Contains(last.Argument?.Content ?? string.Empty);
-                PreprocessorConditions.Push(new PreprocessThing()
-                {
-                    Condition = condition,
-                    Phase = PreprocessPhase.If,
-                });
-
-                break;
-            }
-
-            case "#else":
-            {
-                if (finished)
-                { break; }
-
-                if (PreprocessorConditions.Count == 0)
-                { Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{last.Identifier}\"", last.Identifier.Position, File)); }
-                else
-                {
-                    switch (PreprocessorConditions.Last.Phase)
-                    {
-                        case PreprocessPhase.If:
-                            PreprocessorConditions.Last.Condition = !PreprocessorConditions.Last.Condition;
-                            PreprocessorConditions.Last.Phase = PreprocessPhase.Else;
-                            break;
-                        case PreprocessPhase.Else:
-                            Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{last.Identifier}\"", last.Identifier.Position, File));
-                            break;
-                    }
-                }
-
-                break;
-            }
-
-            case "#endif":
-            {
-                if (finished)
-                { break; }
-
-                if (PreprocessorConditions.Count == 0)
-                { Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{last.Identifier}\"", last.Identifier.Position, File)); }
-                else
-                { PreprocessorConditions.Pop(); }
-
-                break;
-            }
-
-            case "#define":
-            {
-                if (!finished)
-                { break; }
-
-                if (IsPreprocessSkipping)
-                { break; }
-
-                if (last.Argument is null)
-                { Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{last.Identifier}\"", last.Identifier.Position.After(), File)); }
-                else
-                { PreprocessorVariables.Add(last.Argument.Content); }
-
-                break;
-            }
-
-            case "#undefine":
-            {
-                if (!finished)
-                { break; }
-
-                if (IsPreprocessSkipping)
-                { break; }
-
-                if (last.Argument is null)
-                { Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{last.Identifier}\"", last.Identifier.Position.After(), File)); }
-                else
-                { PreprocessorVariables.Remove(last.Argument.Content); }
-
-                break;
-            }
-
-            default:
-            {
-                if (finished)
-                { UnprocessedPreprocessorTags.Add(last); }
-                break;
-            }
-        }
-    }
-
-    readonly Stack<PreprocessThing> PreprocessorConditions;
-    readonly ImmutableHashSet<string> PreprocessorVariables;
-
-    bool IsPreprocessSkipping
-    {
-        get
-        {
-            foreach (PreprocessThing item in PreprocessorConditions)
-            {
-                if (!item.Condition)
-                { return true; }
-            }
-            return false;
-        }
-    }
+    Token? CurrentPreprocess;
+    Token? CurrentPreprocessArgument;
 
     void ProcessCharacter(char currChar, int offsetTotal)
     {
@@ -298,7 +104,6 @@ public partial class Tokenizer
             PreparationTokenType.Whitespace or
             PreparationTokenType.PREPROCESS_Skipped)
         {
-            _ = IsBeginningOfLine;
             EndToken(offsetTotal);
             CurrentToken.TokenType = PreparationTokenType.PREPROCESS_Operator;
             CurrentToken.Content.Append(currChar);
@@ -331,19 +136,29 @@ public partial class Tokenizer
 #endif
             {
                 CurrentToken.Content.Append(currChar);
-                goto FinishCharacter;
+            }
+            else if (currChar is '\r' or '\n')
+            {
+                CurrentPreprocess = EndToken(offsetTotal);
+                CurrentPreprocessArgument = null;
+
+                PreprocessorContext.HandlePreprocess(CurrentPreprocess ?? throw new UnreachableException(), CurrentPreprocessArgument);
+
+                CurrentPreprocess = null;
+                CurrentPreprocessArgument = null;
             }
             else
             {
-                EndToken(offsetTotal);
-                HandlePreprocess(false);
-            }
-        }
-        else if (ExpectPreprocessArguments || CurrentToken.TokenType == PreparationTokenType.PREPROCESS_Argument)
-        {
-            if (CurrentToken.TokenType != PreparationTokenType.PREPROCESS_Argument)
-            { EndToken(offsetTotal); }
+                CurrentPreprocess = EndToken(offsetTotal);
+                CurrentPreprocessArgument = null;
 
+                CurrentToken.TokenType = PreparationTokenType.PREPROCESS_Argument;
+                CurrentToken.Content.Append(currChar);
+            }
+            goto FinishCharacter;
+        }
+        else if (CurrentToken.TokenType == PreparationTokenType.PREPROCESS_Argument)
+        {
 #if NET_STANDARD
             if (CompatibilityUtils.IsAsciiLetter(currChar))
 #else
@@ -357,14 +172,18 @@ public partial class Tokenizer
 
             if (char.IsWhiteSpace(currChar))
             {
-                EndToken(offsetTotal);
-                HandlePreprocess(true);
+                CurrentPreprocessArgument = EndToken(offsetTotal);
+
+                PreprocessorContext.HandlePreprocess(CurrentPreprocess ?? throw new UnreachableException(), CurrentPreprocessArgument);
+
+                CurrentPreprocess = null;
+                CurrentPreprocessArgument = null;
             }
             else
             { Diagnostics.Add(Diagnostic.Error($"Unexpected character \'{currChar.Escape()}\'", GetCurrentPosition(offsetTotal), File)); }
         }
 
-        if (IsPreprocessSkipping)
+        if (PreprocessorContext.IsPreprocessSkipping)
         {
             if (currChar is '\r' or '\n' ||
                 CurrentLine != CurrentToken.Position.Range.End.Line)
@@ -767,8 +586,10 @@ public partial class Tokenizer
         }
     }
 
-    void EndToken(int offsetTotal, bool inFuture = false)
+    Token? EndToken(int offsetTotal, bool inFuture = false)
     {
+        Token? result = null;
+
         if (inFuture)
         {
             CurrentToken.Position = new Position(
@@ -815,7 +636,7 @@ public partial class Tokenizer
                 op.TokenType = PreparationTokenType.Operator;
 
                 Tokens.Add(number.Instantiate());
-                Tokens.Add(op.Instantiate());
+                Tokens.Add(result = op.Instantiate());
                 goto Finish;
             }
         }
@@ -836,7 +657,7 @@ public partial class Tokenizer
             { CurrentToken.TokenType = PreparationTokenType.LiteralFloat; }
         }
 
-        Tokens.Add(CurrentToken.Instantiate());
+        Tokens.Add(result = CurrentToken.Instantiate());
 
     Finish:
         CurrentToken.TokenType = PreparationTokenType.Whitespace;
@@ -846,5 +667,7 @@ public partial class Tokenizer
             new Range<SinglePosition>(CurrentSinglePosition, CurrentToken.Position.Range.End),
             new Range<int>(offsetTotal, CurrentToken.Position.AbsoluteRange.End)
             );
+
+        return result;
     }
 }

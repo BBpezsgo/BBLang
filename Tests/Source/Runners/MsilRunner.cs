@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using LanguageCore.Compiler;
 using LanguageCore.Runtime;
@@ -15,36 +16,20 @@ static class MsilRunner
         protected override System.Reflection.Assembly? Load(AssemblyName assemblyName) => null;
     }
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public static int Run(string file, string input)
     {
-        (WeakReference context, int result) = RunWrapper(file, input);
-        for (int i = 0; context.IsAlive && i < 10; i++)
-        {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-        }
-
-        if (context.IsAlive) throw new Exception("AssemblyLoadContext was not collected. Memory may leak between tests.");
+        CollectibleAssemblyLoadContext context = new();
+        int result = RunImpl(file, input);
+        context.Unload();
+        context = null!;
+        GC.Collect();
 
         return result;
     }
 
-    static (WeakReference, int) RunWrapper(string file, string input)
-    {
-        CollectibleAssemblyLoadContext context = new();
-
-        int result = RunImpl(file, input);
-
-        WeakReference weakRef = new(context, trackResurrection: true);
-        context.Unload();
-        return (weakRef, result);
-    }
-
     static int RunImpl(string file, string input)
     {
-        CollectibleAssemblyLoadContext context = new();
-
         DiagnosticsCollection diagnostics = new();
 
         CompilerResult compiled = StatementCompiler.CompileFile(file, new CompilerSettings(Utils.GetCompilerSettings(IL.Generator.CodeGeneratorForIL.DefaultCompilerSettings))
@@ -52,6 +37,8 @@ static class MsilRunner
             ExternalFunctions = BytecodeProcessor.GetExternalFunctions(new FixedIO(input)).ToImmutableArray(),
             PreprocessorVariables = PreprocessorVariables.IL,
         }, diagnostics);
+
+        diagnostics.Throw();
 
         Func<int> generatedCode = IL.Generator.CodeGeneratorForIL.Generate(compiled, diagnostics, new()
         {

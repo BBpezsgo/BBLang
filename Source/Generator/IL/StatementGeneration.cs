@@ -2235,7 +2235,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!EmitDefaultValue(function is CompiledConstructorDefinition ? BuiltinType.Void : function.Type, il, out PossibleDiagnostic? defaultValueError))
         {
-            Diagnostics.Add(defaultValueError.ToError(body.Location.After()));
+            Diagnostics.Add(defaultValueError.ToError(body.Location.After(), false));
             successful = false;
         }
         il.Emit(OpCodes.Ret);

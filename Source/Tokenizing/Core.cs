@@ -82,8 +82,7 @@ public partial class Tokenizer
         SavedUnicode = null;
         File = file;
 
-        PreprocessorVariables = preprocessorVariables ?? ImmutableHashSet<string>.Empty;
-        PreprocessorConditions = new Stack<PreprocessThing>();
+        PreprocessorContext = new TokenizerPreprocessorContext(diagnostics, preprocessorVariables ?? ImmutableHashSet<string>.Empty, file);
     }
 
     SinglePosition CurrentSinglePosition => new(CurrentLine, CurrentColumn);
