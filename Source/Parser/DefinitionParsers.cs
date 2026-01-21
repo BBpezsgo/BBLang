@@ -105,7 +105,7 @@ public sealed partial class Parser
         if (!ExpectIdentifier(out Token? identifier))
         {
             identifier = new MissingToken(TokenType.Identifier, keyword.Position.After());
-            Diagnostics.Add(Diagnostic.Critical($"Expected identifier after keyword `{keyword}`", identifier, File));
+            Diagnostics.Add(Diagnostic.Critical($"Expected identifier after keyword `{keyword}`", identifier, File, false));
         }
 
         identifier.AnalyzedType = TokenAnalyzedType.TypeAlias;
@@ -113,7 +113,7 @@ public sealed partial class Parser
         if (!ExpectType(AllowedType.Any | AllowedType.FunctionPointer | AllowedType.StackArrayWithoutLength, out TypeInstance? type))
         {
             type = new MissingTypeInstance(identifier.Position.After(), File);
-            Diagnostics.Add(Diagnostic.Critical($"Expected type after alias identifier", type));
+            Diagnostics.Add(Diagnostic.Critical($"Expected type after alias identifier", type, false));
         }
 
         aliasDefinition = new AliasDefinition(
@@ -155,7 +155,7 @@ public sealed partial class Parser
         {
             if (!ExpectIdentifier(out Token? parameter))
             {
-                Diagnostics.Add(Diagnostic.Error("Expected identifier or `>`", lastPosition.After(), File));
+                Diagnostics.Add(Diagnostic.Error("Expected identifier or `>`", lastPosition.After(), File, false));
                 parameter = new MissingToken(TokenType.Identifier, lastPosition.After());
             }
 
@@ -212,7 +212,7 @@ public sealed partial class Parser
 
         if (!ExpectOperator(";") && !ExpectBlock(out block))
         {
-            diagnostics.Add(3, Diagnostic.Critical($"Expected `;` or block", parameters.Brackets.End.Position.After(), File));
+            diagnostics.Add(3, Diagnostic.Critical($"Expected `;` or block", parameters.Brackets.End.Position.After(), File, false));
             savepoint.Restore();
             return false;
         }
@@ -262,7 +262,7 @@ public sealed partial class Parser
         OrderedDiagnosticCollection parameterDiagnostics = new();
         if (!ExpectParameters(ImmutableArray.Create(ModifierKeywords.Temp), false, out ParameterDefinitionCollection? parameters, parameterDiagnostics))
         {
-            diagnostic.Add(1, Diagnostic.Critical($"Expected parameter list for general function definition", possibleNameT.Position.After(), File), parameterDiagnostics.ToImmutableArray());
+            diagnostic.Add(1, Diagnostic.Critical($"Expected parameter list for general function definition", possibleNameT.Position.After(), File, false), parameterDiagnostics.ToImmutableArray());
             savepoint.Restore();
             return false;
         }
@@ -354,7 +354,7 @@ public sealed partial class Parser
         if (!ExpectIdentifier(out Token? possibleStructName))
         {
             possibleStructName = new MissingToken(TokenType.Identifier, keyword.Position.After());
-            Diagnostics.Add(Diagnostic.Critical($"Expected identifier after keyword `{keyword}`", possibleStructName, File));
+            Diagnostics.Add(Diagnostic.Critical($"Expected identifier after keyword `{keyword}`", possibleStructName, File, false));
         }
 
         possibleStructName.AnalyzedType = TokenAnalyzedType.Struct;
@@ -364,7 +364,7 @@ public sealed partial class Parser
         if (!ExpectOperator("{", out Token? bracketStart))
         {
             bracketStart = new MissingToken(TokenType.Operator, possibleStructName.Position.After(), "{");
-            Diagnostics.Add(Diagnostic.Critical($"Expected `{{` after struct identifier `{keyword}`", bracketStart, File));
+            Diagnostics.Add(Diagnostic.Critical($"Expected `{{` after struct identifier `{keyword}`", bracketStart, File, false));
         }
 
         List<FieldDefinition> fields = new();
@@ -409,7 +409,7 @@ public sealed partial class Parser
             }
             else
             {
-                Diagnostics.Add(Diagnostic.Critical($"Unexpected {(CurrentToken is null ? "end of file" : $"token `{CurrentToken}`")}", CurrentToken?.Position ?? PreviousToken!.Position.After(), File).WithSuberrors(diagnostics.Compile()));
+                Diagnostics.Add(Diagnostic.Critical($"Unexpected {(CurrentToken is null ? "end of file" : $"token `{CurrentToken}`")}", CurrentToken?.Position ?? PreviousToken!.Position.After(), File, false).WithSuberrors(diagnostics.Compile()));
                 bracketEnd = new MissingToken(TokenType.Operator, PreviousToken!.Position.After(), "}");
                 break;
             }
@@ -467,9 +467,9 @@ public sealed partial class Parser
             foreach (Token modifier in parameterModifiers)
             {
                 if (!allowedParameterModifiers.Contains(modifier.Content))
-                { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` not valid in the current context", modifier, File)); }
+                { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` not valid in the current context", modifier, File, false)); }
                 else if (modifier.Content == ModifierKeywords.This && parameters.Count > 0)
-                { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` only valid on the first parameter", modifier, File)); }
+                { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` only valid on the first parameter", modifier, File, false)); }
             }
 
             if (!ExpectType(AllowedType.FunctionPointer, out TypeInstance? parameterType))
@@ -478,7 +478,6 @@ public sealed partial class Parser
                 diagnostic.Add(1, Diagnostic.Error("Expected parameter type", parameterType, false));
                 savepoint.Restore();
                 return false;
-                //Diagnostics.Add(Diagnostic.Error("Expected parameter type", parameterType));
             }
 
             if (!ExpectIdentifier(out Token? parameterIdentifier))
@@ -487,7 +486,6 @@ public sealed partial class Parser
                 diagnostic.Add(1, Diagnostic.Error("Expected a parameter name", parameterIdentifier, File, false));
                 savepoint.Restore();
                 return false;
-                //Diagnostics.Add(Diagnostic.Error("Expected a parameter name", parameterIdentifier, File));
             }
 
             parameterIdentifier.AnalyzedType = TokenAnalyzedType.ParameterName;
@@ -498,19 +496,19 @@ public sealed partial class Parser
                 if (!ExpectAnyExpression(out defaultValue))
                 {
                     defaultValue = new MissingExpression(assignmentOperator.Position.After(), File);
-                    Diagnostics.Add(Diagnostic.Error("Expected expression", defaultValue));
+                    Diagnostics.Add(Diagnostic.Error("Expected expression", defaultValue, false));
                 }
 
                 if (!allowDefaultValues)
                 {
-                    Diagnostics.Add(Diagnostic.Error("Default parameter values are not valid in the current context", defaultValue));
+                    Diagnostics.Add(Diagnostic.Error("Default parameter values are not valid in the current context", defaultValue, false));
                 }
 
                 expectOptionalParameters = true;
             }
             else if (expectOptionalParameters)
             {
-                Diagnostics.Add(Diagnostic.Error("Parameters without default value after a parameter that has one is not supported", parameterIdentifier.Position.After(), File));
+                Diagnostics.Add(Diagnostic.Error("Parameters without default value after a parameter that has one is not supported", parameterIdentifier.Position.After(), File, false));
             }
 
             ParameterDefinition parameter = new(parameterModifiers, parameterType, parameterIdentifier, defaultValue, File);
@@ -567,7 +565,7 @@ public sealed partial class Parser
                     if (!ExpectLiteral(out LiteralExpression? argument))
                     {
                         argument = new MissingLiteral(lastPosition.After(), File);
-                        Diagnostics.Add(Diagnostic.Error($"Expected literal as an argument", argument));
+                        Diagnostics.Add(Diagnostic.Error($"Expected literal as an argument", argument, false));
                     }
 
                     parameters.Add(argument);

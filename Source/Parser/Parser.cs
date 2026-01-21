@@ -191,7 +191,7 @@ public sealed partial class Parser
 
             if (CurrentToken != null)
             {
-                Diagnostics.Add(Diagnostic.Error($"Unexpected token `{CurrentToken}`", CurrentToken, File));
+                Diagnostics.Add(Diagnostic.Error($"Unexpected token `{CurrentToken}`", CurrentToken, File, false));
             }
         }
         catch (SyntaxException syntaxException)
@@ -245,7 +245,7 @@ public sealed partial class Parser
 
         if (tokens.Count == 0)
         {
-            Diagnostics.Add(Diagnostic.Error($"Expected identifier or string literal after keyword `{DeclarationKeywords.Using}`", keyword.Position.After(), File));
+            Diagnostics.Add(Diagnostic.Error($"Expected identifier or string literal after keyword `{DeclarationKeywords.Using}`", keyword.Position.After(), File, false));
             usingDefinition = new UsingDefinition(keyword, ImmutableArray<Token>.Empty, File);
             return true;
         }
@@ -318,7 +318,7 @@ public sealed partial class Parser
         foreach (Token modifier in modifiers)
         {
             if (!validModifiers.Contains(modifier.Content))
-            { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` is not valid in the current context", modifier, File)); }
+            { Diagnostics.Add(Diagnostic.Error($"Modifier `{modifier}` is not valid in the current context", modifier, File, false)); }
         }
     }
 

@@ -162,7 +162,7 @@ public sealed partial class Parser
 
         if (!ExpectOperator("{", out Token? bracketStart))
         {
-            diagnostics?.Add(0, Diagnostic.Error($"Expected `{{` for block", CurrentLocation));
+            diagnostics?.Add(0, Diagnostic.Error($"Expected `{{` for block", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
@@ -183,7 +183,7 @@ public sealed partial class Parser
                 if (!ExpectStatement(out Statement? statement, statementDiagnostics))
                 {
                     statement = new MissingStatement(lastPosition.After(), File);
-                    Diagnostics.Add(Diagnostic.Error($"Expected `}}` or a statement", statement).WithSuberrors(statementDiagnostics.Compile()));
+                    Diagnostics.Add(Diagnostic.Error($"Expected `}}` or a statement", statement, false).WithSuberrors(statementDiagnostics.Compile()));
                     CurrentTokenIndex++;
                 }
 
@@ -222,13 +222,13 @@ public sealed partial class Parser
         else if (!ExpectType(AllowedType.StackArrayWithoutLength | AllowedType.FunctionPointer, out possibleType, out Diagnostic? typeError))
         {
             savepoint.Restore();
-            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.Var}` or a type for variable definition", CurrentLocation).WithSuberrors(typeError));
+            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.Var}` or a type for variable definition", CurrentLocation, false).WithSuberrors(typeError));
             return false;
         }
 
         if (!ExpectIdentifier(out Token? possibleVariableName))
         {
-            diagnostics.Add(1, Diagnostic.Error($"Expected identifier for variable definition", possibleType.Location.After()));
+            diagnostics.Add(1, Diagnostic.Error($"Expected identifier for variable definition", possibleType.Location.After(), false));
             savepoint.Restore();
             return false;
         }
@@ -242,14 +242,14 @@ public sealed partial class Parser
             if (!ExpectAnyExpression(out initialValue))
             {
                 initialValue = new MissingExpression(eqOperatorToken.Position.After(), File);
-                Diagnostics.Add(Diagnostic.Error("Expected initial value after `=` in variable declaration", initialValue));
+                Diagnostics.Add(Diagnostic.Error("Expected initial value after `=` in variable declaration", initialValue, false));
             }
         }
         else
         {
             if (possibleType == StatementKeywords.Var)
             {
-                Diagnostics.Add(Diagnostic.Error("Initial value for variable declaration with implicit type is required", possibleType, File));
+                Diagnostics.Add(Diagnostic.Error("Initial value for variable declaration with implicit type is required", possibleType, File, false));
             }
         }
 
@@ -271,7 +271,7 @@ public sealed partial class Parser
 
         if (!ExpectIdentifier(StatementKeywords.For, out Token? keyword))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.For}`", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.For}`", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
@@ -283,7 +283,7 @@ public sealed partial class Parser
         if (!ExpectOperator("(", out Token? bracketStart))
         {
             bracketStart = new MissingToken(TokenType.Operator, keyword.Position.After(), "(");
-            error ??= Diagnostic.Error($"Expected `(` after `{keyword}`", bracketStart, File);
+            error ??= Diagnostic.Error($"Expected `(` after `{keyword}`", bracketStart, File, false);
         }
 
         Statement? initialization;
@@ -302,7 +302,7 @@ public sealed partial class Parser
             if (!ExpectStatementUnchecked(out initialization, statementDiagnostics))
             {
                 initialization = new MissingStatement(lastPosition.After(), File);
-                error ??= Diagnostic.Error($"Expected a statement or `;`", initialization).WithSuberrors(statementDiagnostics.Compile());
+                error ??= Diagnostic.Error($"Expected a statement or `;`", initialization, false).WithSuberrors(statementDiagnostics.Compile());
             }
 
             SetStatementThings(initialization);
@@ -329,7 +329,7 @@ public sealed partial class Parser
             if (!ExpectAnyExpression(out condition))
             {
                 condition = new MissingExpression(lastPosition.After(), File);
-                error ??= Diagnostic.Error($"Expected a condition or `;`", condition);
+                error ??= Diagnostic.Error($"Expected a condition or `;`", condition, false);
             }
 
             lastPosition = condition.Position;
@@ -356,7 +356,7 @@ public sealed partial class Parser
             if (!ExpectStatementUnchecked(out step, statementDiagnostics))
             {
                 step = new MissingStatement(lastPosition.After(), File);
-                error ??= Diagnostic.Error($"Expected a statement or `)`", step).WithSuberrors(statementDiagnostics.Compile());
+                error ??= Diagnostic.Error($"Expected a statement or `)`", step, false).WithSuberrors(statementDiagnostics.Compile());
             }
 
             SetStatementThings(step);
@@ -364,7 +364,7 @@ public sealed partial class Parser
 
             if (!ExpectOperator(")", out bracketEnd))
             {
-                error ??= Diagnostic.Error($"Expected `)`", step.Position.After(), File);
+                error ??= Diagnostic.Error($"Expected `)`", step.Position.After(), File, false);
             }
             else
             {
@@ -375,7 +375,7 @@ public sealed partial class Parser
         if (!ExpectBlock(out Block? block))
         {
             block = new MissingBlock(lastPosition.After(), File);
-            error ??= Diagnostic.Error($"Expected block", block);
+            error ??= Diagnostic.Error($"Expected block", block, false);
         }
 
         Diagnostics.Add(error);
@@ -390,7 +390,7 @@ public sealed partial class Parser
 
         if (!ExpectIdentifier(StatementKeywords.While, out Token? keyword))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.While}`", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.While}`", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
@@ -401,26 +401,26 @@ public sealed partial class Parser
         if (!ExpectOperator("(", out Token? bracketStart))
         {
             bracketStart = new MissingToken(TokenType.Operator, keyword.Position.After(), "(");
-            error ??= Diagnostic.Error($"Expected `(`", bracketStart, File);
+            error ??= Diagnostic.Error($"Expected `(`", bracketStart, File, false);
         }
 
         if (!ExpectAnyExpression(out Expression? condition))
         {
             condition = new MissingExpression(bracketStart.Position.After(), File);
-            error ??= Diagnostic.Error($"Expected condition after `{bracketStart}`", condition);
+            error ??= Diagnostic.Error($"Expected condition after `{bracketStart}`", condition, false);
         }
 
         if (!ExpectOperator(")", out Token? bracketEnd))
         {
             bracketEnd = new MissingToken(TokenType.Operator, condition.Position.After(), ")");
-            error ??= Diagnostic.Error($"Expected `)`", bracketEnd, File);
+            error ??= Diagnostic.Error($"Expected `)`", bracketEnd, File, false);
         }
 
         OrderedDiagnosticCollection statementDiagnostics = new();
         if (!ExpectStatement(out Statement? block, statementDiagnostics))
         {
             block = new MissingStatement(bracketEnd.Position.After(), File);
-            error ??= Diagnostic.Error($"Expected a statement", block).WithSuberrors(statementDiagnostics.Compile());
+            error ??= Diagnostic.Error($"Expected a statement", block, false).WithSuberrors(statementDiagnostics.Compile());
         }
 
         Diagnostics.Add(error);
@@ -435,7 +435,7 @@ public sealed partial class Parser
 
         if (!ExpectIdentifier(StatementKeywords.If, out Token? ifKeyword))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.If}`", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected `{StatementKeywords.If}`", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
@@ -447,26 +447,26 @@ public sealed partial class Parser
         if (!ExpectOperator("(", out Token? bracketStart))
         {
             bracketStart = new MissingToken(TokenType.Operator, ifKeyword.Position.After(), "(");
-            error ??= Diagnostic.Error($"Expected a `(`", bracketStart, File);
+            error ??= Diagnostic.Error($"Expected a `(`", bracketStart, File, false);
         }
 
         if (!ExpectAnyExpression(out Expression? condition))
         {
             condition = new MissingExpression(bracketStart.Position.After(), File);
-            error ??= Diagnostic.Error($"Expected a condition", condition);
+            error ??= Diagnostic.Error($"Expected a condition", condition, false);
         }
 
         if (!ExpectOperator(")", out Token? bracketEnd))
         {
             bracketEnd = new MissingToken(TokenType.Operator, condition.Position.After(), ")");
-            error ??= Diagnostic.Error($"Expected a `)`", bracketEnd, File);
+            error ??= Diagnostic.Error($"Expected a `)`", bracketEnd, File, false);
         }
 
         OrderedDiagnosticCollection statementDiagnostics1 = new();
         if (!ExpectStatement(out Statement? ifBlock, statementDiagnostics1))
         {
             ifBlock = new MissingBlock(bracketEnd.Position.After(), File);
-            error ??= Diagnostic.Error($"Expected a statement", ifBlock).WithSuberrors(statementDiagnostics1.Compile());
+            error ??= Diagnostic.Error($"Expected a statement", ifBlock, false).WithSuberrors(statementDiagnostics1.Compile());
         }
 
         ElseBranchStatement? elseBranch = null;
@@ -479,7 +479,7 @@ public sealed partial class Parser
             if (!ExpectStatement(out Statement? elseBlock, statementDiagnostics2))
             {
                 elseBlock = new MissingBlock(elseKeyword.Position.After(), File);
-                error ??= Diagnostic.Error($"Expected a statement", elseBlock).WithSuberrors(statementDiagnostics2.Compile());
+                error ??= Diagnostic.Error($"Expected a statement", elseBlock, false).WithSuberrors(statementDiagnostics2.Compile());
             }
 
             elseBranch = new ElseBranchStatement(elseKeyword, elseBlock, File);
@@ -521,14 +521,14 @@ public sealed partial class Parser
 
         if (!ExpectAnyExpression(out Expression? leftStatement))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected expression for assignment statement", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected expression for assignment statement", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator("=", out Token? @operator))
         {
-            diagnostics.Add(1, Diagnostic.Error($"Expected `=` for assignment statement", leftStatement.Location.After()));
+            diagnostics.Add(1, Diagnostic.Error($"Expected `=` for assignment statement", leftStatement.Location.After(), false));
             savepoint.Restore();
             return false;
         }
@@ -538,7 +538,7 @@ public sealed partial class Parser
         if (!ExpectAnyExpression(out Expression? valueToAssign))
         {
             valueToAssign = new MissingExpression(@operator.Position.After(), File);
-            Diagnostics.Add(Diagnostic.Error("Expected an expression after assignment operator", valueToAssign));
+            Diagnostics.Add(Diagnostic.Error("Expected an expression after assignment operator", valueToAssign, false));
         }
 
         assignment = new SimpleAssignmentStatement(@operator, leftStatement, valueToAssign, File);
@@ -552,14 +552,14 @@ public sealed partial class Parser
 
         if (!ExpectAnyExpression(out Expression? leftStatement))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected expression for compound assignment statement", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected expression for compound assignment statement", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator(CompoundAssignmentOperators, out Token? @operator))
         {
-            diagnostics.Add(1, Diagnostic.Error($"Expected operator ({string.Join(" | ", CompoundAssignmentOperators)}) for compound assignment statement", leftStatement.Location.After()));
+            diagnostics.Add(1, Diagnostic.Error($"Expected operator ({string.Join(" | ", CompoundAssignmentOperators)}) for compound assignment statement", leftStatement.Location.After(), false));
             savepoint.Restore();
             return false;
         }
@@ -569,7 +569,7 @@ public sealed partial class Parser
         if (!ExpectAnyExpression(out Expression? valueToAssign))
         {
             valueToAssign = new MissingExpression(@operator.Position.After(), File);
-            Diagnostics.Add(Diagnostic.Error("Expected an expression after compound assignment operator", valueToAssign));
+            Diagnostics.Add(Diagnostic.Error("Expected an expression after compound assignment operator", valueToAssign, false));
         }
 
         compoundAssignment = new CompoundAssignmentStatement(@operator, leftStatement, valueToAssign, File);
@@ -583,14 +583,14 @@ public sealed partial class Parser
 
         if (!ExpectAnyExpression(out Expression? expression))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected expression for increment/decrement expression", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected expression for increment/decrement expression", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator(IncrementDecrementOperators, out Token? @operator))
         {
-            diagnostics.Add(1, Diagnostic.Error($"Expected operator ({string.Join(" | ", IncrementDecrementOperators)}) for increment/decrement expression", expression.Location.After()));
+            diagnostics.Add(1, Diagnostic.Error($"Expected operator ({string.Join(" | ", IncrementDecrementOperators)}) for increment/decrement expression", expression.Location.After(), false));
             savepoint.Restore();
             return false;
         }
@@ -610,7 +610,7 @@ public sealed partial class Parser
 
         if (!ExpectIdentifier(name, out Token? keyword))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected `{name}`", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected `{name}`", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
@@ -635,16 +635,16 @@ public sealed partial class Parser
         {
             if (keywordCall.Arguments.Length != minArgumentCount)
             {
-                Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires {minArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File));
+                Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires {minArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File, false));
             }
         }
         else
         {
             if (keywordCall.Arguments.Length < minArgumentCount)
-            { Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires minimum {minArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File)); }
+            { Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires minimum {minArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File, false)); }
 
             if (keywordCall.Arguments.Length > maxArgumentCount)
-            { Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires maximum {maxArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File)); }
+            { Diagnostics.Add(Diagnostic.Error($"Keyword-call `{keyword}` requires maximum {maxArgumentCount} arguments but you passed {keywordCall.Arguments.Length}", keywordCall, File, false)); }
         }
 
         return true;
@@ -657,14 +657,14 @@ public sealed partial class Parser
 
         if (!ExpectIdentifier(out Token? identifier))
         {
-            diagnostics.Add(0, Diagnostic.Error($"Expected identifier for instruction label definition", CurrentLocation));
+            diagnostics.Add(0, Diagnostic.Error($"Expected identifier for instruction label definition", CurrentLocation, false));
             savepoint.Restore();
             return false;
         }
 
         if (!ExpectOperator(":", out Token? colon))
         {
-            diagnostics.Add(1, Diagnostic.Error($"Expected `:` after instruction label definition identifier", identifier.Position.After(), File));
+            diagnostics.Add(1, Diagnostic.Error($"Expected `:` after instruction label definition identifier", identifier.Position.After(), File, false));
             savepoint.Restore();
             return false;
         }

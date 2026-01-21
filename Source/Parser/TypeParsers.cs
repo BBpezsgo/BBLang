@@ -64,7 +64,7 @@ public sealed partial class Parser
             possibleType.AnalyzedType = TokenAnalyzedType.Keyword;
 
             if (ExpectOperator(TheseCharactersIndicateThatTheIdentifierWillBeFollowedByAComplexType, out Token? illegalT))
-            { Diagnostics.Add(Diagnostic.Error($"This is not allowed", illegalT, File)); }
+            { Diagnostics.Add(Diagnostic.Error($"This is not allowed", illegalT, File, false)); }
 
             if (ExpectOperator("*", out Token? pointerOperator))
             {
@@ -75,7 +75,7 @@ public sealed partial class Parser
             {
                 if ((flags & AllowedType.Any) == 0)
                 {
-                    error = Diagnostic.Error($"Type `{TypeKeywords.Any}` is not valid in the current context", possibleType, File);
+                    error = Diagnostic.Error($"Type `{TypeKeywords.Any}` is not valid in the current context", possibleType, File, false);
                     return false;
                 }
             }
@@ -193,7 +193,7 @@ public sealed partial class Parser
     end:
         if (type is not TypeInstanceFunction && closureModifier is not null)
         {
-            error = Diagnostic.Error($"This type modifier is bruh", closureModifier, File);
+            error = Diagnostic.Error($"This type modifier is bruh", closureModifier, File, false);
             return false;
         }
 
