@@ -24,7 +24,9 @@
 
   <ItemGroup>
     <ProjectReference Include="../Examples/Examples.csproj" />
-    <ProjectReference Include="../Source/Core.csproj" />
+    <ProjectReference Include="../Source/Core.csproj">
+      <SetConfiguration>ForTesting=true</SetConfiguration>
+    </ProjectReference>
     <ProjectReference Include="../Utility/Utility.csproj" />
   </ItemGroup>
 </Project>
