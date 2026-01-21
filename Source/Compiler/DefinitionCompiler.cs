@@ -82,7 +82,7 @@ public partial class StatementCompiler
 
                     if (!ExternalFunctions.TryGet(externalName, out IExternalFunction? externalFunction, out PossibleDiagnostic? exception))
                     {
-                        //Diagnostics.Add(exception.ToWarning(attribute, function.File));
+                        if (function.Block is null) Diagnostics.Add(exception.ToWarning(attribute, function.File));
                         break;
                     }
 

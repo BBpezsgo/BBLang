@@ -31,4 +31,22 @@ public static class Extensions
             { yield return statement; }
         }
     }
+
+    public static bool EnumerateStatements(this CompilerResult parserResult, Func<CompiledStatement, bool> callback)
+    {
+        if (!parserResult.Statements.IsDefault)
+        {
+            if (!StatementWalker.Visit(parserResult.Statements, callback)) return false;
+        }
+
+        if (!parserResult.Functions.IsDefault)
+        {
+            foreach (CompiledFunction function in parserResult.Functions)
+            {
+                if (!StatementWalker.Visit(function.Body, callback)) return false;
+            }
+        }
+
+        return true;
+    }
 }

@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace LanguageCore.Parser;
 
 class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
@@ -11,14 +9,14 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
         _diagnostics = new();
     }
 
-    public void Add(int importance, Diagnostic diagnostic, IEnumerable<OrderedDiagnostic> subdiagnostic)
-    {
-        Add(new OrderedDiagnostic(importance, diagnostic, subdiagnostic.ToImmutableArray()));
-    }
-
-    public void Add(int importance, Diagnostic diagnostic, params OrderedDiagnostic[] subdiagnostic)
+    public void Add(int importance, Diagnostic diagnostic, ImmutableArray<OrderedDiagnostic> subdiagnostic)
     {
         Add(new OrderedDiagnostic(importance, diagnostic, subdiagnostic));
+    }
+
+    public void Add(int importance, Diagnostic diagnostic)
+    {
+        Add(new OrderedDiagnostic(importance, diagnostic, ImmutableArray<OrderedDiagnostic>.Empty));
     }
 
     public void Add(OrderedDiagnostic diagnostic)
@@ -39,12 +37,14 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
     public ImmutableArray<Diagnostic> Compile()
     {
         if (_diagnostics.Count == 0) return ImmutableArray<Diagnostic>.Empty;
+        int max = _diagnostics.MaxBy(v => v.Importance).Importance;
         ImmutableArray<Diagnostic>.Builder result = ImmutableArray.CreateBuilder<Diagnostic>(_diagnostics.Count);
         for (int i = 0; i < _diagnostics.Count; i++)
         {
+            if (_diagnostics[i].Importance < max) continue;
             result.Add(Compile(_diagnostics[i]));
         }
-        return result.MoveToImmutable();
+        return result.DrainToImmutable();
     }
 
     public IEnumerator<OrderedDiagnostic> GetEnumerator() => _diagnostics.GetEnumerator();

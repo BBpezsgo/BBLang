@@ -1548,7 +1548,7 @@ public partial class StatementCompiler
         }
 
         if (!CompileStatement(@if.Body, out CompiledStatement? body)) return false;
-        CompiledStatement? next = null;
+        CompiledBranch? next = null;
         if (@if.Else is not null)
         {
             BranchStatementBase nextLink = @if.Else;
@@ -1564,14 +1564,20 @@ public partial class StatementCompiler
                 nextLink = nextIfContainer2;
             }
 
-            if (!CompileStatement(nextLink, out next)) return false;
+            if (!CompileStatement(nextLink, out CompiledStatement? _next)) return false;
+
+            next = _next is CompiledBranch v ? v : new CompiledElse()
+            {
+                Body = _next,
+                Location = _next.Location,
+            };
         }
 
         compiledStatement = new CompiledIf()
         {
             Condition = condition,
             Body = body,
-            Next = (CompiledBranch?)next,
+            Next = next,
             Location = @if.Location,
         };
         return true;
@@ -1876,7 +1882,7 @@ public partial class StatementCompiler
 
             SetStatementType(@operator, operatorDefinition.Type);
 
-            if (!CompileFunctionCall(@operator, @operator.Arguments, result, out compiledStatement)) return false;
+            if (!CompileFunctionCall(@operator, @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap), result, out compiledStatement)) return false;
 
             return true;
         }
@@ -1888,14 +1894,11 @@ public partial class StatementCompiler
                 expectedType = null;
             }
 
-            ArgumentExpression left = @operator.Left;
-            ArgumentExpression right = @operator.Right;
+            Expression left = @operator.Left;
+            Expression right = @operator.Right;
 
-            if (left.Modifier is not null) Diagnostics.Add(Diagnostic.Warning($"Invalid modifier `{left.Modifier}`", left.Modifier, left.File));
-            if (right.Modifier is not null) Diagnostics.Add(Diagnostic.Warning($"Invalid modifier `{right.Modifier}`", right.Modifier, right.File));
-
-            if (!CompileExpression(left.Value, out CompiledExpression? compiledLeft, expectedType)) return false;
-            if (!CompileExpression(right.Value, out CompiledExpression? compiledRight, expectedType)) return false;
+            if (!CompileExpression(left, out CompiledExpression? compiledLeft, expectedType)) return false;
+            if (!CompileExpression(right, out CompiledExpression? compiledRight, expectedType)) return false;
 
             GeneralType leftType = compiledLeft.Type;
             GeneralType rightType = compiledRight.Type;
@@ -1922,7 +1925,7 @@ public partial class StatementCompiler
             leftType = BuiltinType.CreateNumeric(leftNType, leftBitWidth);
             rightType = BuiltinType.CreateNumeric(rightNType, rightBitWidth);
 
-            if (!CompileExpression(left.Value, out compiledLeft, leftType)) return false;
+            if (!CompileExpression(left, out compiledLeft, leftType)) return false;
 
             if (leftNType != NumericType.Float &&
                 rightNType == NumericType.Float)
@@ -1932,7 +1935,7 @@ public partial class StatementCompiler
                 leftNType = NumericType.Float;
             }
 
-            if (!CompileExpression(right.Value, out compiledRight, rightType)) return false;
+            if (!CompileExpression(right, out compiledRight, rightType)) return false;
 
             if (leftType.SameAs(BasicType.F32) &&
                 !rightType.SameAs(BasicType.F32))

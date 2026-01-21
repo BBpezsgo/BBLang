@@ -9,9 +9,8 @@
     <LangVersion>11</LangVersion>
     <InvariantGlobalization>true</InvariantGlobalization>
     <BaseOutputPath>../bin/</BaseOutputPath>
-    <BaseIntermediateOutputPath>../obj/</BaseIntermediateOutputPath>
-    <IntermediateOutputPath Condition=" '$(PlatformName)' == 'AnyCPU' ">$(BaseIntermediateOutputPath)$(Configuration)/</IntermediateOutputPath>
-    <IntermediateOutputPath Condition=" '$(PlatformName)' != 'AnyCPU' ">$(BaseIntermediateOutputPath)$(PlatformName)/$(Configuration)/</IntermediateOutputPath>
+    <IntermediateOutputPath Condition=" '$(PlatformName)' == 'AnyCPU' ">../obj/$(Configuration)/</IntermediateOutputPath>
+    <IntermediateOutputPath Condition=" '$(PlatformName)' != 'AnyCPU' ">../obj/$(PlatformName)/$(Configuration)/</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(ForLanguageServer)' == 'true'">
     <DefineConstants>$(DefineConstants);LANGUAGE_SERVER</DefineConstants>

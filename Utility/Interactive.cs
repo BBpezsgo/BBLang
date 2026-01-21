@@ -29,12 +29,6 @@ public static class Interactive
                 { "memory:///", source }
             }),
             new FileSourceProvider()
-            {
-                ExtraDirectories = new string[]
-                {
-                    "/home/BB/Projects/BBLang/Core/StandardLibrary"
-                },
-            }
         );
 
         try

@@ -49,320 +49,362 @@ public static partial class StatementWalker
         });
     }
 
-    public static void Visit(IEnumerable<CompiledStatement> statement, Func<CompiledStatement, bool> callback)
+    public static bool Visit(IEnumerable<CompiledStatement> statement, Func<CompiledStatement, bool> callback)
     {
         foreach (CompiledStatement item in statement)
         {
-            Visit(item, callback);
+            if (!Visit(item, callback)) return false;
         }
+        return true;
     }
-    public static void Visit(CompiledStatement statement, Func<CompiledStatement, bool> callback)
+    public static bool Visit(CompiledStatement statement, Func<CompiledStatement, bool> callback)
     {
-        switch (statement)
+        return statement switch
         {
-            case CompiledExpression v: Visit(v, callback); break;
-            case CompiledEmptyStatement: break;
-            case CompiledBlock v: Visit(v, callback); break;
-            case CompiledIf v: Visit(v, callback); break;
-            case CompiledElse v: Visit(v, callback); break;
-            case CompiledVariableDefinition v: Visit(v, callback); break;
-            case CompiledCrash v: Visit(v, callback); break;
-            case CompiledDelete v: Visit(v, callback); break;
-            case CompiledReturn v: Visit(v, callback); break;
-            case CompiledBreak v: Visit(v, callback); break;
-            case CompiledGoto v: Visit(v, callback); break;
-            case CompiledLabelDeclaration v: Visit(v, callback); break;
-            case CompiledWhileLoop v: Visit(v, callback); break;
-            case CompiledForLoop v: Visit(v, callback); break;
-            case CompiledSetter v: Visit(v, callback); break;
-            case CompiledCleanup v: Visit(v, callback); break;
-            default: throw new UnreachableException(statement.GetType().Name);
-        }
+            CompiledExpression v => Visit(v, callback),
+            CompiledEmptyStatement => true,
+            CompiledBlock v => Visit(v, callback),
+            CompiledIf v => Visit(v, callback),
+            CompiledElse v => Visit(v, callback),
+            CompiledVariableDefinition v => Visit(v, callback),
+            CompiledCrash v => Visit(v, callback),
+            CompiledDelete v => Visit(v, callback),
+            CompiledReturn v => Visit(v, callback),
+            CompiledBreak v => Visit(v, callback),
+            CompiledGoto v => Visit(v, callback),
+            CompiledLabelDeclaration v => Visit(v, callback),
+            CompiledWhileLoop v => Visit(v, callback),
+            CompiledForLoop v => Visit(v, callback),
+            CompiledSetter v => Visit(v, callback),
+            CompiledCleanup v => Visit(v, callback),
+            _ => throw new UnreachableException(statement.GetType().Name),
+        };
     }
-    static void Visit(CompiledCleanup statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledCleanup statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledExpression statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledExpression statement, Func<CompiledStatement, bool> callback)
     {
-        switch (statement)
+        return statement switch
         {
-            case CompiledDummyExpression v: Visit(v.Statement, callback); break;
-            case CompiledList v: Visit(v, callback); break;
-            case CompiledRuntimeCall v: Visit(v, callback); break;
-            case CompiledFunctionCall v: Visit(v, callback); break;
-            case CompiledExternalFunctionCall v: Visit(v, callback); break;
-            case CompiledSizeof v: Visit(v, callback); break;
-            case CompiledArgument v: Visit(v, callback); break;
-            case CompiledBinaryOperatorCall v: Visit(v, callback); break;
-            case CompiledUnaryOperatorCall v: Visit(v, callback); break;
-            case CompiledConstantValue v: Visit(v, callback); break;
-            case CompiledGetReference v: Visit(v, callback); break;
-            case CompiledDereference v: Visit(v, callback); break;
-            case CompiledStackAllocation v: Visit(v, callback); break;
-            case CompiledHeapAllocation v: Visit(v, callback); break;
-            case CompiledConstructorCall v: Visit(v, callback); break;
-            case CompiledDesctructorCall v: Visit(v, callback); break;
-            case CompiledCast v: Visit(v, callback); break;
-            case CompiledReinterpretation v: Visit(v, callback); break;
-            case CompiledElementAccess v: Visit(v, callback); break;
-            case CompiledVariableAccess v: Visit(v, callback); break;
-            case CompiledExpressionVariableAccess v: Visit(v, callback); break;
-            case CompiledParameterAccess v: Visit(v, callback); break;
-            case CompiledFieldAccess v: Visit(v, callback); break;
-            case CompiledRegisterAccess v: Visit(v, callback); break;
-            case CompiledString v: Visit(v, callback); break;
-            case CompiledStackString v: Visit(v, callback); break;
-            case CompiledFunctionReference v: Visit(v, callback); break;
-            case CompiledLabelReference v: Visit(v, callback); break;
-            case CompiledCompilerVariableAccess v: Visit(v, callback); break;
-            case CompiledLambda v: Visit(v, callback); break;
-            default: throw new UnreachableException();
-        }
+            CompiledDummyExpression v => Visit(v.Statement, callback),
+            CompiledList v => Visit(v, callback),
+            CompiledRuntimeCall v => Visit(v, callback),
+            CompiledFunctionCall v => Visit(v, callback),
+            CompiledExternalFunctionCall v => Visit(v, callback),
+            CompiledSizeof v => Visit(v, callback),
+            CompiledArgument v => Visit(v, callback),
+            CompiledBinaryOperatorCall v => Visit(v, callback),
+            CompiledUnaryOperatorCall v => Visit(v, callback),
+            CompiledConstantValue v => Visit(v, callback),
+            CompiledGetReference v => Visit(v, callback),
+            CompiledDereference v => Visit(v, callback),
+            CompiledStackAllocation v => Visit(v, callback),
+            CompiledHeapAllocation v => Visit(v, callback),
+            CompiledConstructorCall v => Visit(v, callback),
+            CompiledDesctructorCall v => Visit(v, callback),
+            CompiledCast v => Visit(v, callback),
+            CompiledReinterpretation v => Visit(v, callback),
+            CompiledElementAccess v => Visit(v, callback),
+            CompiledVariableAccess v => Visit(v, callback),
+            CompiledExpressionVariableAccess v => Visit(v, callback),
+            CompiledParameterAccess v => Visit(v, callback),
+            CompiledFieldAccess v => Visit(v, callback),
+            CompiledRegisterAccess v => Visit(v, callback),
+            CompiledString v => Visit(v, callback),
+            CompiledStackString v => Visit(v, callback),
+            CompiledFunctionReference v => Visit(v, callback),
+            CompiledLabelReference v => Visit(v, callback),
+            CompiledCompilerVariableAccess v => Visit(v, callback),
+            CompiledLambda v => Visit(v, callback),
+            _ => throw new UnreachableException(),
+        };
     }
-    static void Visit(CompiledLambda statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledLambda statement, Func<CompiledStatement, bool> callback)
     {
-        if (statement.Allocator is not null) Visit(statement.Allocator, callback);
-        if (!callback(statement)) return;
-        Visit(statement.Block, callback);
+        if (statement.Allocator is not null) if (!Visit(statement.Allocator, callback)) return false;
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Block, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledTypeExpression statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledTypeExpression statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
         switch (statement)
         {
             case CompiledAliasTypeExpression v:
-                Visit(v.Value, callback);
-                break;
+                return Visit(v.Value, callback);
             case CompiledArrayTypeExpression v:
-                Visit(v.Of, callback);
-                if (v.Length is not null) Visit(v.Length, callback);
-                break;
+                if (!Visit(v.Of, callback)) return false;
+                if (v.Length is not null) if (!Visit(v.Length, callback)) return false;
+                return true;
             case CompiledFunctionTypeExpression v:
-                Visit(v.ReturnType, callback);
-                foreach (CompiledTypeExpression i in v.Parameters) Visit(i, callback);
-                break;
+                if (!Visit(v.ReturnType, callback)) return false;
+                foreach (CompiledTypeExpression i in v.Parameters) if (!Visit(i, callback)) return false;
+                return true;
             case CompiledPointerTypeExpression v:
-                Visit(v.To, callback);
-                break;
+                return Visit(v.To, callback);
             case CompiledStructTypeExpression v:
-                foreach (KeyValuePair<string, CompiledTypeExpression> i in v.TypeArguments) Visit(i.Value, callback);
-                break;
+                foreach (KeyValuePair<string, CompiledTypeExpression> i in v.TypeArguments) if (!Visit(i.Value, callback)) return false;
+                return true;
             case CompiledBuiltinTypeExpression:
             case CompiledGenericTypeExpression:
-                break;
+                return true;
             default:
                 throw new UnreachableException();
         }
     }
-    static void Visit(CompiledBlock statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledBlock statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Statements, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Statements, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledSetter statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledSetter statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Target, callback);
-        Visit(statement.Value, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Target, callback)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledIf statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledIf statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Condition, callback);
-        Visit(statement.Body, callback);
-        if (statement.Next is not null) Visit(statement.Next, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Condition, callback)) return false;
+        if (!Visit(statement.Body, callback)) return false;
+        if (statement.Next is not null) if (!Visit(statement.Next, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledElse statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledElse statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Body, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Body, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledVariableDefinition statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledVariableDefinition statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.TypeExpression, callback);
-        if (statement.InitialValue is not null) Visit(statement.InitialValue, callback);
-        if (statement.Cleanup is not null) Visit(statement.Cleanup, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.TypeExpression, callback)) return false;
+        if (statement.InitialValue is not null) if (!Visit(statement.InitialValue, callback)) return false;
+        if (statement.Cleanup is not null) if (!Visit(statement.Cleanup, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledCrash statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledCrash statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledDelete statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledDelete statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledReturn statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledReturn statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        if (statement.Value is not null) Visit(statement.Value, callback);
+        if (!callback(statement)) return false;
+        if (statement.Value is not null) if (!Visit(statement.Value, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledBreak statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledBreak statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledGoto statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledGoto statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledLabelDeclaration statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledLabelDeclaration statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledWhileLoop statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledWhileLoop statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Condition, callback);
-        Visit(statement.Body, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Condition, callback)) return false;
+        if (!Visit(statement.Body, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledForLoop statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledForLoop statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        if (statement.Initialization is not null) Visit(statement.Initialization, callback);
-        if (statement.Condition is not null) Visit(statement.Condition, callback);
-        if (statement.Step is not null) Visit(statement.Step, callback);
-        Visit(statement.Body, callback);
+        if (!callback(statement)) return false;
+        if (statement.Initialization is not null) if (!Visit(statement.Initialization, callback)) return false;
+        if (statement.Condition is not null) if (!Visit(statement.Condition, callback)) return false;
+        if (statement.Step is not null) if (!Visit(statement.Step, callback)) return false;
+        if (!Visit(statement.Body, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledList statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledList statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Values, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Values, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledRuntimeCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledRuntimeCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Function, callback);
-        Visit(statement.Arguments, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Function, callback)) return false;
+        if (!Visit(statement.Arguments, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledFunctionCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledFunctionCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Arguments, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Arguments, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledExternalFunctionCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledExternalFunctionCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Arguments, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Arguments, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledSizeof statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledSizeof statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Of, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Of, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledArgument statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledArgument statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
-        Visit(statement.Cleanup, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        if (!Visit(statement.Cleanup, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledBinaryOperatorCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledBinaryOperatorCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Left, callback);
-        Visit(statement.Right, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Left, callback)) return false;
+        if (!Visit(statement.Right, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledUnaryOperatorCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledUnaryOperatorCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Left, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Left, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledConstantValue statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledConstantValue statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledGetReference statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledGetReference statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Of, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Of, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledDereference statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledDereference statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Address, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Address, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledStackAllocation statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledStackAllocation statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.TypeExpression, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.TypeExpression, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledHeapAllocation statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledHeapAllocation statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.TypeExpression, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.TypeExpression, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledConstructorCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledConstructorCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Object, callback);
-        Visit(statement.Arguments, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Object, callback)) return false;
+        if (!Visit(statement.Arguments, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledDesctructorCall statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledDesctructorCall statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledCast statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledCast statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
-        Visit(statement.TypeExpression, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        if (!Visit(statement.TypeExpression, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledReinterpretation statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledReinterpretation statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Value, callback);
-        Visit(statement.TypeExpression, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Value, callback)) return false;
+        if (!Visit(statement.TypeExpression, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledElementAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledElementAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Base, callback);
-        Visit(statement.Index, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Base, callback)) return false;
+        if (!Visit(statement.Index, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledExpressionVariableAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledExpressionVariableAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledVariableAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledVariableAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledParameterAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledParameterAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledFieldAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledFieldAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Object, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Object, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledRegisterAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledRegisterAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledString statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledString statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
-        Visit(statement.Allocator, callback);
+        if (!callback(statement)) return false;
+        if (!Visit(statement.Allocator, callback)) return false;
+        return true;
     }
-    static void Visit(CompiledStackString statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledStackString statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledFunctionReference statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledFunctionReference statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledLabelReference statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledLabelReference statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
-    static void Visit(CompiledCompilerVariableAccess statement, Func<CompiledStatement, bool> callback)
+    static bool Visit(CompiledCompilerVariableAccess statement, Func<CompiledStatement, bool> callback)
     {
-        if (!callback(statement)) return;
+        if (!callback(statement)) return false;
+        return true;
     }
 }

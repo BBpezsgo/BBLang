@@ -754,7 +754,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             case CompiledFieldAccess:
                 break;
             default:
-                Diagnostics.Add(Diagnostic.Critical($"Unsafe!!!", statement, successful));
+                Diagnostics.Add(Diagnostic.Critical($"Unsafe!!!", statement, false));
                 successful = false;
                 break;
         }
@@ -864,7 +864,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 break;
             default:
                 Debugger.Break();
-                Diagnostics.Add(Diagnostic.Critical($"Unsafe!!!", statement));
+                Diagnostics.Add(Diagnostic.Critical($"Unsafe!!!", statement, false));
                 successful = false;
                 return;
         }

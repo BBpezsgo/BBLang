@@ -497,7 +497,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         FunctionQuery<CompiledOperatorDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, Token>(
             @operator.Operator.Content,
-            @operator.Arguments,
+            @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap),
             FunctionArgumentConverter,
             relevantFile,
             null,
