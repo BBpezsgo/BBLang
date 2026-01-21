@@ -66,7 +66,7 @@ public partial class Tokenizer
         return new TokenizerResult(NormalizeTokens(Tokens, Settings).ToImmutableArray(), UnicodeCharacters.ToImmutableArray());
     }
 
-    public Tokenizer(string text, TokenizerSettings settings, Uri? file, ImmutableHashSet<string>? preprocessorVariables, DiagnosticsCollection diagnostics)
+    Tokenizer(string text, TokenizerSettings settings, Uri? file, ImmutableHashSet<string>? preprocessorVariables, DiagnosticsCollection diagnostics)
     {
         Text = text;
 

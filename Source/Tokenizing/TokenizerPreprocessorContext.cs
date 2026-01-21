@@ -44,7 +44,7 @@ class TokenizerPreprocessorContext
                 { Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File)); }
 
                 PreprocessConditionItem v = PreprocessConditionStack.Push(new PreprocessConditionItem(PreprocessConditionPhase.If));
-                v.PreviousConditions.Add(PreprocessorVariables.Contains(argument?.Content ?? string.Empty));
+                v.PreviousConditions.Add(PreprocessorVariables.Contains(argument?.Content.TrimStart() ?? string.Empty));
 
                 break;
             }
@@ -61,7 +61,7 @@ class TokenizerPreprocessorContext
                 { Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File)); }
 
                 PreprocessConditionStack.Last.Phase = PreprocessConditionPhase.Else;
-                PreprocessConditionStack.Last.PreviousConditions.Add(PreprocessConditionStack.Last.PreviousConditions.All(v => !v) && PreprocessorVariables.Contains(argument?.Content ?? string.Empty));
+                PreprocessConditionStack.Last.PreviousConditions.Add(PreprocessConditionStack.Last.PreviousConditions.All(v => !v) && PreprocessorVariables.Contains(argument?.Content.TrimStart() ?? string.Empty));
 
                 break;
             }
@@ -107,7 +107,7 @@ class TokenizerPreprocessorContext
                     break;
                 }
 
-                PreprocessorVariables.Add(argument.Content);
+                PreprocessorVariables.Add(argument.Content.TrimStart());
 
                 break;
             }
@@ -123,7 +123,7 @@ class TokenizerPreprocessorContext
                     break;
                 }
 
-                PreprocessorVariables.Remove(argument.Content);
+                PreprocessorVariables.Remove(argument.Content.TrimStart());
 
                 break;
             }

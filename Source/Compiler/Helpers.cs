@@ -1282,13 +1282,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 {
                     if (!arrayType.Length.HasValue)
                     {
-                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (length of <runtime value>)");
+                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (with a non-constant length)");
                         return false;
                     }
 
                     if (stringInstance.Value.Length != arrayType.Length.Value)
                     {
-                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length?.ToString() ?? "null"}\")");
+                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (length of {arrayType.Length.Value})");
                         return false;
                     }
                 }
@@ -1310,13 +1310,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
                 if (!destArrayType.Length.HasValue)
                 {
-                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (length of <runtime value>)");
+                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (with a non-constant length)");
                     return false;
                 }
 
                 if (stackStringInstance.Value.Length != destArrayType.Length.Value)
                 {
-                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (length of \"{destArrayType.Length?.ToString() ?? "null"}\")");
+                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (length of {destArrayType.Length.Value})");
                     return false;
                 }
 
@@ -1355,7 +1355,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
         }
 
-        error = new($"Can't cast \"{source}\" to \"{destination}\" implicitly");
+        error = new($"Can't cast `{source.FinalValue}` to `{destination.FinalValue}` implicitly");
         return false;
     }
 
