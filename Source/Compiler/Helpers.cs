@@ -2328,7 +2328,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         if (!CompileType(constructorCall.Type, out type, diagnostics)) return false;
 
-        FindStatementTypes(constructorCall.Arguments.Arguments, out ImmutableArray<GeneralType> parameters, diagnostics);
+        if (!FindStatementTypes(constructorCall.Arguments.Arguments, out ImmutableArray<GeneralType> parameters, diagnostics)) return false;
 
         if (GetConstructor(type, parameters, constructorCall.File, out FunctionQueryResult<CompiledConstructorDefinition>? result, out PossibleDiagnostic? notFound))
         {

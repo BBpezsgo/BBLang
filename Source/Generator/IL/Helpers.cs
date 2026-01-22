@@ -173,7 +173,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
     }
 
-    static bool EmitDefaultValue(GeneralType type, ILProxy il, [NotNullWhen(false)] out PossibleDiagnostic? error)
+    bool EmitDefaultValue(GeneralType type, ILProxy il, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         error = null;
 
@@ -185,24 +185,51 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 {
                     case BasicType.Void:
                         return true;
+                    case BasicType.U8:
+                        il.Emit(OpCodes.Ldc_I4_S, (byte)0);
+                        return true;
+                    case BasicType.I8:
+                        il.Emit(OpCodes.Ldc_I4_S, (sbyte)0);
+                        return true;
+                    case BasicType.U16:
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        return true;
+                    case BasicType.I16:
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        return true;
                     case BasicType.I32:
                         il.Emit(OpCodes.Ldc_I4_0);
+                        return true;
+                    case BasicType.U32:
+                        il.Emit(OpCodes.Ldc_I4_0);
+                        return true;
+                    case BasicType.U64:
+                        il.Emit(OpCodes.Ldc_I8, (ulong)0);
+                        return true;
+                    case BasicType.I64:
+                        il.Emit(OpCodes.Ldc_I8, (long)0);
                         return true;
                     case BasicType.F32:
                         il.Emit(OpCodes.Ldc_R4, 0f);
                         return true;
-                    case BasicType.U8:
-                        il.Emit(OpCodes.Ldc_I4_S, (byte)0);
-                        return true;
+                    case BasicType.Any:
                     default:
-                        Debugger.Break();
-                        error = new PossibleDiagnostic($"Unimplemented return type {type}");
+                        error = new PossibleDiagnostic($"Type {type} doesn't have a value");
                         return false;
                 }
             }
             case PointerType:
             {
                 il.Emit(OpCodes.Ldnull);
+                return true;
+            }
+            case StructType v:
+            {
+                if (!ToType(v, out Type? t, out error)) return false;
+                LocalBuilder l = il.DeclareLocal(t);
+                il.Emit(OpCodes.Ldloca, l);
+                il.Emit(OpCodes.Initobj, t);
+                LoadLocal(il, l.LocalIndex);
                 return true;
             }
             default:

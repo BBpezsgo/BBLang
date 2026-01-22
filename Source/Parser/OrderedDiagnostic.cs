@@ -37,7 +37,7 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
     public ImmutableArray<Diagnostic> Compile()
     {
         if (_diagnostics.Count == 0) return ImmutableArray<Diagnostic>.Empty;
-        int max = _diagnostics.MaxBy(v => v.Importance).Importance;
+        int max = _diagnostics.Max(v => v.Importance);
         ImmutableArray<Diagnostic>.Builder result = ImmutableArray.CreateBuilder<Diagnostic>(_diagnostics.Count);
         for (int i = 0; i < _diagnostics.Count; i++)
         {

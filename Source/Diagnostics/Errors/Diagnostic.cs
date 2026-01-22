@@ -143,11 +143,15 @@ public class Diagnostic :
     {
 #if TESTING
         Throw();
-#elif DEBUG && !UNITY
-        if (!IsDebugged)
-        { }
-        IsDebugged = true;
 #endif
+
+        if (!IsDebugged)
+        {
+#if DEBUG && !UNITY
+            Debugger.Break();
+#endif
+        }
+        IsDebugged = true;
         return this;
     }
 
