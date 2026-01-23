@@ -2365,7 +2365,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 { type = definedField.Type; }
                 else
                 {
-                    type = GeneralType.InsertTypeParameters(definedField.Type, structType.TypeArguments) ?? definedField.Type;
+                    type = GeneralType.TryInsertTypeParameters(definedField.Type, structType.TypeArguments);
                 }
                 return true;
             }
@@ -3173,7 +3173,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     };
     static ControlFlowUsage FindControlFlowUsage(KeywordCallStatement statement, bool inDepth = false)
     {
-        switch (statement.Identifier.Content)
+        switch (statement.Keyword.Content)
         {
             case StatementKeywords.Return:
             {

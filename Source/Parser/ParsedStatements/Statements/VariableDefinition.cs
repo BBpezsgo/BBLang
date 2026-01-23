@@ -6,7 +6,7 @@ namespace LanguageCore.Parser.Statements;
 public class VariableDefinition : Statement,
     IHaveType,
     IExportable,
-    IIdentifiable<IdentifierExpression>,
+    IIdentifiable<Token>,
     IHaveAttributes
 {
     /// <summary>
@@ -20,7 +20,7 @@ public class VariableDefinition : Statement,
 
     public ImmutableArray<AttributeUsage> Attributes { get; }
     public TypeInstance Type { get; }
-    public IdentifierExpression Identifier { get; }
+    public Token Identifier { get; }
     public Expression? InitialValue { get; }
     public ImmutableArray<Token> Modifiers { get; }
 
@@ -46,7 +46,7 @@ public class VariableDefinition : Statement,
         ImmutableArray<AttributeUsage> attributes,
         ImmutableArray<Token> modifiers,
         TypeInstance type,
-        IdentifierExpression variableName,
+        Token variableName,
         Expression? initialValue,
         Uri file) : base(file)
     {

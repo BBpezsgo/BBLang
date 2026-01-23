@@ -288,7 +288,7 @@ public sealed partial class Parser
         if (!ExpectType(AllowedType.None, out TypeInstance? instanceTypeName))
         {
             instanceTypeName = new MissingTypeInstance(keywordNew.Position.After(), File);
-            Diagnostics.Add(Diagnostic.Error($"Expected instance constructor after keyword `{StatementKeywords.New}`", instanceTypeName, false));
+            Diagnostics.Add(Diagnostic.Error($"Expected type after keyword `{StatementKeywords.New}`", instanceTypeName, false));
         }
 
         if (ExpectArguments(out ArgumentListExpression? argumentList))
@@ -319,7 +319,7 @@ public sealed partial class Parser
             fieldName = new MissingToken(TokenType.Identifier, tokenDot.Position.After());
             fieldAccessor = new FieldExpression(
                 prevStatement,
-                new MissingIdentifierExpression(fieldName, File),
+                fieldName,
                 File
             );
             Diagnostics.Add(Diagnostic.Error("Expected a symbol after `.`", fieldName, File, false));
@@ -328,7 +328,7 @@ public sealed partial class Parser
 
         fieldAccessor = new FieldExpression(
             prevStatement,
-            new(fieldName, File),
+            fieldName,
             File
         );
         return true;
@@ -603,11 +603,11 @@ public sealed partial class Parser
             return false;
         }
 
-        if (!IsExpression && !IsStatementExpression(result))
-        {
-            savepoint.Restore();
-            return false;
-        }
+        //if (!IsExpression && !IsStatementExpression(result))
+        //{
+        //    savepoint.Restore();
+        //    return false;
+        //}
 
         return true;
     }

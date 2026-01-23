@@ -257,7 +257,7 @@ public sealed partial class Parser
             attributes,
             modifiers,
             possibleType,
-            new IdentifierExpression(possibleVariableName, File),
+            possibleVariableName,
             initialValue,
             File
         );
@@ -672,7 +672,7 @@ public sealed partial class Parser
         identifier.AnalyzedType = TokenAnalyzedType.InstructionLabel;
 
         instructionLabel = new InstructionLabelDeclaration(
-            new IdentifierExpression(identifier, File),
+            identifier,
             colon,
             File
         );

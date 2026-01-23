@@ -9,7 +9,6 @@ public class ForLoopStatement : StatementWithBlock
     public Expression? Condition { get; }
     public Statement? Step { get; }
 
-    public IdentifierExpression Identifier => new(KeywordToken, File);
     public override Position Position => new(KeywordToken, Block);
 
     public ForLoopStatement(

@@ -141,10 +141,6 @@ public class Diagnostic :
 
     public Diagnostic Break()
     {
-#if TESTING
-        Throw();
-#endif
-
         if (!IsDebugged)
         {
 #if DEBUG && !UNITY
@@ -152,6 +148,11 @@ public class Diagnostic :
 #endif
         }
         IsDebugged = true;
+
+#if TESTING
+        Throw();
+#endif
+
         return this;
     }
 

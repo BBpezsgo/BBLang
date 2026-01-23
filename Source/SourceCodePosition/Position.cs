@@ -37,8 +37,8 @@ public readonly struct Position :
         foreach (IPositioned? element in elements)
         {
             if (element is null) continue;
-            if (element is Tokenizing.Token token && token.IsAnonymous) continue;
             Position position = element.Position;
+            if (position == UnknownPosition) continue;
             Range = position.Range;
             AbsoluteRange = position.AbsoluteRange;
             break;

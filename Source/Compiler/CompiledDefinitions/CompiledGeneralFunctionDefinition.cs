@@ -83,14 +83,14 @@ public class CompiledGeneralFunctionDefinition : GeneralFunctionDefinition,
     public override string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null)
     {
         StringBuilder result = new();
-        result.Append((GeneralType.InsertTypeParameters(Type, typeArguments) ?? Type).ToString());
+        result.Append(GeneralType.TryInsertTypeParameters(Type, typeArguments).ToString());
         result.Append(' ');
         result.Append(Identifier.ToString());
         result.Append('(');
         for (int i = 0; i < Parameters.Length; i++)
         {
             if (i > 0) result.Append(", ");
-            result.Append((GeneralType.InsertTypeParameters(Parameters[i].Type, typeArguments) ?? Parameters[i].Type).ToString());
+            result.Append(GeneralType.TryInsertTypeParameters(Parameters[i].Type, typeArguments).ToString());
         }
         result.Append(')');
         return result.ToString();
@@ -98,7 +98,7 @@ public class CompiledGeneralFunctionDefinition : GeneralFunctionDefinition,
 
     public CompiledGeneralFunctionDefinition InstantiateTemplate(IReadOnlyDictionary<string, GeneralType> parameters)
     {
-        GeneralType newType = GeneralType.InsertTypeParameters(Type, parameters) ?? Type;
+        GeneralType newType = GeneralType.InsertTypeParameters(Type, parameters);
         ImmutableArray<CompiledParameter>.Builder newParameters = ImmutableArray.CreateBuilder<CompiledParameter>(Parameters.Length);
         foreach (CompiledParameter parameter in Parameters)
         {

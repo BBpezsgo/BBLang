@@ -723,7 +723,7 @@ public partial class StatementCompiler
                         Token.CreateAnonymous("="),
                         new FieldExpression(
                             new IdentifierExpression(Token.CreateAnonymous("this"), @struct.File),
-                            new IdentifierExpression(Token.CreateAnonymous("_genstate"), @struct.File),
+                            Token.CreateAnonymous("_genstate"),
                             @struct.File
                         ),
                         new IdentifierExpression(Token.CreateAnonymous("state"), @struct.File),
@@ -733,7 +733,7 @@ public partial class StatementCompiler
                         Token.CreateAnonymous("="),
                         new FieldExpression(
                             new IdentifierExpression(Token.CreateAnonymous("this"), @struct.File),
-                            new IdentifierExpression(nextFunction.Identifier, @struct.File),
+                            nextFunction.Identifier,
                             @struct.File
                         ),
                         new IdentifierExpression(Token.CreateAnonymous("func"), @struct.File),

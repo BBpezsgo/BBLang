@@ -628,7 +628,7 @@ public partial class StatementCompiler
                     else if (!GeneralType.TryGetTypeParameters(defined, passed, _typeArguments))
                     {
                         result.Errors.Add(new PossibleDiagnostic($"Could not resolve the template types",
-                            new PossibleDiagnostic($"Invalid type passed: expected {GeneralType.InsertTypeParameters(defined, _typeArguments) ?? defined} but passed {passed}")));
+                            new PossibleDiagnostic($"Invalid type passed: expected {GeneralType.TryInsertTypeParameters(defined, _typeArguments)} but passed {passed}")));
                         return result;
                     }
                 }
@@ -638,7 +638,7 @@ public partial class StatementCompiler
 
                 for (int i = 0; i < checkCount; i++)
                 {
-                    GeneralType defined = GeneralType.InsertTypeParameters(function.Parameters[i].Type, _typeArguments) ?? function.Parameters[i].Type;
+                    GeneralType defined = GeneralType.TryInsertTypeParameters(function.Parameters[i].Type, _typeArguments);
                     TArgument passed = query.Arguments.Value[i];
                     TypeMatch v = result.ParameterTypeMatch.Value;
                     GetArgumentMatch(ref v, ref argumentValues[i], defined, function.Parameters[i], passed, result.Errors);
@@ -650,7 +650,7 @@ public partial class StatementCompiler
 
             if (query.ReturnType is not null)
             {
-                result.ReturnTypeMatch = GetReturnTypeMatch(GeneralType.InsertTypeParameters(function.Type, _typeArguments) ?? function.Type, query.ReturnType, result.Errors);
+                result.ReturnTypeMatch = GetReturnTypeMatch(GeneralType.TryInsertTypeParameters(function.Type, _typeArguments), query.ReturnType, result.Errors);
             }
             else
             {

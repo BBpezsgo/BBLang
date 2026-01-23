@@ -1,3 +1,5 @@
+using LanguageCore.Tokenizing;
+
 namespace LanguageCore.Parser.Statements;
 
 public class FieldExpression : Expression, IReferenceableTo
@@ -8,13 +10,13 @@ public class FieldExpression : Expression, IReferenceableTo
     public object? Reference { get; set; }
 
     public Expression Object { get; }
-    public IdentifierExpression Identifier { get; }
+    public Token Identifier { get; }
 
     public override Position Position => new(Object, Identifier);
 
     public FieldExpression(
         Expression @object,
-        IdentifierExpression identifier,
+        Token identifier,
         Uri file) : base(file)
     {
         Object = @object;

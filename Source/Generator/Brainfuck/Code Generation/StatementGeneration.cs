@@ -3169,7 +3169,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                     Location = function.Location,
                 },
             };
-            GeneralType returnType = GeneralType.InsertTypeParameters(function.Type, typeArguments) ?? function.Type;
+            GeneralType returnType = GeneralType.TryInsertTypeParameters(function.Type, typeArguments);
             returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(returnType, function), callerPosition), false, false, null, FindSize(returnType, function), variableDeclaration);
         }
 

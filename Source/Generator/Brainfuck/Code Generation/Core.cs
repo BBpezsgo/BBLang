@@ -748,7 +748,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
             ImmutableArray<AttributeUsage>.Empty,
             ImmutableArray<Tokenizing.Token>.Empty,
             new TypeInstanceSimple(Tokenizing.Token.CreateAnonymous("u8"), compilerResult.File),
-            new IdentifierExpression(Tokenizing.Token.CreateAnonymous(ReturnVariableName), compilerResult.File),
+            Tokenizing.Token.CreateAnonymous(ReturnVariableName),
             null,
             compilerResult.File
         );

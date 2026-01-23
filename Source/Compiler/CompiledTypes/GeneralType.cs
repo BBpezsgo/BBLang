@@ -174,6 +174,9 @@ public abstract class GeneralType :
         }
     }
 
+    public static GeneralType TryInsertTypeParameters(GeneralType type, IReadOnlyDictionary<string, GeneralType>? typeArguments)
+        => InsertTypeParameters(type, typeArguments) ?? type;
+
     [return: NotNullIfNotNull(nameof(typeArguments))]
     public static GeneralType? InsertTypeParameters(GeneralType type, IReadOnlyDictionary<string, GeneralType>? typeArguments)
     {
@@ -189,16 +192,10 @@ public abstract class GeneralType :
             }
 
             case PointerType pointerType:
-            {
-                GeneralType pointerTo = InsertTypeParameters(pointerType.To, typeArguments);
-                return new PointerType(pointerTo);
-            }
+                return new PointerType(InsertTypeParameters(pointerType.To, typeArguments));
 
             case ArrayType arrayType:
-            {
-                GeneralType stackArrayOf = InsertTypeParameters(arrayType.Of, typeArguments);
-                return new ArrayType(stackArrayOf, arrayType.Length);
-            }
+                return new ArrayType(InsertTypeParameters(arrayType.Of, typeArguments), arrayType.Length);
 
             case StructType structType:
             {
@@ -231,11 +228,7 @@ public abstract class GeneralType :
                 return type;
 
             case FunctionType functionType:
-            {
-                GeneralType returnType = InsertTypeParameters(functionType.ReturnType, typeArguments);
-                ImmutableArray<GeneralType> parameters = InsertTypeParameters(functionType.Parameters, typeArguments);
-                return new FunctionType(returnType, parameters, functionType.HasClosure);
-            }
+                return new FunctionType(InsertTypeParameters(functionType.ReturnType, typeArguments), InsertTypeParameters(functionType.Parameters, typeArguments), functionType.HasClosure);
 
             default:
                 throw new NotImplementedException();
@@ -247,7 +240,7 @@ public abstract class GeneralType :
         ImmutableArray<GeneralType>.Builder result = ImmutableArray.CreateBuilder<GeneralType>(types.Length);
         foreach (GeneralType type in types)
         {
-            result.Add(InsertTypeParameters(type, typeArguments) ?? type);
+            result.Add(TryInsertTypeParameters(type, typeArguments));
         }
         return result.MoveToImmutable();
     }

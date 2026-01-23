@@ -10,8 +10,6 @@ public class KeywordCallStatement : Statement, IReadable, IReferenceableTo<Compi
     public Token Keyword { get; }
     public ImmutableArray<Expression> Arguments { get; }
 
-    public IdentifierExpression Identifier => new(Keyword, File);
-
     public override Position Position =>
         new Position(Keyword)
         .Union(Arguments);

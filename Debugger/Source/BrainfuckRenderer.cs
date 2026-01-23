@@ -505,7 +505,7 @@ public class BrainfuckRenderer
                         t.Write(compiledFunction.Parameters[j].Modifiers[k].Content, AnsiColor.Blue);
                         t.Write(' ');
                     }
-                    WriteType(ref t, GeneralType.InsertTypeParameters(compiledFunction.Parameters[j].Type, function.TypeArguments) ?? compiledFunction.Parameters[j].Type);
+                    WriteType(ref t, GeneralType.TryInsertTypeParameters(compiledFunction.Parameters[j].Type, function.TypeArguments));
                     t.Write(' ');
                     t.Write(compiledFunction.Parameters[j].Identifier.Content);
                 }

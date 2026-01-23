@@ -2316,7 +2316,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             BuiltinType => false,
             PointerType => true,
             AliasType v => ScanForPointer(v.Value),
-            StructType v => v.Struct.Fields.Any(field => ScanForPointer(GeneralType.InsertTypeParameters(field.Type, v.TypeArguments) ?? field.Type)),
+            StructType v => v.Struct.Fields.Any(field => ScanForPointer(GeneralType.TryInsertTypeParameters(field.Type, v.TypeArguments))),
             ArrayType v => ScanForPointer(v.Of),
             FunctionType => true,
             GenericType => true,
@@ -2349,7 +2349,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             BuiltinType => false,
             PointerType v => ScanForPointer(v.To), // Top-level pointers are okay
             AliasType v => ScanForPointer(v.Value),
-            StructType v => v.Struct.Fields.Any(field => ScanForPointer(GeneralType.InsertTypeParameters(field.Type, v.TypeArguments) ?? field.Type)),
+            StructType v => v.Struct.Fields.Any(field => ScanForPointer(GeneralType.TryInsertTypeParameters(field.Type, v.TypeArguments))),
             ArrayType v => ScanForPointer(v.Of),
             _ => throw new UnreachableException(),
         })

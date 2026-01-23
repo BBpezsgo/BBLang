@@ -261,12 +261,19 @@ public partial class StatementCompiler
     {
         return typeInstance switch
         {
-            TypeInstanceSimple simpleType => CompileStatement(simpleType, out result, diagnostics),
-            TypeInstanceFunction functionType => CompileStatement(functionType, out result, diagnostics),
-            TypeInstanceStackArray stackArrayType => CompileStatement(stackArrayType, out result, diagnostics),
-            TypeInstancePointer pointerType => CompileStatement(pointerType, out result, diagnostics),
+            TypeInstanceSimple v => CompileStatement(v, out result, diagnostics),
+            TypeInstanceFunction v => CompileStatement(v, out result, diagnostics),
+            TypeInstanceStackArray v => CompileStatement(v, out result, diagnostics),
+            TypeInstancePointer v => CompileStatement(v, out result, diagnostics),
+            MissingTypeInstance v => CompileStatement(v, out result, diagnostics),
             _ => throw new UnreachableException(),
         };
+    }
+    bool CompileStatement(MissingTypeInstance type, [NotNullWhen(true)] out CompiledTypeExpression? result, DiagnosticsCollection diagnostics)
+    {
+        result = null;
+        diagnostics.Add(Diagnostic.Error("Incomplete AST", type, false));
+        return false;
     }
     bool CompileStatement(TypeInstanceSimple type, [NotNullWhen(true)] out CompiledTypeExpression? result, DiagnosticsCollection diagnostics)
     {
@@ -279,7 +286,7 @@ public partial class StatementCompiler
 
         if (!FindType(type.Identifier, type.File, out result, out PossibleDiagnostic? error))
         {
-            Diagnostics.Add(error.ToError(type));
+            diagnostics.Add(error.ToError(type));
             return false;
         }
 
@@ -309,7 +316,7 @@ public partial class StatementCompiler
         {
             if (type.TypeArguments.HasValue)
             {
-                Diagnostics.Add(Diagnostic.Internal($"Asd", type));
+                diagnostics.Add(Diagnostic.Internal($"Asd", type));
                 return false;
             }
         }
@@ -766,7 +773,7 @@ public partial class StatementCompiler
                     Field = GeneratorStructDefinition.FunctionField,
                     Object = compiledArguments[0].Value,
                     // FIXME: dirty ahh
-                    Type = GeneralType.InsertTypeParameters(GeneratorStructDefinition.FunctionField.Type, ((StructType)((PointerType)((ICompiledFunctionDefinition)callee).Parameters[0].Type).To).TypeArguments) ?? GeneratorStructDefinition.FunctionField.Type,
+                    Type = GeneralType.InsertTypeParameters(GeneratorStructDefinition.FunctionField.Type, ((StructType)((PointerType)((ICompiledFunctionDefinition)callee).Parameters[0].Type).To).TypeArguments),
                     Location = caller.Location,
                     SaveValue = true,
                 },
@@ -1021,7 +1028,7 @@ public partial class StatementCompiler
 
         if (GetConstant(newVariable.Identifier.Content, newVariable.File, out _, out _))
         {
-            Diagnostics.Add(Diagnostic.Error($"Symbol name \"{newVariable.Identifier}\" conflicts with an another symbol name", newVariable.Identifier));
+            Diagnostics.Add(Diagnostic.Error($"Symbol name \"{newVariable.Identifier}\" conflicts with an another symbol name", newVariable.Identifier, newVariable.File));
             return false;
         }
 
@@ -1212,7 +1219,7 @@ public partial class StatementCompiler
 
         if (!GetInstructionLabel(instructionLabel.Identifier.Content, out CompiledLabelDeclaration? compiledInstructionLabelDeclaration, out _))
         {
-            Diagnostics.Add(Diagnostic.Internal($"Instruction label \"{instructionLabel.Identifier.Content}\" not found. Possibly not compiled or some other internal errors (not your fault)", instructionLabel.Identifier));
+            Diagnostics.Add(Diagnostic.Internal($"Instruction label \"{instructionLabel.Identifier.Content}\" not found. Possibly not compiled or some other internal errors (not your fault)", instructionLabel.Identifier, instructionLabel.File));
             return false;
         }
 
@@ -1223,7 +1230,7 @@ public partial class StatementCompiler
     {
         compiledStatement = null;
 
-        if (keywordCall.Identifier.Content == StatementKeywords.Return)
+        if (keywordCall.Keyword.Content == StatementKeywords.Return)
         {
             if (keywordCall.Arguments.Length > 1)
             {
@@ -1254,7 +1261,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (keywordCall.Identifier.Content == StatementKeywords.Yield)
+        if (keywordCall.Keyword.Content == StatementKeywords.Yield)
         {
             if (keywordCall.Arguments.Length > 1)
             {
@@ -1355,7 +1362,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (keywordCall.Identifier.Content == StatementKeywords.Crash)
+        if (keywordCall.Keyword.Content == StatementKeywords.Crash)
         {
             if (keywordCall.Arguments.Length != 1)
             {
@@ -1373,7 +1380,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (keywordCall.Identifier.Content == StatementKeywords.Break)
+        if (keywordCall.Keyword.Content == StatementKeywords.Break)
         {
             compiledStatement = new CompiledBreak()
             {
@@ -1382,7 +1389,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (keywordCall.Identifier.Content == StatementKeywords.Delete)
+        if (keywordCall.Keyword.Content == StatementKeywords.Delete)
         {
             if (!CompileExpression(keywordCall.Arguments[0], out CompiledExpression? value)) return false;
 
@@ -1399,7 +1406,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (keywordCall.Identifier.Content == StatementKeywords.Goto)
+        if (keywordCall.Keyword.Content == StatementKeywords.Goto)
         {
             if (keywordCall.Arguments.Length != 1)
             {
@@ -1423,7 +1430,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Unknown keyword \"{keywordCall.Identifier}\"", keywordCall.Identifier));
+        Diagnostics.Add(Diagnostic.Error($"Unknown keyword \"{keywordCall.Keyword}\"", keywordCall.Keyword, keywordCall.File));
         return false;
     }
     bool CompileStatement(SimpleAssignmentStatement setter, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
@@ -1759,8 +1766,8 @@ public partial class StatementCompiler
             if (anyCall.Expression is FieldExpression _field)
             { _field.Identifier.AnalyzedType = TokenAnalyzedType.FunctionName; }
 
-            SetStatementReference(anyCall, result.OriginalFunction);
-            TrySetStatementReference(anyCall.Expression, result.OriginalFunction);
+            SetStatementReference(anyCall, result.Function);
+            TrySetStatementReference(anyCall.Expression, result);
             SetStatementType(anyCall, result.Function.Type);
 
             result.Function.References.Add(new(anyCall, anyCall.File));
@@ -3329,7 +3336,7 @@ public partial class StatementCompiler
 
         if (field.Identifier is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", field.Identifier, false));
+            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", field.Identifier, field.File, false));
             return false;
         }
 
@@ -3341,8 +3348,8 @@ public partial class StatementCompiler
                 return false;
             }
 
-            SetStatementType(field.Identifier, ArrayLengthType);
-            SetPredictedValue(field.Identifier, arrayType.Length.Value);
+            SetStatementType(field, ArrayLengthType);
+            SetPredictedValue(field, arrayType.Length.Value);
 
             compiledStatement = new CompiledConstantValue()
             {
@@ -3375,8 +3382,8 @@ public partial class StatementCompiler
                 return false;
             }
 
-            SetStatementType(field.Identifier, fieldDefinition.Type);
-            SetStatementReference(field.Identifier, fieldDefinition);
+            SetStatementType(field, fieldDefinition.Type);
+            SetStatementReference(field, fieldDefinition);
 
             compiledStatement = new CompiledFieldAccess()
             {
@@ -3384,7 +3391,7 @@ public partial class StatementCompiler
                 Field = fieldDefinition,
                 Location = field.Location,
                 SaveValue = field.SaveValue,
-                Type = GeneralType.InsertTypeParameters(fieldDefinition.Type, structPointerType.TypeArguments) ?? fieldDefinition.Type,
+                Type = GeneralType.TryInsertTypeParameters(fieldDefinition.Type, structPointerType.TypeArguments),
             };
             return true;
         }
@@ -3401,8 +3408,8 @@ public partial class StatementCompiler
             return false;
         }
 
-        SetStatementType(field.Identifier, compiledField.Type);
-        SetStatementReference(field.Identifier, compiledField);
+        SetStatementType(field, compiledField.Type);
+        SetStatementReference(field, compiledField);
 
         compiledStatement = new CompiledFieldAccess()
         {
@@ -3410,7 +3417,7 @@ public partial class StatementCompiler
             Object = prev,
             Location = field.Location,
             SaveValue = field.SaveValue,
-            Type = GeneralType.InsertTypeParameters(compiledField.Type, structType.TypeArguments) ?? compiledField.Type,
+            Type = GeneralType.TryInsertTypeParameters(compiledField.Type, structType.TypeArguments),
         };
         return true;
     }
@@ -3944,7 +3951,7 @@ public partial class StatementCompiler
                 return false;
             }
 
-            GeneralType type = GeneralType.InsertTypeParameters(compiledField.Type, structType.TypeArguments) ?? compiledField.Type;
+            GeneralType type = GeneralType.TryInsertTypeParameters(compiledField.Type, structType.TypeArguments);
             if (!CompileExpression(value, out CompiledExpression? _value, type)) return false;
 
             if (!CanCastImplicitly(_value.Type, type, value, out PossibleDiagnostic? castError2))
@@ -3972,7 +3979,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Type `{prevType}` doesn't have any fields", target.Identifier));
+        Diagnostics.Add(Diagnostic.Error($"Type `{prevType}` doesn't have any fields", target.Identifier, target.File));
         return false;
     }
     bool CompileSetter(IndexCallExpression target, Expression value, [NotNullWhen(true)] out CompiledStatement? compiledStatement)

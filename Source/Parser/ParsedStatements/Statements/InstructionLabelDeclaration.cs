@@ -4,7 +4,7 @@ namespace LanguageCore.Parser.Statements;
 
 public class InstructionLabelDeclaration : Statement
 {
-    public IdentifierExpression Identifier { get; }
+    public Token Identifier { get; }
     public Token Colon { get; }
 
     public override Position Position => new(
@@ -13,7 +13,7 @@ public class InstructionLabelDeclaration : Statement
     );
 
     public InstructionLabelDeclaration(
-        IdentifierExpression identifier,
+        Token identifier,
         Token colon,
         Uri file) : base(file)
     {

@@ -20,7 +20,7 @@ public static class PositionExtensions
         Position result = a;
 
         for (int i = 0; i < b.Length; i++)
-        { result = PositionExtensions.Union(result, b[i]); }
+        { result = Union(result, b[i]); }
 
         return result;
     }
@@ -29,8 +29,7 @@ public static class PositionExtensions
     {
         if (b is null) return a;
 
-        if (b is Tokenizing.Token token && token.IsAnonymous) return a;
-        return PositionExtensions.Union(a, b.Position);
+        return Union(a, b.Position);
     }
 
     public static Position Union(this Position a, params IPositioned?[] b)
@@ -40,7 +39,7 @@ public static class PositionExtensions
         Position result = a;
 
         for (int i = 0; i < b.Length; i++)
-        { result = PositionExtensions.Union(result, b[i]); }
+        { result = Union(result, b[i]); }
 
         return result;
     }
@@ -52,7 +51,7 @@ public static class PositionExtensions
         Position result = a;
 
         foreach (IPositioned? element in b)
-        { result = PositionExtensions.Union(result, element); }
+        { result = Union(result, element); }
 
         return result;
     }

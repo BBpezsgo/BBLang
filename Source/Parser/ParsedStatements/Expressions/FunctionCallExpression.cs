@@ -1,4 +1,5 @@
 using LanguageCore.Compiler;
+using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
@@ -9,7 +10,7 @@ public class FunctionCallExpression : Expression, IReadable, IReferenceableTo<Co
     /// </summary>
     public CompiledFunctionDefinition? Reference { get; set; }
 
-    public IdentifierExpression Identifier { get; }
+    public Token Identifier { get; }
     public ArgumentListExpression Arguments { get; }
     public ArgumentExpression? Object { get; }
 
@@ -26,7 +27,7 @@ public class FunctionCallExpression : Expression, IReadable, IReferenceableTo<Co
 
     public FunctionCallExpression(
         ArgumentExpression? @object,
-        IdentifierExpression identifier,
+        Token identifier,
         ArgumentListExpression arguments,
         Uri file) : base(file)
     {

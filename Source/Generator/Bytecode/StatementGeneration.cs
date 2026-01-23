@@ -1460,7 +1460,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 PushFrom(new AddressOffset(
                     new AddressRegisterPointer(reg.Register),
                     fieldOffset
-                    ), FindSize(GeneralType.InsertTypeParameters(fieldDefinition.Type, structPointerType.TypeArguments) ?? fieldDefinition.Type, fieldDefinition));
+                    ), FindSize(GeneralType.TryInsertTypeParameters(fieldDefinition.Type, structPointerType.TypeArguments), fieldDefinition));
             }
             return;
         }

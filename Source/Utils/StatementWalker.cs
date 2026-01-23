@@ -43,12 +43,10 @@ public static partial class StatementWalker
                 break;
             case FieldExpression v:
                 foreach (Statement w in Visit(v.Object, callback)) yield return w;
-                foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 break;
             case FunctionCallExpression v:
                 if (v.Object is not null) foreach (Statement w in Visit(v.Object, callback)) yield return w;
                 foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
-                foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 break;
             case GetReferenceExpression v:
                 foreach (Statement w in Visit(v.Expression, callback)) yield return w;
@@ -113,10 +111,8 @@ public static partial class StatementWalker
                 foreach (Statement w in Visit(v.Block, callback)) yield return w;
                 break;
             case InstructionLabelDeclaration v:
-                foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 break;
             case KeywordCallStatement v:
-                foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 foreach (Statement w in Visit(v.Arguments, callback)) yield return w;
                 break;
             case SimpleAssignmentStatement v:
@@ -125,7 +121,6 @@ public static partial class StatementWalker
                 break;
             case VariableDefinition v:
                 foreach (Statement w in Visit(v.Type, callback)) yield return w;
-                foreach (Statement w in Visit(v.Identifier, callback)) yield return w;
                 foreach (Statement w in Visit(v.InitialValue, callback)) yield return w;
                 break;
             case WhileLoopStatement v:
@@ -163,11 +158,13 @@ public static partial class StatementWalker
             case TypeInstancePointer v:
                 foreach (Statement w in Visit(v.To, callback)) yield return w;
                 break;
-            case TypeInstanceSimple v:
+            case TypeInstanceSimple:
                 break;
             case TypeInstanceStackArray v:
                 foreach (Statement w in Visit(v.StackArrayOf, callback)) yield return w;
                 foreach (Statement w in Visit(v.StackArraySize, callback)) yield return w;
+                break;
+            case MissingTypeInstance:
                 break;
             default: throw new UnreachableException(type.GetType().Name);
         }

@@ -280,7 +280,7 @@ public class InterpreterRenderer
                     t.Write(function.Parameters[j].Modifiers[k].Content, AnsiColor.Blue);
                     t.Write(' ');
                 }
-                WriteType(ref t, GeneralType.InsertTypeParameters(function.Parameters[j].Type, typeArguments) ?? function.Parameters[j].Type);
+                WriteType(ref t, GeneralType.TryInsertTypeParameters(function.Parameters[j].Type, typeArguments));
                 t.Write(' ');
                 t.Write(function.Parameters[j].Identifier.Content);
             }
