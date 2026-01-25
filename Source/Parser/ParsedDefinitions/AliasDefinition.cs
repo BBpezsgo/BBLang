@@ -20,6 +20,8 @@ public class AliasDefinition :
     public Position Position => new(Keyword, Identifier, Value);
     public bool IsExported => Modifiers.Contains(ProtectionKeywords.Export);
 
+    CanUseOn IHaveAttributes.AttributeUsageKind => CanUseOn.TypeAlias;
+
     public AliasDefinition(ImmutableArray<AttributeUsage> attributes, ImmutableArray<Token> modifiers, Token keyword, Token identifier, TypeInstance value, Uri file)
     {
         Attributes = attributes;

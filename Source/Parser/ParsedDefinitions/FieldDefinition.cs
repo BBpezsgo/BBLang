@@ -40,6 +40,8 @@ public class FieldDefinition :
 
     public Location Location => new(Position, Context.File);
 
+    CanUseOn IHaveAttributes.AttributeUsageKind => CanUseOn.Field;
+
     public FieldDefinition(FieldDefinition other)
     {
         Identifier = other.Identifier;

@@ -25,6 +25,8 @@ public class StructDefinition :
     public bool IsExported => Modifiers.Contains(ProtectionKeywords.Export);
     public virtual Position Position => new(Identifier, BracketStart, BracketEnd);
 
+    CanUseOn IHaveAttributes.AttributeUsageKind => CanUseOn.Struct;
+
     public StructDefinition(StructDefinition other)
     {
         Attributes = other.Attributes;

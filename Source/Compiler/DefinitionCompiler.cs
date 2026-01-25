@@ -212,7 +212,7 @@ public partial class StatementCompiler
         {
             if (userDefinedAttribute.Name != attribute.Identifier.Content) continue;
 
-            if (!userDefinedAttribute.CanUseOn.HasFlag(CanUseOn.Function))
+            if (!userDefinedAttribute.CanUseOn.HasFlag(context.AttributeUsageKind))
             { Diagnostics.Add(Diagnostic.Error($"Can't use attribute \"{attribute.Identifier}\" on \"{context.GetType().Name}\". Valid usages: {userDefinedAttribute.CanUseOn}", attribute)); }
 
             if (attribute.Parameters.Length != userDefinedAttribute.Parameters.Length)

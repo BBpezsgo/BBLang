@@ -160,7 +160,7 @@ public class Diagnostic :
     {
         if (File == null) return null;
         if (!File.IsFile) return null;
-        string? source = SourceCodeManager.LoadSourceSync(sourceProviders, File.ToString());
+        string? source = SourceCodeManager.LoadSource(sourceProviders, File.ToString());
         return source is not null ? LanguageException.GetArrows(Position, source) : null;
     }
 

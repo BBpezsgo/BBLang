@@ -9,6 +9,7 @@ public enum CanUseOn
     Struct = 0x2,
     Field = 0x4,
     TypeAlias = 0x8,
+    Variable = 0x10,
 
     TypeDefinition = Struct | TypeAlias,
 }

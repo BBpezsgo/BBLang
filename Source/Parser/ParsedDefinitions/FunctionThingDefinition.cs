@@ -30,6 +30,8 @@ public abstract class FunctionThingDefinition :
     public bool IsInlineable => Modifiers.Contains(ModifierKeywords.Inline);
     public virtual bool IsTemplate => Template is not null;
 
+    CanUseOn IHaveAttributes.AttributeUsageKind => CanUseOn.Function;
+
     public virtual Position Position =>
         new Position(Identifier)
         .Union(Parameters.Position)

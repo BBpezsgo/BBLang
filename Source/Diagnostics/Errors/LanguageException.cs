@@ -79,7 +79,7 @@ public class LanguageException : Exception
     {
         if (File == null) return null;
         if (!File.IsFile) return null;
-        string? content = SourceCodeManager.LoadSourceSync(sourceProviders, File.ToString());
+        string? content = SourceCodeManager.LoadSource(sourceProviders, File.ToString());
         return content is not null ? GetArrows(Position, content) : null;
     }
 

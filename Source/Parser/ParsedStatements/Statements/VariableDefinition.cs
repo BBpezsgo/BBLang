@@ -32,6 +32,8 @@ public class VariableDefinition : Statement,
         .Union(Modifiers);
     public bool IsExported => Modifiers.Contains(ProtectionKeywords.Export);
 
+    CanUseOn IHaveAttributes.AttributeUsageKind => CanUseOn.Variable;
+
     public VariableDefinition(VariableDefinition other) : base(other)
     {
         Attributes = other.Attributes;

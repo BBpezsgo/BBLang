@@ -104,6 +104,7 @@ public interface IIdentifiable<TIdentifier>
 
 public interface IHaveAttributes
 {
+    CanUseOn AttributeUsageKind { get; }
     ImmutableArray<AttributeUsage> Attributes { get; }
 }
 
