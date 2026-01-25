@@ -53,8 +53,8 @@ public class BrainfuckTests
     [TestMethod, Timeout(Timeout)] public void Test046() => TestList.GetTest(46).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test047() => TestList.GetTest(47).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test048() => TestList.GetTest(48).DoBrainfuck();
-    [TestMethod, Timeout(Timeout), Ignore("Floats not supported")] public void Test049() => TestList.GetTest(49).DoBrainfuck();
-    [TestMethod, Timeout(Timeout), Ignore("Floats not supported")] public void Test050() => TestList.GetTest(50).DoBrainfuck();
+    [TestMethod, Timeout(Timeout), Ignore("f32 not supported")] public void Test049() => TestList.GetTest(49).DoBrainfuck();
+    [TestMethod, Timeout(Timeout), Ignore("f32 not supported")] public void Test050() => TestList.GetTest(50).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test051() => TestList.GetTest(51).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test052() => TestList.GetTest(52).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test053() => TestList.GetTest(53).DoBrainfuck();
@@ -88,9 +88,9 @@ public class BrainfuckTests
     [TestMethod, Timeout(Timeout), Ignore("i16 not supported")] public void Test081() => TestList.GetTest(81).DoBrainfuck();
     [TestMethod, Timeout(Timeout), Ignore("u32 not supported")] public void Test082() => TestList.GetTest(82).DoBrainfuck();
     [TestMethod, Timeout(Timeout), Ignore("i32 not supported")] public void Test083() => TestList.GetTest(83).DoBrainfuck();
-    [TestMethod, Timeout(Timeout), Ignore("Floats not supported")] public void Test084() => TestList.GetTest(84).DoBrainfuck();
+    [TestMethod, Timeout(Timeout), Ignore("f32 not supported")] public void Test084() => TestList.GetTest(84).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test085() => TestList.GetTest(85).DoBrainfuck();
-    [TestMethod, Timeout(Timeout), Ignore("Floats not supported")] public void Test086() => TestList.GetTest(86).DoBrainfuck();
+    [TestMethod, Timeout(Timeout), Ignore("f32 not supported")] public void Test086() => TestList.GetTest(86).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test087() => TestList.GetTest(87).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test088() => TestList.GetTest(88).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test089() => TestList.GetTest(89).DoBrainfuck();
@@ -107,7 +107,7 @@ public class BrainfuckTests
     [TestMethod, Timeout(Timeout), Ignore("Not supported")] public void Test100() => TestList.GetTest(100).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test101() => TestList.GetTest(101).DoBrainfuck();
     [TestMethod, Timeout(Timeout), Ignore("No")] public void Test102() => TestList.GetTest(102).DoBrainfuck();
-    [TestMethod, Timeout(Timeout), Ignore("Floats not supported")] public void Test103() => TestList.GetTest(103).DoBrainfuck();
+    [TestMethod, Timeout(Timeout), Ignore("f32 not supported")] public void Test103() => TestList.GetTest(103).DoBrainfuck();
     [TestMethod, Timeout(Timeout), Ignore("No")] public void Test104() => TestList.GetTest(104).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test105() => TestList.GetTest(105).DoBrainfuck();
     [TestMethod, Timeout(Timeout)] public void Test106() => TestList.GetTest(106).DoBrainfuck();
