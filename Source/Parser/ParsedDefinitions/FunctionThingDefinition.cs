@@ -15,7 +15,7 @@ public abstract class FunctionThingDefinition :
     public ImmutableArray<Token> Modifiers { get; }
     public Token Identifier { get; }
     public ParameterDefinitionCollection Parameters { get; }
-    public Statements.Block? Block { get; init; }
+    public Statements.Block? Block { get; }
     public TemplateInfo? Template { get; }
     public Uri File { get; }
     public abstract ImmutableArray<AttributeUsage> Attributes { get; }
@@ -53,15 +53,14 @@ public abstract class FunctionThingDefinition :
         Token identifier,
         ParameterDefinitionCollection parameters,
         TemplateInfo? template,
+        Statements.Block? block,
         Uri file)
     {
-        parameters.Context = this;
-        foreach (ParameterDefinition parameter in parameters.Parameters) parameter.Context = this;
-
         Modifiers = modifiers;
         Identifier = identifier;
         Parameters = parameters;
         Template = template;
+        Block = block;
         File = file;
     }
 

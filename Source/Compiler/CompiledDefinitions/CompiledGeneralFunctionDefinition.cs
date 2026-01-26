@@ -4,7 +4,6 @@ using LanguageCore.Parser.Statements;
 namespace LanguageCore.Compiler;
 
 public class CompiledGeneralFunctionDefinition : GeneralFunctionDefinition,
-    IDefinition<CompiledGeneralFunctionDefinition>,
     IReferenceable<Expression?>,
     IHaveCompiledType,
     IInContext<CompiledStruct>,
@@ -36,17 +35,6 @@ public class CompiledGeneralFunctionDefinition : GeneralFunctionDefinition,
         Parameters = parameters;
         Context = other.Context;
         References = new List<Reference<Expression?>>(other.References);
-    }
-
-    public bool DefinitionEquals(CompiledGeneralFunctionDefinition other)
-    {
-        if (!Type.Equals(other.Type)) return false;
-        if (Identifier.Content != other.Identifier.Content) return false;
-        if (Parameters.Length != other.Parameters.Length) return false;
-        for (int i = 0; i < Parameters.Length; i++)
-        { if (!Parameters[i].Type.Equals(other.Parameters[i].Type)) return false; }
-
-        return true;
     }
 
     public override string ToString()

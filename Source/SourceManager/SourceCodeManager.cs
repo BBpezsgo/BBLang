@@ -106,17 +106,16 @@ public class SourceCodeManager
                 break;
             }
 
-            TokenizerResult tokens;
-            string text;
-            using (StreamReader reader = new(content))
-            {
-                tokens = Tokenizer.Tokenize(
-                    text = reader.ReadToEnd(),
-                    Diagnostics,
-                    PreprocessorVariables,
-                    finishedFile.Uri,
-                    TokenizerSettings);
-            }
+            string text = new StreamReader(content).ReadToEnd();
+            content.Dispose();
+
+            TokenizerResult tokens = Tokenizer.Tokenize(
+                text,
+                Diagnostics,
+                PreprocessorVariables,
+                finishedFile.Uri,
+                TokenizerSettings
+            );
 
             ParserResult ast = Parser.Parser.Parse(tokens.Tokens, finishedFile.Uri, Diagnostics);
 
@@ -390,8 +389,6 @@ public class SourceCodeManager
     static readonly Unity.Profiling.ProfilerMarker _marker = new("LanguageCore.SourceCodeManager.Collect");
     static readonly Unity.Profiling.ProfilerMarker _markerWait = new("LanguageCore.SourceCodeManager.WaitForFiles");
 #endif
-    SourceCodeManagerResult Entry(string? file, ImmutableArray<string> additionalImports)
-        => Entry(file is null ? ReadOnlySpan<string>.Empty : new string[] { file }, additionalImports);
 
     SourceCodeManagerResult Entry(ReadOnlySpan<string> files, ImmutableArray<string> additionalImports)
     {
@@ -473,7 +470,7 @@ public class SourceCodeManager
         IDictionary<Uri, CacheItem>? cache)
     {
         SourceCodeManager sourceCodeManager = new(diagnostics, preprocessorVariables, sourceProviders, tokenizerSettings, cache);
-        return sourceCodeManager.Entry(file, additionalImports);
+        return sourceCodeManager.Entry(file is null ? ReadOnlySpan<string>.Empty : new string[] { file }, additionalImports);
     }
 
     public static SourceCodeManagerResult CollectMultiple(

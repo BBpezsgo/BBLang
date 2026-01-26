@@ -4,7 +4,6 @@ using LanguageCore.Parser.Statements;
 namespace LanguageCore.Compiler;
 
 public class CompiledOperatorDefinition : FunctionDefinition,
-    IDefinition<CompiledOperatorDefinition>,
     IReferenceable<Expression>,
     IHaveCompiledType,
     IInContext<CompiledStruct?>,
@@ -38,8 +37,6 @@ public class CompiledOperatorDefinition : FunctionDefinition,
         Context = other.Context;
         References = new List<Reference<Expression>>(other.References);
     }
-
-    public bool DefinitionEquals(CompiledOperatorDefinition other) => Extensions.IsSame(this, other);
 
     public CompiledOperatorDefinition InstantiateTemplate(IReadOnlyDictionary<string, GeneralType> parameters)
     {

@@ -6,7 +6,6 @@ namespace LanguageCore.Parser;
 public class AliasDefinition :
     IPositioned,
     IIdentifiable<Token>,
-    IDefinition<CompiledAlias>,
     IExportable,
     IHaveAttributes
 {
@@ -41,7 +40,4 @@ public class AliasDefinition :
         Value = other.Value;
         File = other.File;
     }
-
-    public bool DefinitionEquals(CompiledAlias other)
-        => Identifier.Content == other.Identifier.Content;
 }

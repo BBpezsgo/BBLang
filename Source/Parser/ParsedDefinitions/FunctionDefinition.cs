@@ -29,15 +29,7 @@ public class FunctionDefinition : FunctionThingDefinition,
             ? attribute.TryGetValue(out string? name) ? name : Identifier.Content
             : null;
 
-    public override bool IsTemplate
-    {
-        get
-        {
-            if (Template is not null) return true;
-            if (Context?.Template is not null) return true;
-            return false;
-        }
-    }
+    public override bool IsTemplate => Template is not null || Context?.Template is not null;
 
     public FunctionDefinition(FunctionDefinition other) : base(other)
     {
@@ -53,8 +45,9 @@ public class FunctionDefinition : FunctionThingDefinition,
         Token identifier,
         ParameterDefinitionCollection parameters,
         TemplateInfo? templateInfo,
+        Statements.Block? block,
         Uri file)
-        : base(modifiers, identifier, parameters, templateInfo, file)
+        : base(modifiers, identifier, parameters, templateInfo, block, file)
     {
         Attributes = attributes;
         Type = type;

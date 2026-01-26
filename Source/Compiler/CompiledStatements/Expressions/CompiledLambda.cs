@@ -29,9 +29,6 @@ public class CompiledLambda : CompiledExpression,
         ParameterDefinitions = parameterDefinitions;
         CapturedLocals = capturedLocals;
         File = file;
-
-        foreach (CompiledParameter parameter in parameters) parameter.Context = this;
-        foreach (ParameterDefinition parameter in parameterDefinitions.Parameters) parameter.Context = this;
     }
 
     public override string ToString()

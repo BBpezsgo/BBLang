@@ -73,6 +73,7 @@ public class CompiledGeneratorState
                 Token.Empty,
                 ImmutableArray<AttributeUsage>.Empty,
                 ImmutableArray<Token>.Empty,
+                null,
                 ImmutableArray<FieldDefinition>.Empty,
                 ImmutableArray<FunctionDefinition>.Empty,
                 ImmutableArray<GeneralFunctionDefinition>.Empty,

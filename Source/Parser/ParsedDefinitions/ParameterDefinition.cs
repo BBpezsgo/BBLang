@@ -7,16 +7,10 @@ namespace LanguageCore.Parser;
 public class ParameterDefinition :
     IPositioned,
     IHaveType,
-    IInContext<ICallableDefinition>,
     IIdentifiable<Token>,
     IInFile,
     ILocated
 {
-    /// <summary>
-    /// Set by the <see cref="ICallableDefinition"/>
-    /// </summary>
-    [NotNull] public ICallableDefinition? Context { get; set; }
-
     public Token Identifier { get; }
     public TypeInstance Type { get; }
     public ImmutableArray<Token> Modifiers { get; }
@@ -36,17 +30,15 @@ public class ParameterDefinition :
         Modifiers = other.Modifiers;
         Type = other.Type;
         Identifier = other.Identifier;
-        Context = other.Context;
         DefaultValue = other.DefaultValue;
         File = other.File;
     }
 
-    public ParameterDefinition(ImmutableArray<Token> modifiers, TypeInstance type, Token identifier, Expression? defaultValue, Uri file, FunctionThingDefinition? context = null)
+    public ParameterDefinition(ImmutableArray<Token> modifiers, TypeInstance type, Token identifier, Expression? defaultValue, Uri file)
     {
         Modifiers = modifiers;
         Type = type;
         Identifier = identifier;
-        Context = context;
         DefaultValue = defaultValue;
         File = file;
     }

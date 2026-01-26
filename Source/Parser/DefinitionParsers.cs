@@ -75,10 +75,9 @@ public sealed partial class Parser
             possibleName,
             parameters,
             null,
-            File)
-        {
-            Block = block
-        };
+            block,
+            File
+        );
         return true;
     }
 
@@ -228,10 +227,9 @@ public sealed partial class Parser
             possibleNameT,
             parameters,
             templateInfo,
-            File)
-        {
-            Block = block
-        };
+            block,
+            File
+        );
         return true;
     }
 
@@ -282,10 +280,9 @@ public sealed partial class Parser
             possibleNameT,
             modifiers,
             parameters,
-            File)
-        {
-            Block = block
-        };
+            block,
+            File
+        );
         return true;
     }
 
@@ -324,11 +321,9 @@ public sealed partial class Parser
             type,
             modifiers,
             parameters,
-            File)
-        {
-            Block = block
-        };
-
+            block,
+            File
+        );
         return true;
     }
 
@@ -423,15 +418,14 @@ public sealed partial class Parser
             bracketEnd,
             attributes,
             modifiers,
+            templateInfo,
             fields.ToImmutableArray(),
             methods.ToImmutableArray(),
             generalMethods.ToImmutableArray(),
             operators.ToImmutableArray(),
             constructors.ToImmutableArray(),
-            File)
-        {
-            Template = templateInfo,
-        };
+            File
+        );
 
         Structs.Add(structDefinition.Identifier.Content, structDefinition);
 
@@ -452,7 +446,7 @@ public sealed partial class Parser
 
         if (ExpectOperator(")", out Token? bracketEnd))
         {
-            parameterDefinitions = new ParameterDefinitionCollection(ImmutableArray<ParameterDefinition>.Empty, new TokenPair(bracketStart, bracketEnd));
+            parameterDefinitions = new ParameterDefinitionCollection(ImmutableArray<ParameterDefinition>.Empty, new TokenPair(bracketStart, bracketEnd), File);
             return true;
         }
 
@@ -527,7 +521,7 @@ public sealed partial class Parser
             lastPosition = parameter.Position;
         }
 
-        parameterDefinitions = new ParameterDefinitionCollection(parameters.ToImmutableArray(), new TokenPair(bracketStart, bracketEnd));
+        parameterDefinitions = new ParameterDefinitionCollection(parameters.ToImmutableArray(), new TokenPair(bracketStart, bracketEnd), File);
         return true;
     }
 

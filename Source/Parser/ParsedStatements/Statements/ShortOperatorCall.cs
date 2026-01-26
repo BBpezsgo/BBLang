@@ -60,7 +60,7 @@ public class ShortOperatorCall : AssignmentStatement, IReadable, IReferenceableT
 
     public override SimpleAssignmentStatement ToAssignment()
     {
-        LiteralExpression one = LiteralExpression.CreateAnonymous(LiteralType.Integer, "1", Operator.Position, File);
+        LiteralExpression one = IntLiteralExpression.CreateAnonymous(1, Operator.Position, File);
         BinaryOperatorCallExpression operatorCall = Operator.Content switch
         {
             "++" => new BinaryOperatorCallExpression(Token.CreateAnonymous("+", TokenType.Operator, Operator.Position), ArgumentExpression.Wrap(Expression), ArgumentExpression.Wrap(one), File),

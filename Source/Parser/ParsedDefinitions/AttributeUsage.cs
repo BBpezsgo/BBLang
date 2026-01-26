@@ -48,15 +48,29 @@ public class AttributeUsage :
         else
         { throw new NotImplementedException($"Unknown attribute type requested: \"{type.FullName}\""); }
 
-        value = literalType switch
+        switch (literalType)
         {
-            LiteralType.Integer => (T)(object)Parameters[index].GetInt(),
-            LiteralType.Float => (T)(object)Parameters[index].GetFloat(),
-            LiteralType.String => (T)(object)Parameters[index].Value,
-            LiteralType.Char => (T)(object)Parameters[index].Value[0],
-            _ => throw new UnreachableException(),
-        };
-        return true;
+            case LiteralType.Integer:
+                if (Parameters[index] is not IntLiteralExpression intLiteral) return false;
+                value = (T)(object)intLiteral.Value;
+                return true;
+            case LiteralType.Float:
+                if (Parameters[index] is not FloatLiteralExpression floatLiteral) return false;
+                value = (T)(object)floatLiteral.Value;
+                return true;
+            case LiteralType.String:
+                if (Parameters[index] is not StringLiteralExpression stringLiteral) return false;
+                value = (T)(object)stringLiteral.Value;
+                return true;
+            case LiteralType.Char:
+                if (Parameters[index] is not CharLiteralExpression charLiteral) return false;
+                value = (T)(object)charLiteral.Value;
+                return true;
+            case LiteralType.Invalid:
+                return false;
+            default:
+                throw new UnreachableException();
+        }
     }
 
     public bool TryGetValue<T0>([NotNullWhen(true)] out T0? param0)

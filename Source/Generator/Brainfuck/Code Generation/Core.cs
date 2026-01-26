@@ -163,7 +163,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
         public readonly GeneratorStatistics Statistics;
 
-        public readonly ImmutableArray<IDefinition> CurrentMacro;
+        public readonly ImmutableArray<ICompiledFunctionDefinition> CurrentMacro;
 
         public readonly string? VariableCanBeDiscarded;
 
@@ -257,7 +257,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
     readonly Stack<ControlFlowBlock> Returns;
     readonly Stack<ControlFlowBlock> Breaks;
 
-    readonly Stack<IDefinition> CurrentMacro;
+    readonly Stack<ICompiledFunctionDefinition> CurrentMacro;
 
     readonly BrainfuckGeneratorSettings Settings;
 
@@ -291,7 +291,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
         {
             AddSmallComments = brainfuckSettings.GenerateSmallComments,
         };
-        CurrentMacro = new Stack<IDefinition>();
+        CurrentMacro = new Stack<ICompiledFunctionDefinition>();
         VariableCleanupStack = new Stack<int>();
         Returns = new Stack<ControlFlowBlock>();
         Breaks = new Stack<ControlFlowBlock>();

@@ -972,8 +972,7 @@ public partial class StatementCompiler
                         type = new ArrayType(arrayType.Of, literalList.Values.Length);
                     }
 
-                    if (newVariable.InitialValue is LiteralExpression literalStatement &&
-                        literalStatement.Type == LiteralType.String)
+                    if (newVariable.InitialValue is StringLiteralExpression literalStatement)
                     {
                         if (arrayType.Of.SameAs(BasicType.U16))
                         {
@@ -2483,15 +2482,15 @@ public partial class StatementCompiler
     }
     bool CompileExpression(LiteralExpression literal, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
     {
-        switch (literal.Type)
+        switch (literal)
         {
-            case LiteralType.Integer:
+            case IntLiteralExpression intLiteral:
             {
                 if (expectedType is not null)
                 {
                     if (expectedType.SameAs(BasicType.U8))
                     {
-                        if (literal.GetInt() is >= byte.MinValue and <= byte.MaxValue)
+                        if (intLiteral.Value is >= byte.MinValue and <= byte.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2499,14 +2498,14 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((byte)literal.GetInt()),
+                                Value = new CompiledValue((byte)intLiteral.Value),
                             };
                             return true;
                         }
                     }
                     else if (expectedType.SameAs(BasicType.I8))
                     {
-                        if (literal.GetInt() is >= sbyte.MinValue and <= sbyte.MaxValue)
+                        if (intLiteral.Value is >= sbyte.MinValue and <= sbyte.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2514,14 +2513,14 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((sbyte)literal.GetInt()),
+                                Value = new CompiledValue((sbyte)intLiteral.Value),
                             };
                             return true;
                         }
                     }
                     else if (expectedType.SameAs(BasicType.U16))
                     {
-                        if (literal.GetInt() is >= ushort.MinValue and <= ushort.MaxValue)
+                        if (intLiteral.Value is >= ushort.MinValue and <= ushort.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2529,14 +2528,14 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((ushort)literal.GetInt()),
+                                Value = new CompiledValue((ushort)intLiteral.Value),
                             };
                             return true;
                         }
                     }
                     else if (expectedType.SameAs(BasicType.I16))
                     {
-                        if (literal.GetInt() is >= short.MinValue and <= short.MaxValue)
+                        if (intLiteral.Value is >= short.MinValue and <= short.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2544,7 +2543,7 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((short)literal.GetInt()),
+                                Value = new CompiledValue((short)intLiteral.Value),
                             };
                             return true;
                         }
@@ -2557,7 +2556,7 @@ public partial class StatementCompiler
                             Location = literal.Location,
                             SaveValue = literal.SaveValue,
                             Type = expectedType,
-                            Value = new CompiledValue(literal.GetInt().U32()),
+                            Value = new CompiledValue(intLiteral.Value.U32()),
                         };
                         return true;
                     }
@@ -2569,7 +2568,7 @@ public partial class StatementCompiler
                             Location = literal.Location,
                             SaveValue = literal.SaveValue,
                             Type = expectedType,
-                            Value = new CompiledValue((int)literal.GetInt()),
+                            Value = new CompiledValue((int)intLiteral.Value),
                         };
                         return true;
                     }
@@ -2581,13 +2580,13 @@ public partial class StatementCompiler
                             Location = literal.Location,
                             SaveValue = literal.SaveValue,
                             Type = expectedType,
-                            Value = new CompiledValue((float)literal.GetInt()),
+                            Value = new CompiledValue((float)intLiteral.Value),
                         };
                         return true;
                     }
                 }
 
-                if (!GetLiteralType(literal.Type, out GeneralType? literalType, out _))
+                if (!GetLiteralType(LiteralType.Integer, out GeneralType? literalType, out _))
                 { literalType = BuiltinType.I32; }
 
                 SetStatementType(literal, literalType);
@@ -2596,13 +2595,13 @@ public partial class StatementCompiler
                     Location = literal.Location,
                     SaveValue = literal.SaveValue,
                     Type = literalType,
-                    Value = new CompiledValue((int)literal.GetInt()),
+                    Value = new CompiledValue((int)intLiteral.Value),
                 };
                 return true;
             }
-            case LiteralType.Float:
+            case FloatLiteralExpression floatLiteral:
             {
-                if (!GetLiteralType(literal.Type, out GeneralType? literalType, out _))
+                if (!GetLiteralType(LiteralType.Float, out GeneralType? literalType, out _))
                 { literalType = BuiltinType.F32; }
 
                 SetStatementType(literal, literalType);
@@ -2611,11 +2610,11 @@ public partial class StatementCompiler
                     Location = literal.Location,
                     SaveValue = literal.SaveValue,
                     Type = literalType,
-                    Value = new CompiledValue((float)literal.GetFloat()),
+                    Value = new CompiledValue(floatLiteral.Value),
                 };
                 return true;
             }
-            case LiteralType.String:
+            case StringLiteralExpression stringLiteral:
             {
                 if (expectedType is not null &&
                     expectedType.Is(out PointerType? pointerType) &&
@@ -2629,11 +2628,11 @@ public partial class StatementCompiler
                     {
                         Diagnostics.Add(sizeError.ToError(literal));
                     }
-                    if (!CompileAllocation((1 + literal.Value.Length) * charSize, literal.Location, out CompiledExpression? allocator)) return false;
+                    if (!CompileAllocation((1 + stringLiteral.Value.Length) * charSize, literal.Location, out CompiledExpression? allocator)) return false;
 
                     compiledStatement = new CompiledString()
                     {
-                        Value = literal.Value,
+                        Value = stringLiteral.Value,
                         IsASCII = true,
                         Location = literal.Location,
                         SaveValue = true,
@@ -2654,11 +2653,11 @@ public partial class StatementCompiler
                     {
                         Diagnostics.Add(sizeError.ToError(literal));
                     }
-                    if (!CompileAllocation((1 + literal.Value.Length) * charSize, literal.Location, out CompiledExpression? allocator)) return false;
+                    if (!CompileAllocation((1 + stringLiteral.Value.Length) * charSize, literal.Location, out CompiledExpression? allocator)) return false;
 
                     compiledStatement = new CompiledString()
                     {
-                        Value = literal.Value,
+                        Value = stringLiteral.Value,
                         IsASCII = false,
                         Location = literal.Location,
                         SaveValue = true,
@@ -2675,12 +2674,12 @@ public partial class StatementCompiler
 
                     compiledStatement = new CompiledStackString()
                     {
-                        Value = literal.Value,
+                        Value = stringLiteral.Value,
                         IsASCII = true,
                         Location = literal.Location,
                         SaveValue = true,
                         Type = expectedType,
-                        IsNullTerminated = arrayType3.Length.HasValue && arrayType3.Length.Value > literal.Value.Length,
+                        IsNullTerminated = arrayType3.Length.HasValue && arrayType3.Length.Value > stringLiteral.Value.Length,
                     };
                     return true;
                 }
@@ -2692,12 +2691,12 @@ public partial class StatementCompiler
 
                     compiledStatement = new CompiledStackString()
                     {
-                        Value = literal.Value,
+                        Value = stringLiteral.Value,
                         IsASCII = false,
                         Location = literal.Location,
                         SaveValue = true,
                         Type = expectedType,
-                        IsNullTerminated = arrayType4.Length.HasValue && arrayType4.Length.Value > literal.Value.Length,
+                        IsNullTerminated = arrayType4.Length.HasValue && arrayType4.Length.Value > stringLiteral.Value.Length,
                     };
                     return true;
                 }
@@ -2708,21 +2707,21 @@ public partial class StatementCompiler
                     {
                         Diagnostics.Add(sizeError.ToError(literal));
                     }
-                    if (!CompileAllocation((1 + literal.Value.Length) * charSize, literal.Location, out CompiledExpression? allocator)) return false;
+                    if (!CompileAllocation((1 + stringLiteral.Value.Length) * charSize, literal.Location, out CompiledExpression? allocator)) return false;
 
-                    if (!GetLiteralType(literal.Type, out GeneralType? stringType, out _))
+                    if (!GetLiteralType(LiteralType.String, out GeneralType? stringType, out _))
                     {
-                        if (!GetLiteralType(literal.Type, out GeneralType? charType, out _))
+                        if (!GetLiteralType(LiteralType.Char, out GeneralType? charType, out _))
                         { charType = BuiltinType.Char; }
 
-                        stringType = new PointerType(new ArrayType(charType, literal.Value.Length + 1));
+                        stringType = new PointerType(new ArrayType(charType, stringLiteral.Value.Length + 1));
                     }
 
                     SetStatementType(literal, stringType);
 
                     compiledStatement = new CompiledString()
                     {
-                        Value = literal.Value,
+                        Value = stringLiteral.Value,
                         IsASCII = false,
                         Location = literal.Location,
                         SaveValue = true,
@@ -2732,19 +2731,13 @@ public partial class StatementCompiler
                     return true;
                 }
             }
-            case LiteralType.Char:
+            case CharLiteralExpression charLiteral:
             {
-                if (literal.Value.Length != 1)
-                {
-                    Diagnostics.Add(Diagnostic.Internal($"Literal char contains {literal.Value.Length} characters but only 1 allowed", literal, literal.File));
-                    if (literal.Value.Length == 0) break;
-                }
-
                 if (expectedType is not null)
                 {
                     if (expectedType.SameAs(BasicType.U8))
                     {
-                        if ((int)literal.Value[0] is >= byte.MinValue and <= byte.MaxValue)
+                        if ((int)charLiteral.Value is >= byte.MinValue and <= byte.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2752,14 +2745,14 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((byte)literal.Value[0]),
+                                Value = new CompiledValue((byte)charLiteral.Value),
                             };
                             return true;
                         }
                     }
                     else if (expectedType.SameAs(BasicType.I8))
                     {
-                        if ((int)literal.Value[0] is >= sbyte.MinValue and <= sbyte.MaxValue)
+                        if ((int)charLiteral.Value is >= sbyte.MinValue and <= sbyte.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2767,7 +2760,7 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((sbyte)literal.Value[0]),
+                                Value = new CompiledValue((sbyte)charLiteral.Value),
                             };
                             return true;
                         }
@@ -2780,13 +2773,13 @@ public partial class StatementCompiler
                             Location = literal.Location,
                             SaveValue = literal.SaveValue,
                             Type = expectedType,
-                            Value = new CompiledValue((char)literal.Value[0]),
+                            Value = new CompiledValue((char)charLiteral.Value),
                         };
                         return true;
                     }
                     else if (expectedType.SameAs(BasicType.I16))
                     {
-                        if ((int)literal.Value[0] is >= short.MinValue and <= short.MaxValue)
+                        if ((int)charLiteral.Value is >= short.MinValue and <= short.MaxValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2794,14 +2787,14 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((short)literal.Value[0]),
+                                Value = new CompiledValue((short)charLiteral.Value),
                             };
                             return true;
                         }
                     }
                     else if (expectedType.SameAs(BasicType.U32))
                     {
-                        if (literal.Value[0] >= uint.MinValue)
+                        if (charLiteral.Value >= uint.MinValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2809,14 +2802,14 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((uint)literal.Value[0]),
+                                Value = new CompiledValue((uint)charLiteral.Value),
                             };
                             return true;
                         }
                     }
                     else if (expectedType.SameAs(BasicType.I32))
                     {
-                        if (literal.Value[0] >= int.MinValue)
+                        if (charLiteral.Value >= int.MinValue)
                         {
                             SetStatementType(literal, expectedType);
                             compiledStatement = new CompiledConstantValue()
@@ -2824,7 +2817,7 @@ public partial class StatementCompiler
                                 Location = literal.Location,
                                 SaveValue = literal.SaveValue,
                                 Type = expectedType,
-                                Value = new CompiledValue((int)literal.Value[0]),
+                                Value = new CompiledValue((int)charLiteral.Value),
                             };
                             return true;
                         }
@@ -2837,13 +2830,13 @@ public partial class StatementCompiler
                             Location = literal.Location,
                             SaveValue = literal.SaveValue,
                             Type = expectedType,
-                            Value = new CompiledValue((float)literal.Value[0]),
+                            Value = new CompiledValue((float)charLiteral.Value),
                         };
                         return true;
                     }
                 }
 
-                if (!GetLiteralType(literal.Type, out GeneralType? literalType, out _))
+                if (!GetLiteralType(LiteralType.Char, out GeneralType? literalType, out _))
                 { literalType = BuiltinType.Char; }
 
                 SetStatementType(literal, literalType);
@@ -2852,15 +2845,12 @@ public partial class StatementCompiler
                     Location = literal.Location,
                     SaveValue = literal.SaveValue,
                     Type = literalType,
-                    Value = new CompiledValue((char)literal.Value[0]),
+                    Value = new CompiledValue((char)charLiteral.Value),
                 };
                 return true;
             }
             default: throw new UnreachableException();
         }
-
-        compiledStatement = null;
-        return false;
     }
     bool CompileExpression(IdentifierExpression variable, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
     {

@@ -72,15 +72,13 @@ public partial class StatementCompiler
                         break;
                     }
 
-                    if (attribute.Parameters[0].Type != LiteralType.String)
+                    if (attribute.Parameters[0] is not StringLiteralExpression stringLiteral)
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type \"{attribute.Parameters[0].Type}\" for attribute \"{attribute.Identifier}\" at {0}: expected \"{LiteralType.String}\"", attribute));
+                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type for attribute \"{attribute.Identifier}\" at {0}: expected string", attribute));
                         break;
                     }
 
-                    string externalName = attribute.Parameters[0].Value;
-
-                    if (!ExternalFunctions.TryGet(externalName, out IExternalFunction? externalFunction, out PossibleDiagnostic? exception))
+                    if (!ExternalFunctions.TryGet(stringLiteral.Value, out IExternalFunction? externalFunction, out PossibleDiagnostic? exception))
                     {
                         if (function.Block is null) Diagnostics.Add(exception.ToWarning(attribute, function.File));
                         break;
@@ -98,28 +96,26 @@ public partial class StatementCompiler
                         break;
                     }
 
-                    if (attribute.Parameters[0].Type != LiteralType.String)
+                    if (attribute.Parameters[0] is not StringLiteralExpression stringLiteral)
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type \"{attribute.Parameters[0].Type}\" for attribute \"{attribute.Identifier}\" at {0}: expected \"{LiteralType.String}\"", attribute));
+                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type for attribute \"{attribute.Identifier}\" at {0}: expected string", attribute));
                         break;
                     }
 
-                    string builtinName = attribute.Parameters[0].Value;
-
-                    if (!BuiltinFunctions.Prototypes.TryGetValue(builtinName, out BuiltinFunction? builtinFunction))
+                    if (!BuiltinFunctions.Prototypes.TryGetValue(stringLiteral.Value, out BuiltinFunction? builtinFunction))
                     {
-                        Diagnostics.Add(Diagnostic.Warning($"{AttributeConstants.BuiltinIdentifier} function \"{builtinName}\" not found", attribute, function.File));
+                        Diagnostics.Add(Diagnostic.Warning($"{AttributeConstants.BuiltinIdentifier} function \"{stringLiteral.Value}\" not found", attribute, function.File));
                         break;
                     }
 
                     if (builtinFunction.Parameters.Length != (function as ICompiledFunctionDefinition).Parameters.Length)
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{builtinName}\"", function.Identifier, function.File));
+                        Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{stringLiteral.Value}\"", function.Identifier, function.File));
                     }
 
                     if (!builtinFunction.Type.Invoke(type))
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Wrong type defined for function \"{builtinName}\"", (function as IHaveType)?.Type.Location ?? new Location(function.Identifier.Position, function.File)));
+                        Diagnostics.Add(Diagnostic.Error($"Wrong type defined for function \"{stringLiteral.Value}\"", (function as IHaveType)?.Type.Location ?? new Location(function.Identifier.Position, function.File)));
                     }
 
                     for (int i = 0; i < builtinFunction.Parameters.Length; i++)
@@ -132,7 +128,7 @@ public partial class StatementCompiler
                         if (definedParameterType.Invoke(passedParameterType))
                         { continue; }
 
-                        Diagnostics.Add(Diagnostic.Error($"Wrong type of parameter passed to function \"{builtinName}\". Parameter index: {i} Required type: \"{definedParameterType}\" Passed: \"{passedParameterType}\"", (function as FunctionThingDefinition).Parameters[i].Type, function.Parameters[i].File));
+                        Diagnostics.Add(Diagnostic.Error($"Wrong type of parameter passed to function \"{stringLiteral.Value}\". Parameter index: {i} Required type: \"{definedParameterType}\" Passed: \"{passedParameterType}\"", (function as FunctionThingDefinition).Parameters[i].Type, function.Parameters[i].File));
                     }
                     break;
                 }
@@ -149,9 +145,9 @@ public partial class StatementCompiler
                         break;
                     }
 
-                    if (attribute.Parameters[0].Type != LiteralType.String)
+                    if (attribute.Parameters[0] is not StringLiteralExpression)
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type \"{attribute.Parameters[0].Type}\" for attribute \"{attribute.Identifier}\" at {0}: expected \"{LiteralType.String}\"", attribute));
+                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type for attribute \"{attribute.Identifier}\" at {0}: expected string", attribute));
                         break;
                     }
 
@@ -184,9 +180,9 @@ public partial class StatementCompiler
                         break;
                     }
 
-                    if (attribute.Parameters[0].Type != LiteralType.String)
+                    if (attribute.Parameters[0] is not StringLiteralExpression)
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type \"{attribute.Parameters[0].Type}\" for attribute \"{attribute.Identifier}\" at {0}: expected \"{LiteralType.String}\"", attribute));
+                        Diagnostics.Add(Diagnostic.Error($"Invalid parameter type for attribute \"{attribute.Identifier}\" at {0}: expected string", attribute));
                         break;
                     }
 
@@ -535,8 +531,7 @@ public partial class StatementCompiler
                 TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(@struct.Identifier.Content, method.File, @struct.Template?.Parameters), method.File),
                 Token.CreateAnonymous(StatementKeywords.This),
                 null,
-                method.File,
-                method
+                method.File
             ));
 
             FunctionDefinition copy = new(
@@ -544,12 +539,12 @@ public partial class StatementCompiler
                 method.Modifiers,
                 method.Type,
                 method.Identifier,
-                new ParameterDefinitionCollection(parameters, method.Parameters.Brackets),
+                new ParameterDefinitionCollection(parameters, method.Parameters.Brackets, method.File),
                 method.Template,
+                method.Block,
                 method.File)
             {
                 Context = method.Context,
-                Block = method.Block,
             };
 
             if (!CompileFunctionDefinition(copy, @struct, out CompiledFunctionDefinition? compiledMethod))
@@ -709,7 +704,34 @@ public partial class StatementCompiler
                 ImmutableArray<Token>.Empty,
                 new ParameterDefinitionCollection(
                     _parameters.As<ParameterDefinition>(),
-                    TokenPair.CreateAnonymous("(", ")")
+                    TokenPair.CreateAnonymous("(", ")"),
+                    @struct.File
+                ),
+                new Block(
+                    ImmutableArray.Create<Statement>(
+                        new SimpleAssignmentStatement(
+                            Token.CreateAnonymous("="),
+                            new FieldExpression(
+                                new IdentifierExpression(Token.CreateAnonymous("this"), @struct.File),
+                                Token.CreateAnonymous("_genstate"),
+                                @struct.File
+                            ),
+                            new IdentifierExpression(Token.CreateAnonymous("state"), @struct.File),
+                            @struct.File
+                        ),
+                        new SimpleAssignmentStatement(
+                            Token.CreateAnonymous("="),
+                            new FieldExpression(
+                                new IdentifierExpression(Token.CreateAnonymous("this"), @struct.File),
+                                nextFunction.Identifier,
+                                @struct.File
+                            ),
+                            new IdentifierExpression(Token.CreateAnonymous("func"), @struct.File),
+                            @struct.File
+                        )
+                    ),
+                    TokenPair.CreateAnonymous("{", "}"),
+                    @struct.File
                 ),
                 @struct.File
             )
@@ -717,32 +739,6 @@ public partial class StatementCompiler
                 Context = @struct,
             })
         {
-            Block = new Block(
-                ImmutableArray.Create<Statement>(
-                    new SimpleAssignmentStatement(
-                        Token.CreateAnonymous("="),
-                        new FieldExpression(
-                            new IdentifierExpression(Token.CreateAnonymous("this"), @struct.File),
-                            Token.CreateAnonymous("_genstate"),
-                            @struct.File
-                        ),
-                        new IdentifierExpression(Token.CreateAnonymous("state"), @struct.File),
-                        @struct.File
-                    ),
-                    new SimpleAssignmentStatement(
-                        Token.CreateAnonymous("="),
-                        new FieldExpression(
-                            new IdentifierExpression(Token.CreateAnonymous("this"), @struct.File),
-                            nextFunction.Identifier,
-                            @struct.File
-                        ),
-                        new IdentifierExpression(Token.CreateAnonymous("func"), @struct.File),
-                        @struct.File
-                    )
-                ),
-                TokenPair.CreateAnonymous("{", "}"),
-                @struct.File
-            ),
             Context = @struct,
         };
 
@@ -883,18 +879,17 @@ public partial class StatementCompiler
                         TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, method.File, compiledStruct.Template?.Parameters),
                         Token.CreateAnonymous(StatementKeywords.This),
                         null,
-                        method.File,
-                        method
+                        method.File
                     ));
 
                     GeneralFunctionDefinition copy = new(
                         method.Identifier,
                         method.Modifiers,
-                        new ParameterDefinitionCollection(parameters, method.Parameters.Brackets),
+                        new ParameterDefinitionCollection(parameters, method.Parameters.Brackets, method.File),
+                        method.Block,
                         method.File)
                     {
                         Context = method.Context,
-                        Block = method.Block,
                     };
 
                     returnType = BuiltinType.Void;
@@ -909,18 +904,17 @@ public partial class StatementCompiler
                         TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, method.File, compiledStruct.Template?.Parameters), method.File),
                         Token.CreateAnonymous(StatementKeywords.This),
                         null,
-                        method.File,
-                        method
+                        method.File
                     ));
 
                     copy = new GeneralFunctionDefinition(
                         method.Identifier,
                         method.Modifiers,
-                        new ParameterDefinitionCollection(parameters, method.Parameters.Brackets),
+                        new ParameterDefinitionCollection(parameters, method.Parameters.Brackets, method.File),
+                        method.Block,
                         method.File)
                     {
                         Context = method.Context,
-                        Block = method.Block,
                     };
 
                     if (!CompileGeneralFunctionDefinition(copy, returnType, compiledStruct, out CompiledGeneralFunctionDefinition? methodWithPointer))
@@ -973,8 +967,7 @@ public partial class StatementCompiler
                     TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, method.File, compiledStruct.Template?.Parameters), method.File),
                     Token.CreateAnonymous(StatementKeywords.This),
                     null,
-                    method.File,
-                    method
+                    method.File
                 ));
 
                 FunctionDefinition copy = new(
@@ -982,12 +975,12 @@ public partial class StatementCompiler
                     method.Modifiers,
                     method.Type,
                     method.Identifier,
-                    new ParameterDefinitionCollection(parameters, method.Parameters.Brackets),
+                    new ParameterDefinitionCollection(parameters, method.Parameters.Brackets, method.File),
                     method.Template,
+                    method.Block,
                     method.File)
                 {
                     Context = method.Context,
-                    Block = method.Block,
                 };
 
                 if (!CompileFunctionDefinition(copy, compiledStruct, out CompiledFunctionDefinition? methodWithPointer))
@@ -1020,17 +1013,17 @@ public partial class StatementCompiler
                     TypeInstancePointer.CreateAnonymous(TypeInstanceSimple.CreateAnonymous(compiledStruct.Identifier.Content, constructor.File, compiledStruct.Template?.Parameters), constructor.File),
                     Token.CreateAnonymous(StatementKeywords.This),
                     null,
-                    constructor.File,
-                    constructor
+                    constructor.File
                 ));
 
                 ConstructorDefinition constructorWithThisParameter = new(
                     constructor.Type,
                     constructor.Modifiers,
-                    new ParameterDefinitionCollection(parameters, constructor.Parameters.Brackets),
-                    constructor.File)
+                    new ParameterDefinitionCollection(parameters, constructor.Parameters.Brackets, constructor.File),
+                    constructor.Block,
+                    constructor.File
+                )
                 {
-                    Block = constructor.Block,
                     Context = constructor.Context,
                 };
 

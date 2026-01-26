@@ -12,15 +12,7 @@ public class GeneralFunctionDefinition : FunctionThingDefinition,
     [NotNull] public StructDefinition? Context { get; set; }
     public override ImmutableArray<AttributeUsage> Attributes { get; }
 
-    public override bool IsTemplate
-    {
-        get
-        {
-            if (Template is not null) return true;
-            if (Context.Template is not null) return true;
-            return false;
-        }
-    }
+    public override bool IsTemplate => Template is not null || Context.Template is not null;
 
     public GeneralFunctionDefinition(GeneralFunctionDefinition other) : base(other)
     {
@@ -32,8 +24,9 @@ public class GeneralFunctionDefinition : FunctionThingDefinition,
         Token identifier,
         ImmutableArray<Token> modifiers,
         ParameterDefinitionCollection parameters,
+        Statements.Block? block,
         Uri file)
-        : base(modifiers, identifier, parameters, null, file)
+        : base(modifiers, identifier, parameters, null, block, file)
     {
         Attributes = ImmutableArray<AttributeUsage>.Empty;
     }

@@ -110,13 +110,15 @@ public sealed partial class Parser
 
         SkipCrapTokens();
 
-        string v = CurrentToken?.Content ?? string.Empty;
-
         if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralFloat)
         {
-            v = v.Replace("_", string.Empty, StringComparison.Ordinal);
+            if (!float.TryParse(CurrentToken.Content.Replace("_", string.Empty, StringComparison.Ordinal), out float value))
+            {
+                value = default;
+                Diagnostics.Add(Diagnostic.Error($"Invalid literal `{CurrentToken.Content}`", CurrentToken, File));
+            }
 
-            LiteralExpression literal = new(LiteralType.Float, v, CurrentToken, File);
+            LiteralExpression literal = new FloatLiteralExpression(value, CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
 
             CurrentTokenIndex++;
@@ -126,9 +128,13 @@ public sealed partial class Parser
         }
         else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralNumber)
         {
-            v = v.Replace("_", string.Empty, StringComparison.Ordinal);
+            if (!int.TryParse(CurrentToken.Content.Replace("_", string.Empty, StringComparison.Ordinal), out int value))
+            {
+                value = default;
+                Diagnostics.Add(Diagnostic.Error($"Invalid literal `{CurrentToken.Content}`", CurrentToken, File));
+            }
 
-            LiteralExpression literal = new(LiteralType.Integer, v, CurrentToken, File);
+            LiteralExpression literal = new IntLiteralExpression(value, CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
 
             CurrentTokenIndex++;
@@ -138,6 +144,8 @@ public sealed partial class Parser
         }
         else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralHex)
         {
+            string v = CurrentToken.Content;
+
             if (v.Length < 3)
             {
                 Diagnostics.Add(Diagnostic.Error($"Invalid hex literal `{CurrentToken}`", CurrentToken, File, false));
@@ -149,13 +157,7 @@ public sealed partial class Parser
                 v = v.Replace("_", string.Empty, StringComparison.Ordinal);
             }
 
-            if (!int.TryParse(v, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int value))
-            {
-                Diagnostics.Add(Diagnostic.Error($"Invalid hex number `{v}`", CurrentToken.Position[2..], File, false));
-                value = 0;
-            }
-
-            LiteralExpression literal = new(LiteralType.Integer, value.ToString(CultureInfo.InvariantCulture), CurrentToken, File);
+            LiteralExpression literal = new IntLiteralExpression(Convert.ToInt32(v, 16), CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
 
             CurrentTokenIndex++;
@@ -165,6 +167,8 @@ public sealed partial class Parser
         }
         else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralBinary)
         {
+            string v = CurrentToken.Content;
+
             if (v.Length < 3)
             {
                 Diagnostics.Add(Diagnostic.Error($"Invalid binary literal `{CurrentToken}`", CurrentToken, File, false));
@@ -176,14 +180,7 @@ public sealed partial class Parser
                 v = v.Replace("_", string.Empty, StringComparison.Ordinal);
             }
 
-            // if (!int.TryParse(v, NumberStyles.BinaryNumber, CultureInfo.InvariantCulture, out int value))
-            // {
-            //     Diagnostics.Add(Diagnostic.Error($"Invalid binary number `{v}`", CurrentToken.Position[2..], File, false));
-            //     value = 0;
-            // }
-            int value = Convert.ToInt32(v, 2);
-
-            LiteralExpression literal = new(LiteralType.Integer, value.ToString(CultureInfo.InvariantCulture), CurrentToken, File);
+            LiteralExpression literal = new IntLiteralExpression(Convert.ToInt32(v, 2), CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
 
             CurrentTokenIndex++;
@@ -193,7 +190,7 @@ public sealed partial class Parser
         }
         else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralString)
         {
-            LiteralExpression literal = new(LiteralType.String, v, CurrentToken, File);
+            LiteralExpression literal = new StringLiteralExpression(CurrentToken.Content, CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
 
             CurrentTokenIndex++;
@@ -203,7 +200,18 @@ public sealed partial class Parser
         }
         else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralCharacter)
         {
-            LiteralExpression literal = new(LiteralType.Char, v, CurrentToken, File);
+            char value;
+            if (CurrentToken.Content.Length != 1)
+            {
+                value = default;
+                Diagnostics.Add(Diagnostic.Error($"Invalid literal `{CurrentToken.Content}`", CurrentToken, File));
+            }
+            else
+            {
+                value = CurrentToken.Content[0];
+            }
+
+            LiteralExpression literal = new CharLiteralExpression(value, CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
 
             CurrentTokenIndex++;

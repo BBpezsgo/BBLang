@@ -16,7 +16,7 @@ public class StructDefinition :
     public Uri File { get; }
     public ImmutableArray<FieldDefinition> Fields { get; }
     public ImmutableArray<Token> Modifiers { get; }
-    public TemplateInfo? Template { get; init; }
+    public TemplateInfo? Template { get; }
     public ImmutableArray<FunctionDefinition> Functions { get; }
     public ImmutableArray<GeneralFunctionDefinition> GeneralFunctions { get; }
     public ImmutableArray<FunctionDefinition> Operators { get; }
@@ -49,6 +49,7 @@ public class StructDefinition :
         Token bracketEnd,
         ImmutableArray<AttributeUsage> attributes,
         ImmutableArray<Token> modifiers,
+        TemplateInfo? template,
         ImmutableArray<FieldDefinition> fields,
         ImmutableArray<FunctionDefinition> methods,
         ImmutableArray<GeneralFunctionDefinition> generalMethods,
@@ -72,6 +73,7 @@ public class StructDefinition :
         Operators = operators;
         Constructors = constructors;
         Modifiers = modifiers;
+        Template = template;
 
         File = file;
     }

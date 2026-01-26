@@ -12,6 +12,14 @@ public sealed class Configuration
     public required ImmutableArray<ExternalFunctionStub> ExternalFunctions { get; init; }
     public required ImmutableArray<ExternalConstant> ExternalConstants { get; init; }
 
+    public static readonly Configuration Empty = new()
+    {
+        ExtraDirectories = ImmutableArray<string>.Empty,
+        AdditionalImports = ImmutableArray<string>.Empty,
+        ExternalFunctions = ImmutableArray<ExternalFunctionStub>.Empty,
+        ExternalConstants = ImmutableArray<ExternalConstant>.Empty,
+    };
+
     public delegate void DeclarationParser(ReadOnlySpan<char> key, ReadOnlySpan<char> value, Location location);
 
     public class Parser
@@ -61,7 +69,7 @@ public sealed class Configuration
                         }
                         else
                         {
-                            diagnostics.Add(Diagnostic.Error($"Invalid integer `{arg.ToString()}`", location));
+                            diagnostics.Add(Diagnostic.Error($"Invalid integer `{arg}`", location));
                         }
                     }
                     else
@@ -72,7 +80,7 @@ public sealed class Configuration
                         }
                         else
                         {
-                            diagnostics.Add(Diagnostic.Error($"Invalid integer `{arg.ToString()}`", location));
+                            diagnostics.Add(Diagnostic.Error($"Invalid integer `{arg}`", location));
                         }
                     }
                 }
@@ -99,7 +107,7 @@ public sealed class Configuration
             }
             else
             {
-                diagnostics.Add(Diagnostic.Error($"Invalid configuration key `{key.ToString()}`", location));
+                diagnostics.Add(Diagnostic.Error($"Invalid configuration key `{key}`", location));
             }
         }
 

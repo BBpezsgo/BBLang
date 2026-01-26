@@ -1210,13 +1210,12 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         if (CanCastImplicitly(source, destination, out error)) return true;
 
-        if (value is LiteralExpression literal &&
-            literal.Type == LiteralType.String)
+        if (value is StringLiteralExpression stringLiteral)
         {
             if (destination.Is(out ArrayType? destArrayType) &&
                 destArrayType.Of.SameAs(BasicType.U16))
             {
-                string literalValue = literal.Value;
+                string literalValue = stringLiteral.Value;
                 if (destArrayType.Length is null)
                 {
                     error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (without length)");
@@ -1246,13 +1245,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 {
                     if (!arrayType.Length.HasValue)
                     {
-                        error = new($"Can't cast literal value \"{literal.Value}\" (length of {literal.Value.Length}) to array \"{destination}\" (length of <runtime value>)");
+                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of <runtime value>)");
                         return false;
                     }
 
-                    if (literal.Value.Length != arrayType.Length.Value)
+                    if (stringLiteral.Value.Length != arrayType.Length.Value)
                     {
-                        error = new($"Can't cast literal value \"{literal.Value}\" (length of {literal.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length?.ToString() ?? "null"}\")");
+                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length?.ToString() ?? "null"}\")");
                         return false;
                     }
                 }
@@ -2039,15 +2038,15 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
     bool FindStatementType(LiteralExpression literal, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
     {
-        switch (literal.Type)
+        switch (literal)
         {
-            case LiteralType.Integer:
+            case IntLiteralExpression intLiteral:
             {
                 if (expectedType is not null)
                 {
                     if (expectedType.SameAs(BasicType.U8))
                     {
-                        if (literal.GetInt() is >= byte.MinValue and <= byte.MaxValue)
+                        if (intLiteral.Value is >= byte.MinValue and <= byte.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2055,7 +2054,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                     else if (expectedType.SameAs(BasicType.I8))
                     {
-                        if (literal.GetInt() is >= sbyte.MinValue and <= sbyte.MaxValue)
+                        if (intLiteral.Value is >= sbyte.MinValue and <= sbyte.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2063,7 +2062,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                     else if (expectedType.SameAs(BasicType.U16))
                     {
-                        if (literal.GetInt() is >= ushort.MinValue and <= ushort.MaxValue)
+                        if (intLiteral.Value is >= ushort.MinValue and <= ushort.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2071,7 +2070,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                     else if (expectedType.SameAs(BasicType.I16))
                     {
-                        if (literal.GetInt() is >= short.MinValue and <= short.MaxValue)
+                        if (intLiteral.Value is >= short.MinValue and <= short.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2079,7 +2078,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                     else if (expectedType.SameAs(BasicType.U32))
                     {
-                        if (literal.GetInt() >= (int)uint.MinValue)
+                        if (intLiteral.Value >= (int)uint.MinValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2092,7 +2091,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                 }
 
-                if (GetLiteralType(literal.Type, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
+                if (GetLiteralType(LiteralType.Integer, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
                 {
                     type = literalType;
                     return true;
@@ -2102,9 +2101,9 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 diagnostics.Add(Diagnostic.Warning($"No type defined for integer literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
-            case LiteralType.Float:
+            case FloatLiteralExpression:
             {
-                if (GetLiteralType(literal.Type, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
+                if (GetLiteralType(LiteralType.Float, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
                 {
                     type = literalType;
                     return true;
@@ -2114,7 +2113,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 diagnostics.Add(Diagnostic.Warning($"No type defined for float literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
-            case LiteralType.String:
+            case StringLiteralExpression stringLiteral:
             {
                 if (expectedType is not null &&
                     expectedType.Is(out PointerType? pointerType) &&
@@ -2125,7 +2124,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     return true;
                 }
 
-                if (GetLiteralType(literal.Type, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
+                if (GetLiteralType(LiteralType.String, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
                 {
                     type = literalType;
                     return true;
@@ -2137,17 +2136,17 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     diagnostics.Add(Diagnostic.Warning($"No type defined for characters, using the default {charType}", literal).WithSuberrors(charInternalTypeError.ToError(literal)));
                 }
 
-                SetStatementType(literal, type = new PointerType(new ArrayType(charType, literal.Value.Length + 1)));
+                SetStatementType(literal, type = new PointerType(new ArrayType(charType, stringLiteral.Value.Length + 1)));
                 diagnostics.Add(Diagnostic.Warning($"No type defined for string literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
-            case LiteralType.Char:
+            case CharLiteralExpression charLiteral:
             {
                 if (expectedType is not null)
                 {
                     if (expectedType.SameAs(BasicType.U8))
                     {
-                        if ((int)literal.Value[0] is >= byte.MinValue and <= byte.MaxValue)
+                        if ((int)charLiteral.Value is >= byte.MinValue and <= byte.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2155,7 +2154,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                     else if (expectedType.SameAs(BasicType.I8))
                     {
-                        if ((int)literal.Value[0] is >= sbyte.MinValue and <= sbyte.MaxValue)
+                        if ((int)charLiteral.Value is >= sbyte.MinValue and <= sbyte.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2163,7 +2162,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                     else if (expectedType.SameAs(BasicType.I16))
                     {
-                        if ((int)literal.Value[0] is >= short.MinValue and <= short.MaxValue)
+                        if ((int)charLiteral.Value is >= short.MinValue and <= short.MaxValue)
                         {
                             SetStatementType(literal, type = expectedType);
                             return true;
@@ -2176,7 +2175,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     }
                 }
 
-                if (GetLiteralType(literal.Type, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
+                if (GetLiteralType(LiteralType.Char, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
                 {
                     type = literalType;
                     return true;
@@ -2187,7 +2186,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 return true;
             }
             default:
-                throw new UnreachableException($"Unknown literal type \"{literal.Type}\"");
+                throw new UnreachableException(literal.GetType().ToString());
         }
     }
     bool FindStatementType(IdentifierExpression identifier, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
@@ -3283,21 +3282,18 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
     static bool TryComputeSimple(LiteralExpression literal, out CompiledValue value)
     {
-        switch (literal.Type)
+        switch (literal)
         {
-            case LiteralType.Integer:
-                value = new CompiledValue(literal.GetInt());
+            case IntLiteralExpression intLiteral:
+                value = new CompiledValue(intLiteral.Value);
                 return true;
-            case LiteralType.Float:
-                value = new CompiledValue(literal.GetFloat());
+            case FloatLiteralExpression floatLiteral:
+                value = new CompiledValue(floatLiteral.Value);
                 return true;
-            case LiteralType.Char:
-                if (literal.Value.Length != 1)
-                { throw new InternalExceptionWithoutContext($"Invalid character literal"); }
-
-                value = new CompiledValue(literal.Value[0]);
+            case CharLiteralExpression charLiteral:
+                value = new CompiledValue(charLiteral.Value);
                 return true;
-            case LiteralType.String:
+            case StringLiteralExpression:
             default:
                 value = CompiledValue.Null;
                 return false;
@@ -3374,15 +3370,15 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
     static bool TryComputeSimple(IndexCallExpression indexCall, out CompiledValue value)
     {
-        if (indexCall.Object is LiteralExpression literal &&
-            literal.Type == LiteralType.String &&
-            TryComputeSimple(indexCall.Index, out CompiledValue index))
+        if (indexCall.Object is StringLiteralExpression literal &&
+            TryComputeSimple(indexCall.Index, out CompiledValue indexValue))
         {
-            if (index == literal.Value.Length)
-            { value = new CompiledValue('\0'); }
-            else
-            { value = new CompiledValue(literal.Value[(int)index]); }
-            return true;
+            int index = (int)indexValue;
+            if (index >= 0 && index <= literal.Value.Length)
+            {
+                value = new CompiledValue(index == literal.Value.Length ? '\0' : literal.Value[index]);
+                return true;
+            }
         }
 
         value = CompiledValue.Null;

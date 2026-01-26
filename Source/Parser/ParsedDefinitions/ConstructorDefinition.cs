@@ -16,15 +16,7 @@ public class ConstructorDefinition : FunctionThingDefinition,
     public TypeInstance Type { get; }
     public override ImmutableArray<AttributeUsage> Attributes { get; }
 
-    public override bool IsTemplate
-    {
-        get
-        {
-            if (Template is not null) return true;
-            if (Context.Template is not null) return true;
-            return false;
-        }
-    }
+    public override bool IsTemplate => Template is not null || Context.Template is not null;
     TypeInstance IIdentifiable<TypeInstance>.Identifier => Type;
 
     public ConstructorDefinition(ConstructorDefinition other) : base(other)
@@ -38,8 +30,9 @@ public class ConstructorDefinition : FunctionThingDefinition,
         TypeInstance type,
         ImmutableArray<Token> modifiers,
         ParameterDefinitionCollection parameters,
+        Statements.Block? block,
         Uri file)
-        : base(modifiers, Token.CreateAnonymous(type.ToString(), TokenType.Identifier, type.Position), parameters, null, file)
+        : base(modifiers, Token.CreateAnonymous(type.ToString(), TokenType.Identifier, type.Position), parameters, null, block, file)
     {
         Type = type;
         Attributes = ImmutableArray<AttributeUsage>.Empty;

@@ -4,7 +4,6 @@ using LanguageCore.Parser.Statements;
 namespace LanguageCore.Compiler;
 
 public class CompiledConstructorDefinition : ConstructorDefinition,
-    IDefinition<CompiledConstructorDefinition>,
     IReferenceable<ConstructorCallExpression>,
     IHaveCompiledType,
     IInContext<CompiledStruct>,
@@ -41,13 +40,6 @@ public class CompiledConstructorDefinition : ConstructorDefinition,
         Parameters = parameters;
         Context = other.Context;
         References = new List<Reference<ConstructorCallExpression>>(other.References);
-    }
-
-    public bool DefinitionEquals(CompiledConstructorDefinition other)
-    {
-        if (!Type.Equals(other.Type)) return false;
-        if (!Utils.SequenceEquals(Parameters.Select(v => v.Type), other.Parameters.Select(v => v.Type))) return false;
-        return true;
     }
 
     public override string ToString()

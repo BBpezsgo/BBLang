@@ -5,21 +5,15 @@ namespace LanguageCore.Parser;
 
 public class ParameterDefinitionCollection :
     IPositioned,
-    IInContext<FunctionThingDefinition>,
     IInFile
 {
-    /// <summary>
-    /// Set by the <see cref="FunctionThingDefinition"/>
-    /// </summary>
-    [NotNull] public FunctionThingDefinition? Context { get; set; }
-
     public TokenPair Brackets { get; }
+    public Uri File { get; }
 
     public int Count => Parameters.Length;
     public Position Position =>
         new Position(Brackets)
         .Union(Parameters);
-    public Uri File => Context?.File ?? throw new NullReferenceException($"{nameof(Context.File)} is null");
 
     public ParameterDefinition this[int index] => Parameters[index];
     public ParameterDefinition this[Index index] => Parameters[index];
@@ -30,13 +24,14 @@ public class ParameterDefinitionCollection :
     {
         Parameters = other.Parameters;
         Brackets = other.Brackets;
-        Context = other.Context;
+        File = other.File;
     }
 
-    public ParameterDefinitionCollection(ImmutableArray<ParameterDefinition> parameterDefinitions, TokenPair brackets)
+    public ParameterDefinitionCollection(ImmutableArray<ParameterDefinition> parameterDefinitions, TokenPair brackets, Uri file)
     {
         Parameters = parameterDefinitions;
         Brackets = brackets;
+        File = file;
     }
 
     public bool TypeEquals(ParameterDefinitionCollection? other)
@@ -48,8 +43,8 @@ public class ParameterDefinitionCollection :
         return true;
     }
 
-    public static ParameterDefinitionCollection CreateAnonymous(ImmutableArray<ParameterDefinition> parameterDefinitions)
-        => new(parameterDefinitions, TokenPair.CreateAnonymous(new Position(parameterDefinitions), "(", ")"));
+    public static ParameterDefinitionCollection CreateAnonymous(ImmutableArray<ParameterDefinition> parameterDefinitions, Uri file)
+        => new(parameterDefinitions, TokenPair.CreateAnonymous(new Position(parameterDefinitions), "(", ")"), file);
 
     public override string ToString()
     {
