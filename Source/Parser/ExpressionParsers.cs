@@ -112,10 +112,14 @@ public sealed partial class Parser
 
         if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralFloat)
         {
-            if (!float.TryParse(CurrentToken.Content.Replace("_", string.Empty, StringComparison.Ordinal), out float value))
+            string v = CurrentToken.Content;
+            v = v.Replace("_", null, StringComparison.Ordinal);
+            if (v.EndsWith('f')) v = v[..^1];
+
+            if (!float.TryParse(v, out float value))
             {
                 value = default;
-                Diagnostics.Add(Diagnostic.Error($"Invalid literal `{CurrentToken.Content}`", CurrentToken, File));
+                Diagnostics.Add(Diagnostic.Error($"Invalid float literal `{CurrentToken.Content}`", CurrentToken, File));
             }
 
             LiteralExpression literal = new FloatLiteralExpression(value, CurrentToken, File);
@@ -128,10 +132,13 @@ public sealed partial class Parser
         }
         else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralNumber)
         {
-            if (!int.TryParse(CurrentToken.Content.Replace("_", string.Empty, StringComparison.Ordinal), out int value))
+            string v = CurrentToken.Content;
+            v = v.Replace("_", null, StringComparison.Ordinal);
+
+            if (!int.TryParse(v, out int value))
             {
                 value = default;
-                Diagnostics.Add(Diagnostic.Error($"Invalid literal `{CurrentToken.Content}`", CurrentToken, File));
+                Diagnostics.Add(Diagnostic.Error($"Invalid integer literal `{CurrentToken.Content}`", CurrentToken, File));
             }
 
             LiteralExpression literal = new IntLiteralExpression(value, CurrentToken, File);
@@ -204,7 +211,7 @@ public sealed partial class Parser
             if (CurrentToken.Content.Length != 1)
             {
                 value = default;
-                Diagnostics.Add(Diagnostic.Error($"Invalid literal `{CurrentToken.Content}`", CurrentToken, File));
+                Diagnostics.Add(Diagnostic.Error($"Invalid character literal `{CurrentToken.Content}`", CurrentToken, File));
             }
             else
             {
