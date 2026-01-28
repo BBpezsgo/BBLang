@@ -4,7 +4,7 @@ public interface ICompiledFunctionDefinition :
     IHaveCompiledType,
     IInFile,
     IHaveInstructionOffset,
-    ISimpleReadable,
+    IReadable,
     IMsilCompatible
 {
     bool ReturnSomething { get; }

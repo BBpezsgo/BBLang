@@ -1,0 +1,171 @@
+﻿using LanguageCore.Compiler;
+
+namespace LanguageCore;
+
+[ExcludeFromCodeCoverage]
+public class LanguageExceptionAt : LanguageException
+{
+    public Position Position { get; protected set; }
+    public Uri File { get; protected set; }
+
+    public LanguageExceptionAt(string message, Position position, Uri file)
+        : this(message, position, file, ImmutableArray<Exception>.Empty)
+    { }
+
+    public LanguageExceptionAt(string message, Position position, Uri file, params Exception[] suberrors)
+        : this(message, position, file, suberrors.ToImmutableArray())
+    { }
+
+    public LanguageExceptionAt(string message, Position position, Uri file, ImmutableArray<Exception> suberrors)
+        : base(message, suberrors)
+    {
+        Position = position;
+        File = file;
+    }
+
+    public override string ToString()
+    {
+        StringBuilder result = new(Format(Message, Position, File));
+
+        if (InnerException != null)
+        { result.Append($" {InnerException}"); }
+
+        return result.ToString();
+    }
+
+    public static string Format(string? message, Location location)
+        => Format(message, location.Position, location.File);
+
+    public static string Format(string? message, Position position, Uri? file)
+    {
+        StringBuilder result = new();
+        if (!string.IsNullOrEmpty(message))
+        {
+            result.Append(message);
+        }
+
+        if (file?.Scheme == "void") file = null;
+
+        if (file is not null)
+        {
+            if (result.Length > 0) result.Append(' ');
+            result.Append("(at ");
+            result.Append(file);
+
+            if (position.Range.Start.Line >= 0)
+            {
+                result.Append(':');
+                result.Append(position.Range.Start.Line + 1);
+
+                if (position.Range.Start.Character >= 0)
+                {
+                    result.Append(':');
+                    result.Append(position.Range.Start.Character + 1);
+                }
+            }
+
+            result.Append(')');
+        }
+
+        return result.ToString();
+    }
+
+    public (string SourceCode, string Arrows)? GetArrows(IEnumerable<ISourceProvider>? sourceProviders = null)
+    {
+        if (File == null) return null;
+        if (!File.IsFile) return null;
+        string? content = SourceCodeManager.LoadSource(sourceProviders, File.ToString());
+        return content is not null ? GetArrows(Position, content) : null;
+    }
+
+    public static (string SourceCode, string Arrows)? GetArrows(Position position, string text)
+    {
+        if (position.AbsoluteRange == 0) return null;
+        if (position == Position.UnknownPosition) return null;
+        if (position.Range.Start.Line != position.Range.End.Line)
+        { return null; }
+
+        string[] lines = text.ReplaceLineEndings("\n").Split('\n');
+
+        if (position.Range.Start.Line >= lines.Length)
+        { return null; }
+
+        string line = lines[position.Range.Start.Line];
+
+        line = line.Replace('\t', ' ');
+
+        int removedLeadingWhitespaces;
+        {
+            string trimmedLine = line.TrimStart();
+            removedLeadingWhitespaces = line.Length - trimmedLine.Length;
+            line = trimmedLine.Trim();
+        }
+
+        StringBuilder result = new();
+        result.Append(' ', Math.Max(0, position.Range.Start.Character - removedLeadingWhitespaces));
+        result.Append('^', Math.Max(1, position.Range.End.Character - position.Range.Start.Character));
+        return (line, result.ToString());
+    }
+
+    public static string? GetArrows(Position position, IEnumerable<Tokenizing.Token> text)
+    {
+        if (position.AbsoluteRange == 0) return null;
+        if (position == Position.UnknownPosition) return null;
+        if (position.Range.Start.Line != position.Range.End.Line)
+        { return null; }
+
+        StringBuilder lineBuilder = new();
+        Tokenizing.Token? prevToken = null;
+        foreach (Tokenizing.Token token in text)
+        {
+            if (token.Position.Range.Start.Line != position.Range.Start.Line)
+            {
+                if (lineBuilder.Length > 0)
+                { break; }
+                else
+                { continue; }
+            }
+
+            if (prevToken is null)
+            { lineBuilder.Append(' ', token.Position.Range.Start.Character); }
+            else
+            { lineBuilder.Append(' ', Math.Max(0, token.Position.Range.Start.Character - lineBuilder.Length)); }
+
+            lineBuilder.Append(token.ToOriginalString());
+
+            prevToken = token;
+        }
+
+        lineBuilder.Replace('\t', ' ');
+        string line = lineBuilder.ToString();
+
+        StringBuilder result = new();
+
+        int removedLeadingWhitespaces;
+        {
+            string trimmedLine = line.TrimStart();
+            removedLeadingWhitespaces = line.Length - trimmedLine.Length;
+            line = trimmedLine.Trim();
+        }
+
+        result.Append(line);
+        result.AppendLine();
+        result.Append(' ', Math.Max(0, position.Range.Start.Character - removedLeadingWhitespaces));
+        result.Append('^', Math.Max(1, position.Range.End.Character - position.Range.Start.Character));
+        return result.ToString();
+    }
+
+    public new DiagnosticAt ToDiagnostic() => new(
+        DiagnosticsLevel.Error,
+        Message,
+        Position,
+        File,
+        false,
+        InnerException switch
+        {
+            LanguageExceptionAt v => ImmutableArray.Create<Diagnostic>(v.ToDiagnostic()),
+            LanguageException v => ImmutableArray.Create<Diagnostic>(v.ToDiagnostic()),
+            _ => ImmutableArray<Diagnostic>.Empty,
+        }
+    );
+}

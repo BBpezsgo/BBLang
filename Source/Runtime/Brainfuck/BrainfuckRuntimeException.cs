@@ -41,13 +41,13 @@ public class BrainfuckRuntimeException : Exception
         string? arrows = null;
         if (sourcePosition.Location.File is not null &&
             DebugInfo.OriginalFiles.TryGetValue(sourcePosition.Location.File, out ImmutableArray<Tokenizing.Token> tokens))
-        { arrows = LanguageException.GetArrows(sourcePosition.Location.Position, tokens); }
+        { arrows = LanguageExceptionAt.GetArrows(sourcePosition.Location.Position, tokens); }
 
         FunctionInformation currentFrame = DebugInfo.GetFunctionInformation(RuntimeContext.CodePointer);
 
         StringBuilder result = new();
 
-        result.Append(LanguageException.Format(Message, position, sourcePosition.Location.File));
+        result.Append(LanguageExceptionAt.Format(Message, position, sourcePosition.Location.File));
 
         result.AppendLine();
 

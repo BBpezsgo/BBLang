@@ -134,14 +134,14 @@ public static class Assembler
                     if (rest.StartsWith(errorPrefix))
                     {
                         rest = rest[errorPrefix.Length..].TrimStart();
-                        diagnostics.Add(new Diagnostic(DiagnosticsLevel.Error, $"{rest}\n{assembly.Split('\n')[lineNumber - 1]}", Position.UnknownPosition, null, true, ImmutableArray<Diagnostic>.Empty));
+                        diagnostics.Add(new DiagnosticAt(DiagnosticsLevel.Error, $"{rest}\n{assembly.Split('\n')[lineNumber - 1]}", Position.UnknownPosition, new Uri(sourceFile), true, ImmutableArray<DiagnosticAt>.Empty));
                         continue;
                     }
 
                     if (rest.StartsWith(warningPrefix))
                     {
                         rest = rest[warningPrefix.Length..].TrimStart();
-                        diagnostics.Add(new Diagnostic(DiagnosticsLevel.Warning, $"{rest}\n{assembly.Split('\n')[lineNumber - 1]}", Position.UnknownPosition, null, false, ImmutableArray<Diagnostic>.Empty));
+                        diagnostics.Add(new DiagnosticAt(DiagnosticsLevel.Warning, $"{rest}\n{assembly.Split('\n')[lineNumber - 1]}", Position.UnknownPosition, new Uri(sourceFile), false, ImmutableArray<DiagnosticAt>.Empty));
                         continue;
                     }
                 }

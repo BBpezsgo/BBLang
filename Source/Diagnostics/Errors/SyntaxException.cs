@@ -1,7 +1,7 @@
 ﻿namespace LanguageCore.Parser;
 
 [ExcludeFromCodeCoverage]
-public sealed class SyntaxException : LanguageException
+public sealed class SyntaxException : LanguageExceptionAt
 {
     public SyntaxException(string message, ILocated location) : base(message, location.Location.Position, location.Location.File) { }
     public SyntaxException(string message, Location location) : base(message, location.Position, location.File) { }

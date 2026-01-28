@@ -35,7 +35,7 @@ public partial class Tokenizer
     readonly List<SimpleToken> UnicodeCharacters;
     readonly DiagnosticsCollection Diagnostics;
     readonly TokenizerSettings Settings;
-    readonly Uri? File;
+    readonly Uri File;
 
     readonly PreparationToken CurrentToken;
     int CurrentColumn;
@@ -44,7 +44,7 @@ public partial class Tokenizer
 
     readonly string Text;
 
-    public static TokenizerResult Tokenize(string text, DiagnosticsCollection diagnostics, ImmutableHashSet<string>? preprocessorVariables = null, Uri? file = null, TokenizerSettings? settings = null)
+    public static TokenizerResult Tokenize(string text, DiagnosticsCollection diagnostics, Uri file, ImmutableHashSet<string>? preprocessorVariables = null, TokenizerSettings? settings = null)
         => new Tokenizer(text, settings ?? TokenizerSettings.Default, file, preprocessorVariables, diagnostics)
         .TokenizeInternal();
 
@@ -66,7 +66,7 @@ public partial class Tokenizer
         return new TokenizerResult(NormalizeTokens(Tokens, Settings).ToImmutableArray(), UnicodeCharacters.ToImmutableArray());
     }
 
-    Tokenizer(string text, TokenizerSettings settings, Uri? file, ImmutableHashSet<string>? preprocessorVariables, DiagnosticsCollection diagnostics)
+    Tokenizer(string text, TokenizerSettings settings, Uri file, ImmutableHashSet<string>? preprocessorVariables, DiagnosticsCollection diagnostics)
     {
         Text = text;
 

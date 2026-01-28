@@ -1024,7 +1024,6 @@ public class InterpreterRenderer
 
         try
         {
-            Console.CursorVisible = false;
             while (!cancel)
             {
                 while (!Console.IsOutputRedirected && Console.KeyAvailable)
@@ -1064,7 +1063,6 @@ public class InterpreterRenderer
         finally
         {
             Console.ResetColor();
-            Console.CursorVisible = true;
         }
     }
 }

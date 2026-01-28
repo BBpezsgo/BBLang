@@ -6,7 +6,7 @@ namespace LanguageCore.Parser;
 public abstract class FunctionThingDefinition :
     IExportable,
     IPositioned,
-    ISimpleReadable,
+    IReadable,
     IIdentifiable<Token>,
     ILocated,
     IHaveAttributes,
@@ -64,6 +64,6 @@ public abstract class FunctionThingDefinition :
         File = file;
     }
 
-    string ISimpleReadable.ToReadable() => ToReadable();
+    string IReadable.ToReadable() => ToReadable();
     public abstract string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null);
 }

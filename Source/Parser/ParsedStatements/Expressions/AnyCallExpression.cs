@@ -2,7 +2,7 @@ using LanguageCore.Compiler;
 
 namespace LanguageCore.Parser.Statements;
 
-public class AnyCallExpression : Expression, IReadable, IReferenceableTo<CompiledFunctionDefinition>
+public class AnyCallExpression : Expression, IReferenceableTo<CompiledFunctionDefinition>
 {
     /// <summary>
     /// Set by the compiler
@@ -35,20 +35,6 @@ public class AnyCallExpression : Expression, IReadable, IReferenceableTo<Compile
         result.Append(SurroundingBrackets?.End);
         result.Append(Semicolon);
 
-        return result.ToString();
-    }
-
-    public string ToReadable(FindStatementType typeSearch)
-    {
-        StringBuilder result = new();
-        result.Append("...");
-        result.Append('(');
-        for (int i = 0; i < Arguments.Arguments.Length; i++)
-        {
-            if (i > 0) { result.Append(", "); }
-            result.Append(typeSearch.Invoke(Arguments.Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
-        }
-        result.Append(')');
         return result.ToString();
     }
 }

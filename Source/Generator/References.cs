@@ -28,14 +28,7 @@ public readonly struct Reference<TSource>
     public Uri SourceFile { get; }
     public bool IsImplicit { get; }
 
-    public Reference(TSource source, Uri sourceFile)
-    {
-        Source = source;
-        SourceFile = sourceFile;
-        IsImplicit = false;
-    }
-
-    public Reference(TSource source, Uri sourceFile, bool isImplicit)
+    public Reference(TSource source, Uri sourceFile, bool isImplicit = false)
     {
         Source = source;
         SourceFile = sourceFile;

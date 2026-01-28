@@ -174,7 +174,7 @@ public class StackCodeHelper
             _code.CRASH(address, "Stack overflow");
             if (location is not null)
             {
-                _diagnostics?.Add(Diagnostic.Warning($"The stack will overflow here (size {Size} exceeded {MaxSize})", location));
+                _diagnostics?.Add(DiagnosticAt.Warning($"The stack will overflow here (size {Size} exceeded {MaxSize})", location));
             }
             // Debugger.Break();
         }

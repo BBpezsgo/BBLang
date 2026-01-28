@@ -92,3 +92,6 @@ dotnet_analyzer_diagnostic.category-Style.severity = warning
 
 # IDE0001: Simplify Names
 dotnet_diagnostic.IDE0001.severity = silent
+
+# IDE0220: Add explicit cast
+dotnet_diagnostic.IDE0220.severity = error

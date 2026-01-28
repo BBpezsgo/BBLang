@@ -3,7 +3,7 @@ using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
-public class UnaryOperatorCallExpression : Expression, IReadable, IReferenceableTo<CompiledOperatorDefinition>
+public class UnaryOperatorCallExpression : Expression, IReferenceableTo<CompiledOperatorDefinition>
 {
     public const int ParameterCount = 1;
 
@@ -52,18 +52,6 @@ public class UnaryOperatorCallExpression : Expression, IReadable, IReferenceable
 
         result.Append(SurroundingBrackets?.End);
         result.Append(Semicolon);
-        return result.ToString();
-    }
-
-    public string ToReadable(FindStatementType typeSearch)
-    {
-        StringBuilder result = new();
-
-        result.Append(Operator.Content);
-        result.Append('(');
-        result.Append(typeSearch.Invoke(Expression, out GeneralType? type, new()) ? type.ToString() : '?');
-        result.Append(')');
-
         return result.ToString();
     }
 }

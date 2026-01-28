@@ -51,7 +51,7 @@ public static class Interactive
                 null,
                 diagnostics);
         }
-        catch (LanguageException ex)
+        catch (LanguageExceptionAt ex)
         {
             diagnostics.Add(ex.ToDiagnostic());
             return;

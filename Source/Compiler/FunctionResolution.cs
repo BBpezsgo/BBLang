@@ -268,7 +268,7 @@ public partial class StatementCompiler
 
         [NotNullWhen(true)] out FunctionQueryResult<TFunction>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error)
-        where TFunction : ICompiledFunctionDefinition, IInFile, ITemplateable<TFunction>, ISimpleReadable, IIdentifiable<TDefinedIdentifier>
+        where TFunction : ICompiledFunctionDefinition, ITemplateable<TFunction>, IIdentifiable<TDefinedIdentifier>
         where TDefinedIdentifier : notnull, IEquatable<TPassedIdentifier>
         where TArgument : notnull
     {
@@ -400,7 +400,7 @@ public partial class StatementCompiler
     static FunctionMatch<TFunction> GetFunctionMatch<TFunction, TDefinedIdentifier, TPassedIdentifier, TArgument>(
         TFunction function,
         FunctionQuery<TFunction, TPassedIdentifier, TDefinedIdentifier, TArgument> query)
-        where TFunction : ICompiledFunctionDefinition, IInFile, ITemplateable<TFunction>, ISimpleReadable, IIdentifiable<TDefinedIdentifier>
+        where TFunction : ICompiledFunctionDefinition, ITemplateable<TFunction>, IIdentifiable<TDefinedIdentifier>
         where TDefinedIdentifier : notnull, IEquatable<TPassedIdentifier>
         where TArgument : notnull
     {

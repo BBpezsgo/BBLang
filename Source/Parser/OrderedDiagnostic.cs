@@ -9,12 +9,12 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
         _diagnostics = new();
     }
 
-    public void Add(int importance, Diagnostic diagnostic, ImmutableArray<OrderedDiagnostic> subdiagnostic)
+    public void Add(int importance, DiagnosticAt diagnostic, ImmutableArray<OrderedDiagnostic> subdiagnostic)
     {
         Add(new OrderedDiagnostic(importance, diagnostic, subdiagnostic));
     }
 
-    public void Add(int importance, Diagnostic diagnostic)
+    public void Add(int importance, DiagnosticAt diagnostic)
     {
         Add(new OrderedDiagnostic(importance, diagnostic, ImmutableArray<OrderedDiagnostic>.Empty));
     }
@@ -25,7 +25,7 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
         _diagnostics.Insert(index < 0 ? ~index : index, diagnostic);
     }
 
-    static Diagnostic Compile(OrderedDiagnostic diagnostic) => new(
+    static DiagnosticAt Compile(OrderedDiagnostic diagnostic) => new(
         diagnostic.Diagnostic.Level,
         diagnostic.Diagnostic.Message,
         diagnostic.Diagnostic.Position,
@@ -34,11 +34,11 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
         diagnostic.SubDiagnostics.ToImmutableArray(Compile)
     );
 
-    public ImmutableArray<Diagnostic> Compile()
+    public ImmutableArray<DiagnosticAt> Compile()
     {
-        if (_diagnostics.Count == 0) return ImmutableArray<Diagnostic>.Empty;
+        if (_diagnostics.Count == 0) return ImmutableArray<DiagnosticAt>.Empty;
         int max = _diagnostics.Max(v => v.Importance);
-        ImmutableArray<Diagnostic>.Builder result = ImmutableArray.CreateBuilder<Diagnostic>(_diagnostics.Count);
+        ImmutableArray<DiagnosticAt>.Builder result = ImmutableArray.CreateBuilder<DiagnosticAt>(_diagnostics.Count);
         for (int i = 0; i < _diagnostics.Count; i++)
         {
             if (_diagnostics[i].Importance < max) continue;
@@ -54,24 +54,24 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
 readonly struct OrderedDiagnostic : IComparable<OrderedDiagnostic>
 {
     public int Importance { get; }
-    public Diagnostic Diagnostic { get; }
+    public DiagnosticAt Diagnostic { get; }
     public ImmutableArray<OrderedDiagnostic> SubDiagnostics { get; }
 
-    public OrderedDiagnostic(int importance, Diagnostic diagnostic)
+    public OrderedDiagnostic(int importance, DiagnosticAt diagnostic)
     {
         Importance = importance;
         Diagnostic = diagnostic;
         SubDiagnostics = ImmutableArray<OrderedDiagnostic>.Empty;
     }
 
-    public OrderedDiagnostic(int importance, Diagnostic diagnostic, ImmutableArray<OrderedDiagnostic> subdiagnostics)
+    public OrderedDiagnostic(int importance, DiagnosticAt diagnostic, ImmutableArray<OrderedDiagnostic> subdiagnostics)
     {
         Importance = importance;
         Diagnostic = diagnostic;
         SubDiagnostics = subdiagnostics;
     }
 
-    public OrderedDiagnostic(int importance, Diagnostic diagnostic, params OrderedDiagnostic[] subdiagnostic)
+    public OrderedDiagnostic(int importance, DiagnosticAt diagnostic, params OrderedDiagnostic[] subdiagnostic)
         : this(importance, diagnostic, subdiagnostic.ToImmutableArray()) { }
 
     public int CompareTo(OrderedDiagnostic other) => Importance.CompareTo(other.Importance);

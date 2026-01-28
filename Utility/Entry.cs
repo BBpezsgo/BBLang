@@ -140,7 +140,7 @@ public static class Entry
                     diagnostics.Print();
                     if (diagnostics.HasErrors) return 1;
                 }
-                catch (LanguageException ex)
+                catch (LanguageExceptionAt ex)
                 {
                     diagnostics.Print();
                     Output.LogError(ex);
@@ -478,7 +478,7 @@ public static class Entry
                     Output.LogDebug($"Precomputed {generated.Statistics.Precomputations} statements");
                     Output.LogDebug($"Evaluated {generated.Statistics.FunctionEvaluations} functions");
                 }
-                catch (LanguageException exception)
+                catch (LanguageExceptionAt exception)
                 {
                     diagnostics.Print();
                     Output.LogError(exception);
@@ -768,7 +768,7 @@ public static class Entry
                     if (diagnostics.HasErrors) return 1;
                     return f.AsDelegate<CodeGeneratorForNative.JitFn>()();
                 }
-                catch (LanguageException ex)
+                catch (LanguageExceptionAt ex)
                 {
                     diagnostics.Print();
                     Output.LogError(ex);

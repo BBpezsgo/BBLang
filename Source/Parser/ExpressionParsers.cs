@@ -79,7 +79,7 @@ public sealed partial class Parser
             if (!ExpectAnyExpression(out Expression? value))
             {
                 value = new MissingExpression(lastPosition.After(), File);
-                Diagnostics.Add(Diagnostic.Error("Expected expression or `]`", value, false));
+                Diagnostics.Add(DiagnosticAt.Error("Expected expression or `]`", value, false));
             }
 
             values.Add(value);
@@ -90,7 +90,7 @@ public sealed partial class Parser
                 if (!ExpectOperator("]", out bracketEnd))
                 {
                     bracketEnd = new MissingToken(TokenType.Operator, lastPosition.After(), "]");
-                    Diagnostics.Add(Diagnostic.Error("Expected `,` or `]`", bracketEnd, File, false));
+                    Diagnostics.Add(DiagnosticAt.Error("Expected `,` or `]`", bracketEnd, File, false));
                 }
                 break;
             }
@@ -119,7 +119,7 @@ public sealed partial class Parser
             if (!float.TryParse(v, out float value))
             {
                 value = default;
-                Diagnostics.Add(Diagnostic.Error($"Invalid float literal `{CurrentToken.Content}`", CurrentToken, File));
+                Diagnostics.Add(DiagnosticAt.Error($"Invalid float literal `{CurrentToken.Content}`", CurrentToken, File));
             }
 
             LiteralExpression literal = new FloatLiteralExpression(value, CurrentToken, File);
@@ -138,7 +138,7 @@ public sealed partial class Parser
             if (!int.TryParse(v, out int value))
             {
                 value = default;
-                Diagnostics.Add(Diagnostic.Error($"Invalid integer literal `{CurrentToken.Content}`", CurrentToken, File));
+                Diagnostics.Add(DiagnosticAt.Error($"Invalid integer literal `{CurrentToken.Content}`", CurrentToken, File));
             }
 
             LiteralExpression literal = new IntLiteralExpression(value, CurrentToken, File);
@@ -155,7 +155,7 @@ public sealed partial class Parser
 
             if (v.Length < 3)
             {
-                Diagnostics.Add(Diagnostic.Error($"Invalid hex literal `{CurrentToken}`", CurrentToken, File, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Invalid hex literal `{CurrentToken}`", CurrentToken, File, false));
                 v = "0";
             }
             else
@@ -178,7 +178,7 @@ public sealed partial class Parser
 
             if (v.Length < 3)
             {
-                Diagnostics.Add(Diagnostic.Error($"Invalid binary literal `{CurrentToken}`", CurrentToken, File, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Invalid binary literal `{CurrentToken}`", CurrentToken, File, false));
                 v = "0";
             }
             else
@@ -211,7 +211,7 @@ public sealed partial class Parser
             if (CurrentToken.Content.Length != 1)
             {
                 value = default;
-                Diagnostics.Add(Diagnostic.Error($"Invalid character literal `{CurrentToken.Content}`", CurrentToken, File));
+                Diagnostics.Add(DiagnosticAt.Error($"Invalid character literal `{CurrentToken.Content}`", CurrentToken, File));
             }
             else
             {
@@ -253,7 +253,7 @@ public sealed partial class Parser
         if (!ExpectOperator("]", out Token? bracketEnd))
         {
             bracketEnd = new MissingToken(TokenType.Operator, expression.Position.After(), "]");
-            Diagnostics.Add(Diagnostic.Error("Expected `]`", bracketEnd, File, false));
+            Diagnostics.Add(DiagnosticAt.Error("Expected `]`", bracketEnd, File, false));
         }
 
         // fixme
@@ -278,7 +278,7 @@ public sealed partial class Parser
         if (!ExpectOperator(")", out Token? bracketEnd))
         {
             bracketEnd = new MissingToken(TokenType.Operator, expression.Position.After(), ")");
-            Diagnostics.Add(Diagnostic.Error("Expected `)`", bracketEnd, File, false));
+            Diagnostics.Add(DiagnosticAt.Error("Expected `)`", bracketEnd, File, false));
         }
 
         expression.SurroundingBrackets = new TokenPair(bracketStart, bracketEnd);
@@ -303,7 +303,7 @@ public sealed partial class Parser
         if (!ExpectType(AllowedType.None, out TypeInstance? instanceTypeName))
         {
             instanceTypeName = new MissingTypeInstance(keywordNew.Position.After(), File);
-            Diagnostics.Add(Diagnostic.Error($"Expected type after keyword `{StatementKeywords.New}`", instanceTypeName, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Expected type after keyword `{StatementKeywords.New}`", instanceTypeName, false));
         }
 
         if (ExpectArguments(out ArgumentListExpression? argumentList))
@@ -337,7 +337,7 @@ public sealed partial class Parser
                 fieldName,
                 File
             );
-            Diagnostics.Add(Diagnostic.Error("Expected a symbol after `.`", fieldName, File, false));
+            Diagnostics.Add(DiagnosticAt.Error("Expected a symbol after `.`", fieldName, File, false));
             return true;
         }
 
@@ -363,7 +363,7 @@ public sealed partial class Parser
         if (!ExpectType(AllowedType.StackArrayWithoutLength, out TypeInstance? type))
         {
             type = new MissingTypeInstance(keyword.Position.After(), File);
-            Diagnostics.Add(Diagnostic.Error($"Expected type after keyword `{keyword}`", type, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Expected type after keyword `{keyword}`", type, false));
         }
 
         basicTypeCast = new ReinterpretExpression(prevStatement, keyword, type, File);
@@ -601,7 +601,7 @@ public sealed partial class Parser
         if (!ExpectOneValue(out Expression? expression))
         {
             argument = new IdentifierExpression(modifier, File);
-            Diagnostics.Add(Diagnostic.Warning($"is this ok?", argument));
+            Diagnostics.Add(DiagnosticAt.Warning($"is this ok?", argument));
             return true;
         }
 
@@ -648,7 +648,7 @@ public sealed partial class Parser
                 if (!ExpectUnaryOperatorCall(out UnaryOperatorCallExpression? rightUnaryOperatorCall))
                 {
                     rightStatement = new MissingArgumentExpression(binaryOperator.Position.After(), File);
-                    Diagnostics.Add(Diagnostic.Error($"Expected value after binary operator `{binaryOperator}`", rightStatement, false));
+                    Diagnostics.Add(DiagnosticAt.Error($"Expected value after binary operator `{binaryOperator}`", rightStatement, false));
                 }
                 else
                 {
@@ -684,7 +684,7 @@ public sealed partial class Parser
             if (!ExpectOneValue(out Expression? value))
             {
                 value = new MissingExpression(modifier.Position.After(), File);
-                Diagnostics.Add(Diagnostic.Error($"Expected value after modifier `{modifier}`", value, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Expected value after modifier `{modifier}`", value, false));
             }
 
             argumentExpression = new ArgumentExpression(modifier, value, File);
@@ -761,7 +761,7 @@ public sealed partial class Parser
             if (!ExpectArgument(out ArgumentExpression? argument, ArgumentModifiers))
             {
                 argument = new MissingArgumentExpression(lastPosition.After(), File);
-                Diagnostics.Add(Diagnostic.Error($"Expected expression as an argument", argument, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Expected expression as an argument", argument, false));
             }
 
             arguments.Add(argument);

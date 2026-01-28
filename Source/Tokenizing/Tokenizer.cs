@@ -58,7 +58,7 @@ public partial class Tokenizer
             else if (!char.IsAsciiHexDigit(currChar))
 #endif
             {
-                Diagnostics.Add(Diagnostic.Error($"This isn't a hex digit \"{currChar}\"", GetCurrentPosition(offsetTotal), File));
+                Diagnostics.Add(DiagnosticAt.Error($"This isn't a hex digit \"{currChar}\"", GetCurrentPosition(offsetTotal), File));
             }
             else
             {
@@ -89,7 +89,7 @@ public partial class Tokenizer
             else if (!char.IsAsciiHexDigit(currChar))
 #endif
             {
-                Diagnostics.Add(Diagnostic.Error($"This isn't a hex digit: \"{currChar}\"", GetCurrentPosition(offsetTotal), File));
+                Diagnostics.Add(DiagnosticAt.Error($"This isn't a hex digit: \"{currChar}\"", GetCurrentPosition(offsetTotal), File));
             }
             else
             {
@@ -180,7 +180,7 @@ public partial class Tokenizer
                 CurrentPreprocessArgument = null;
             }
             else
-            { Diagnostics.Add(Diagnostic.Error($"Unexpected character \'{currChar.Escape()}\'", GetCurrentPosition(offsetTotal), File)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"Unexpected character \'{currChar.Escape()}\'", GetCurrentPosition(offsetTotal), File)); }
         }
 
         if (PreprocessorContext.IsPreprocessSkipping)
@@ -221,7 +221,7 @@ public partial class Tokenizer
                     default:
                     {
                         c = currChar;
-                        Diagnostics.Add(Diagnostic.Error($"I don't know this escape sequence: \\{currChar}", GetCurrentPosition(offsetTotal), File));
+                        Diagnostics.Add(DiagnosticAt.Error($"I don't know this escape sequence: \\{currChar}", GetCurrentPosition(offsetTotal), File));
                         break;
                     }
                 }
@@ -252,7 +252,7 @@ public partial class Tokenizer
                     default:
                     {
                         c = currChar;
-                        Diagnostics.Add(Diagnostic.Error($"I don't know this escape sequence: \\{currChar}", GetCurrentPosition(offsetTotal), File));
+                        Diagnostics.Add(DiagnosticAt.Error($"I don't know this escape sequence: \\{currChar}", GetCurrentPosition(offsetTotal), File));
                         break;
                     }
                 }
@@ -352,7 +352,7 @@ public partial class Tokenizer
         else if (currChar == 'e' && (CurrentToken.TokenType is PreparationTokenType.LiteralNumber or PreparationTokenType.LiteralFloat))
         {
             if (CurrentToken.Contains(currChar))
-            { Diagnostics.Add(Diagnostic.Error($"Am I stupid or this is not a float number?", CurrentToken.Position, File)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"Am I stupid or this is not a float number?", CurrentToken.Position, File)); }
             CurrentToken.Content.Append(currChar);
             CurrentToken.TokenType = PreparationTokenType.LiteralFloat;
         }
@@ -361,7 +361,7 @@ public partial class Tokenizer
             CurrentToken.Content.Equals("0"))
         {
             if (!CurrentToken.EndsWith('0'))
-            { Diagnostics.Add(Diagnostic.Error($"Am I stupid or this is not a hex number?", CurrentToken.Position, File)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"Am I stupid or this is not a hex number?", CurrentToken.Position, File)); }
             CurrentToken.Content.Append(currChar);
             CurrentToken.TokenType = PreparationTokenType.LiteralHex;
         }
@@ -370,7 +370,7 @@ public partial class Tokenizer
             CurrentToken.Content.Equals("0"))
         {
             if (!CurrentToken.EndsWith('0'))
-            { Diagnostics.Add(Diagnostic.Error($"Am I stupid or this is not a binary number?", CurrentToken.Position, File)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"Am I stupid or this is not a binary number?", CurrentToken.Position, File)); }
             CurrentToken.Content.Append(currChar);
             CurrentToken.TokenType = PreparationTokenType.LiteralBinary;
         }
@@ -401,7 +401,7 @@ public partial class Tokenizer
                 if (currChar is not '0' and not '1')
                 {
                     RefreshTokenPosition(offsetTotal);
-                    Diagnostics.Add(Diagnostic.Error($"This isn't a binary digit am i right? \'{currChar}\'", CurrentToken.Position.After(), File));
+                    Diagnostics.Add(DiagnosticAt.Error($"This isn't a binary digit am i right? \'{currChar}\'", CurrentToken.Position.After(), File));
                 }
             }
 
@@ -554,7 +554,7 @@ public partial class Tokenizer
             if (currChar is not ((>= 'a' and <= 'f') or (>= 'A' and <= 'F') or '_'))
             {
                 RefreshTokenPosition(offsetTotal);
-                Diagnostics.Add(Diagnostic.Error($"This isn't a hex digit am i right? \'{currChar}\'", CurrentToken.Position.After(), File));
+                Diagnostics.Add(DiagnosticAt.Error($"This isn't a hex digit am i right? \'{currChar}\'", CurrentToken.Position.After(), File));
             }
             CurrentToken.Content.Append(currChar);
         }
@@ -644,9 +644,9 @@ public partial class Tokenizer
         if (CurrentToken.TokenType == PreparationTokenType.LiteralCharacter)
         {
             if (CurrentToken.Content.Length > 1)
-            { Diagnostics.Add(Diagnostic.Error($"I think there are more characters than there should be ({CurrentToken.Content.Length})", CurrentToken.Position, File)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"I think there are more characters than there should be ({CurrentToken.Content.Length})", CurrentToken.Position, File)); }
             else if (CurrentToken.Content.Length < 1)
-            { Diagnostics.Add(Diagnostic.Error($"I think there are less characters than there should be ({CurrentToken.Content.Length})", CurrentToken.Position, File)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"I think there are less characters than there should be ({CurrentToken.Content.Length})", CurrentToken.Position, File)); }
         }
 
         if (CurrentToken.TokenType == PreparationTokenType.POTENTIAL_FLOAT)

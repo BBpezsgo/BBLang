@@ -4,7 +4,7 @@ using LanguageCore.Tokenizing;
 namespace LanguageCore.Parser;
 
 public class ConstructorDefinition : FunctionThingDefinition,
-    ISimpleReadable,
+    IReadable,
     IInContext<StructDefinition?>,
     IIdentifiable<TypeInstance>
 {
@@ -49,7 +49,7 @@ public class ConstructorDefinition : FunctionThingDefinition,
         return result.ToString();
     }
 
-    string ISimpleReadable.ToReadable() => ToReadable();
+    string IReadable.ToReadable() => ToReadable();
     public override string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null)
     {
         StringBuilder result = new();

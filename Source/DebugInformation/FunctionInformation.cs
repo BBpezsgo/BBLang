@@ -41,7 +41,7 @@ public struct FunctionInformation
 
         result.Append(ReadableIdentifier());
 
-        result.Append(LanguageException.Format(ReadableIdentifier(), SourcePosition, File));
+        result.Append(LanguageExceptionAt.Format(ReadableIdentifier(), SourcePosition, File));
 
         return result.ToString();
     }

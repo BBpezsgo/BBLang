@@ -17,7 +17,7 @@ public partial class StatementCompiler
             }
             else
             {
-                Diagnostics.Add(Diagnostic.FailedOptimization($"Failed to compute allocation size", type).WithSuberrors(typeSizeError.ToError(type, false)));
+                Diagnostics.Add(DiagnosticAt.FailedOptimization($"Failed to compute allocation size", type).WithSuberrors(typeSizeError.ToError(type, false)));
             }
         }
 
@@ -25,7 +25,7 @@ public partial class StatementCompiler
 
         if (!TryGetBuiltinFunction(BuiltinFunctions.Allocate, ImmutableArray.Create<GeneralType>(SizeofStatementType), type.Location.File, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? error, AddCompilable))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", type));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", type));
             return false;
         }
 
@@ -37,13 +37,13 @@ public partial class StatementCompiler
         CompiledFunctionDefinition allocator = result.Function;
         if (!allocator.ReturnSomething)
         {
-            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
             return false;
         }
 
         if (!allocator.CanUse(type.Location.File))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function \"{allocator.ToReadable()}\" cannot be called due to its protection level", type));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{allocator.ToReadable()}\" cannot be called due to its protection level", type));
             return false;
         }
 
@@ -83,12 +83,12 @@ public partial class StatementCompiler
         if (!GetLiteralType(LiteralType.Integer, out GeneralType? intType, out PossibleDiagnostic? typeError))
         {
             intType = SizeofStatementType;
-            Diagnostics.Add(Diagnostic.Warning($"No type defined for integer literals, using the default {intType}", sizeLocation).WithSuberrors(typeError.ToError(sizeLocation, false)));
+            Diagnostics.Add(DiagnosticAt.Warning($"No type defined for integer literals, using the default {intType}", sizeLocation).WithSuberrors(typeError.ToError(sizeLocation, false)));
         }
 
         if (!TryGetBuiltinFunction(BuiltinFunctions.Allocate, ImmutableArray.Create<GeneralType>(intType), sizeLocation.File, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? error, AddCompilable))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", sizeLocation));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] not found: {error}", sizeLocation));
             return false;
         }
 
@@ -100,13 +100,13 @@ public partial class StatementCompiler
         CompiledFunctionDefinition allocator = result.Function;
         if (!allocator.ReturnSomething)
         {
-            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
             return false;
         }
 
         if (!allocator.CanUse(sizeLocation.File))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function \"{allocator.ToReadable()}\" cannot be called due to its protection level", sizeLocation));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{allocator.ToReadable()}\" cannot be called due to its protection level", sizeLocation));
             return false;
         }
 
@@ -146,7 +146,7 @@ public partial class StatementCompiler
 
         if (!TryGetBuiltinFunction(BuiltinFunctions.Free, parameterTypes, location.File, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFoundError, AddCompilable))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Free}\")] not found", location).WithSuberrors(notFoundError.ToError(location)));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Free}\")] not found", location).WithSuberrors(notFoundError.ToError(location)));
             return false;
         }
 
@@ -159,7 +159,7 @@ public partial class StatementCompiler
 
         if (!deallocator.CanUse(location.File))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function \"{deallocator.ToReadable()}\" cannot be called due to its protection level", location));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{deallocator.ToReadable()}\" cannot be called due to its protection level", location));
             return false;
         }
 
@@ -197,7 +197,7 @@ public partial class StatementCompiler
             {
                 if (deallocateablePointerType.To.Is<StructType>())
                 {
-                    Diagnostics.Add(Diagnostic.Warning($"Destructor for type \"{deallocateablePointerType.To}\" not found", location).WithSuberrors(error.ToWarning(location)));
+                    Diagnostics.Add(DiagnosticAt.Warning($"Destructor for type \"{deallocateablePointerType.To}\" not found", location).WithSuberrors(error.ToWarning(location)));
                 }
             }
             else
@@ -213,7 +213,7 @@ public partial class StatementCompiler
             {
                 if (deallocateableType.Is<StructType>())
                 {
-                    Diagnostics.Add(Diagnostic.Warning($"Destructor for type \"{deallocateableType}\" not found", location).WithSuberrors(error.ToWarning(location)));
+                    Diagnostics.Add(DiagnosticAt.Warning($"Destructor for type \"{deallocateableType}\" not found", location).WithSuberrors(error.ToWarning(location)));
                 }
             }
             else
@@ -227,7 +227,7 @@ public partial class StatementCompiler
         if (destructor is not null
             && !destructor.CanUse(location.File))
         {
-            Diagnostics.Add(Diagnostic.Error($"Destructor for type \"{deallocateableType}\" cannot be called due to its protection level", location));
+            Diagnostics.Add(DiagnosticAt.Error($"Destructor for type \"{deallocateableType}\" cannot be called due to its protection level", location));
             return false;
         }
 
@@ -272,7 +272,7 @@ public partial class StatementCompiler
     bool CompileStatement(MissingTypeInstance type, [NotNullWhen(true)] out CompiledTypeExpression? result, DiagnosticsCollection diagnostics)
     {
         result = null;
-        diagnostics.Add(Diagnostic.Error("Incomplete AST", type, false));
+        diagnostics.Add(DiagnosticAt.Error("Incomplete AST", type, false));
         return false;
     }
     bool CompileStatement(TypeInstanceSimple type, [NotNullWhen(true)] out CompiledTypeExpression? result, DiagnosticsCollection diagnostics)
@@ -316,7 +316,7 @@ public partial class StatementCompiler
         {
             if (type.TypeArguments.HasValue)
             {
-                diagnostics.Add(Diagnostic.Internal($"Asd", type));
+                diagnostics.Add(DiagnosticAt.Internal($"Asd", type));
                 return false;
             }
         }
@@ -422,7 +422,7 @@ public partial class StatementCompiler
             else if (!FindSize(parameter.Type, out int parameterSize, out PossibleDiagnostic? parameterSizeError, this))
             { Diagnostics.Add(parameterSizeError.ToError(parameter)); }
             else if (argumentSize != parameterSize)
-            { Diagnostics.Add(Diagnostic.Internal($"Bad argument type passed: expected \"{parameter.Type}\" ({parameterSize} bytes) passed \"{compiledArgument.Type}\" ({argumentSize} bytes)", argument)); }
+            { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameter.Type}\" ({parameterSize} bytes) passed \"{compiledArgument.Type}\" ({argumentSize} bytes)", argument)); }
 
             bool typeAllowsTemp = AllowDeallocate(compiledArgument.Type);
 
@@ -433,14 +433,14 @@ public partial class StatementCompiler
             if (callerAllowsTemp)
             {
                 if (explicitDeallocate && !calleeAllowsTemp)
-                { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this value: parameter definition does not have a \"{ModifierKeywords.Temp}\" modifier", argument)); }
+                { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this value: parameter definition does not have a \"{ModifierKeywords.Temp}\" modifier", argument)); }
                 if (explicitDeallocate && !typeAllowsTemp)
-                { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this type", argument)); }
+                { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this type", argument)); }
             }
             else
             {
                 if (explicitDeallocate)
-                { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this value", argument)); }
+                { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this value", argument)); }
             }
 
             CompiledCleanup? compiledCleanup = null;
@@ -475,12 +475,12 @@ public partial class StatementCompiler
                 Expression? argument = parameter.DefaultValue;
                 if (argument is null)
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"Can't explain this error", parameter));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Can't explain this error", parameter));
                     return false;
                 }
                 else
                 {
-                    Diagnostics.Add(Diagnostic.Warning($"WIP", argument));
+                    Diagnostics.Add(DiagnosticAt.Warning($"WIP", argument));
                 }
 
                 if (!CompileExpression(argument, out CompiledExpression? compiledArgument, parameter.Type)) return false;
@@ -494,7 +494,7 @@ public partial class StatementCompiler
                 else if (!FindSize(parameter.Type, out int parameterSize, out PossibleDiagnostic? parameterSizeError, this))
                 { Diagnostics.Add(parameterSizeError.ToError(parameter)); }
                 else if (argumentSize != parameterSize)
-                { Diagnostics.Add(Diagnostic.Internal($"Bad argument type passed: expected \"{parameter.Type}\" ({parameterSize} bytes) passed \"{compiledArgument.Type}\" ({argumentSize} bytes)", argument)); }
+                { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameter.Type}\" ({parameterSize} bytes) passed \"{compiledArgument.Type}\" ({argumentSize} bytes)", argument)); }
 
                 bool typeAllowsTemp = AllowDeallocate(compiledArgument.Type);
 
@@ -505,14 +505,14 @@ public partial class StatementCompiler
                 if (callerAllowsTemp)
                 {
                     if (explicitDeallocate && !calleeAllowsTemp)
-                    { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this value: parameter definition does not have a \"{ModifierKeywords.Temp}\" modifier", argument)); }
+                    { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this value: parameter definition does not have a \"{ModifierKeywords.Temp}\" modifier", argument)); }
                     if (explicitDeallocate && !typeAllowsTemp)
-                    { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this type", argument)); }
+                    { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this type", argument)); }
                 }
                 else
                 {
                     if (explicitDeallocate)
-                    { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this value", argument)); }
+                    { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this value", argument)); }
                 }
 
                 CompiledCleanup? compiledCleanup = null;
@@ -567,12 +567,12 @@ public partial class StatementCompiler
             if (StatementCanBeDeallocated(ArgumentExpression.Wrap(argument), out bool explicitDeallocate))
             {
                 if (explicitDeallocate && !canDeallocate)
-                { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this value: parameter definition does not have a \"{ModifierKeywords.Temp}\" modifier", argument)); }
+                { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this value: parameter definition does not have a \"{ModifierKeywords.Temp}\" modifier", argument)); }
             }
             else
             {
                 if (explicitDeallocate)
-                { Diagnostics.Add(Diagnostic.Warning($"Can not deallocate this value", compiledArgument)); }
+                { Diagnostics.Add(DiagnosticAt.Warning($"Can not deallocate this value", compiledArgument)); }
                 canDeallocate = false;
             }
 
@@ -601,7 +601,7 @@ public partial class StatementCompiler
     }
 
     bool CompileFunctionCall_External<TFunction>(ImmutableArray<CompiledArgument> arguments, bool saveValue, TFunction compiledFunction, IExternalFunction externalFunction, Location location, [NotNullWhen(true)] out CompiledExpression? compiledStatement)
-        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition, ISimpleReadable
+        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition
     {
         CheckExternalFunctionDeclaration(this, compiledFunction, externalFunction, Diagnostics);
 
@@ -617,7 +617,7 @@ public partial class StatementCompiler
         return true;
     }
     bool CompileFunctionCall<TFunction>(Expression caller, ImmutableArray<ArgumentExpression> arguments, FunctionQueryResult<TFunction> _callee, [NotNullWhen(true)] out CompiledExpression? compiledStatement)
-        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition, IExportable, ISimpleReadable, ILocated, IExternalFunctionDefinition, IHaveInstructionOffset
+        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition, IExternalFunctionDefinition
     {
         (TFunction callee, ImmutableDictionary<string, GeneralType>? typeArguments) = _callee;
         _callee.ReplaceArgumentsIfNeeded(ref arguments);
@@ -719,7 +719,7 @@ public partial class StatementCompiler
 
         if (!callee.CanUse(caller.File))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function \"{callee.ToReadable()}\" could not be called due to its protection level", caller));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{callee.ToReadable()}\" could not be called due to its protection level", caller));
             return false;
         }
 
@@ -732,7 +732,7 @@ public partial class StatementCompiler
 
         if (arguments.Length < partial)
         {
-            Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {callee.ParameterCount} passed {arguments.Length}", caller));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {callee.ParameterCount} passed {arguments.Length}", caller));
             return false;
         }
 
@@ -808,7 +808,7 @@ public partial class StatementCompiler
             runtimeStatements.Length == 0)
         {
             SetPredictedValue(caller, returnValue.Value);
-            Diagnostics.Add(Diagnostic.OptimizationNotice($"Function evaluated with result \"{returnValue.Value}\"", caller));
+            Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Function evaluated with result \"{returnValue.Value}\"", caller));
             compiledStatement = new CompiledConstantValue()
             {
                 Value = returnValue.Value,
@@ -851,7 +851,7 @@ public partial class StatementCompiler
                                 }
                             }
                             Debugger.Break();
-                            Diagnostics.Add(Diagnostic.FailedOptimization($"Can't inline \"{callee.ToReadable()}\" because the behavior might change", item));
+                            Diagnostics.Add(DiagnosticAt.FailedOptimization($"Can't inline \"{callee.ToReadable()}\" because the behavior might change", item));
                             goto bad;
                         ok:;
                         }
@@ -865,7 +865,7 @@ public partial class StatementCompiler
                         if (complexity.HasFlag(StatementComplexity.Bruh))
                         {
                             Debugger.Break();
-                            Diagnostics.Add(Diagnostic.FailedOptimization($"Can't inline \"{callee.ToReadable()}\" because of this argument", argument));
+                            Diagnostics.Add(DiagnosticAt.FailedOptimization($"Can't inline \"{callee.ToReadable()}\" because of this argument", argument));
                             goto bad;
                         }
 
@@ -874,7 +874,7 @@ public partial class StatementCompiler
                             if (inlineContext.InlinedArguments.Count(v => v == argument) > 1)
                             {
                                 //Debugger.Break();
-                                Diagnostics.Add(Diagnostic.FailedOptimization($"Can't inline \"{callee.ToReadable()}\" because this expression might be complex", argument));
+                                Diagnostics.Add(DiagnosticAt.FailedOptimization($"Can't inline \"{callee.ToReadable()}\" because this expression might be complex", argument));
                                 goto bad;
                             }
                         }
@@ -884,7 +884,7 @@ public partial class StatementCompiler
                     if (!callee.ReturnSomething &&
                         controlFlowUsage == ControlFlowUsage.None)
                     {
-                        Diagnostics.Add(Diagnostic.OptimizationNotice($"Function inlined", caller));
+                        Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Function inlined", caller));
                         CompiledStatement? compiledStatement2 = inlined1;
                         compiledStatement = new CompiledDummyExpression()
                         {
@@ -899,7 +899,7 @@ public partial class StatementCompiler
                              controlFlowUsage == ControlFlowUsage.None &&
                              inlined1 is CompiledExpression statementWithValue)
                     {
-                        Diagnostics.Add(Diagnostic.OptimizationNotice($"Function inlined", caller));
+                        Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Function inlined", caller));
 
                         if (!CanCastImplicitly(statementWithValue.Type, callee.Type, out PossibleDiagnostic? castError))
                         { Diagnostics.Add(castError.ToError(statementWithValue)); }
@@ -924,7 +924,7 @@ public partial class StatementCompiler
                     //        .Select((value, index) => (value.Identifier.Content, compiledArguments[index]))
                     //        .ToImmutableDictionary(v => v.Content, v => v.Item2),
                     //}, out inlined1);
-                    Diagnostics.Add(Diagnostic.Warning($"Failed to inline \"{callee.ToReadable()}\"", caller));
+                    Diagnostics.Add(DiagnosticAt.Warning($"Failed to inline \"{callee.ToReadable()}\"", caller));
                 }
             }
         }
@@ -953,7 +953,7 @@ public partial class StatementCompiler
         }
 
         if (LanguageConstants.KeywordList.Contains(newVariable.Identifier.Content))
-        { Diagnostics.Add(Diagnostic.Error($"Illegal variable name \"{newVariable.Identifier.Content}\"", newVariable.Identifier, newVariable.File)); }
+        { Diagnostics.Add(DiagnosticAt.Error($"Illegal variable name \"{newVariable.Identifier.Content}\"", newVariable.Identifier, newVariable.File)); }
 
         GeneralType? type = null;
         if (newVariable.Type != StatementKeywords.Var)
@@ -990,7 +990,7 @@ public partial class StatementCompiler
                             if (length != literalStatement.Value.Length &&
                                 length != literalStatement.Value.Length + 1)
                             {
-                                Diagnostics.Add(Diagnostic.Error($"String literal's length ({literalStatement.Value.Length}) doesn't match with the type's length ({length})", literalStatement));
+                                Diagnostics.Add(DiagnosticAt.Error($"String literal's length ({literalStatement.Value.Length}) doesn't match with the type's length ({length})", literalStatement));
                             }
 
                             type = new ArrayType(arrayType.Of, length);
@@ -1011,7 +1011,7 @@ public partial class StatementCompiler
                             if (length != literalStatement.Value.Length &&
                                 length != literalStatement.Value.Length + 1)
                             {
-                                Diagnostics.Add(Diagnostic.Error($"String literal's length ({literalStatement.Value.Length}) doesn't match with the type's length ({length})", literalStatement));
+                                Diagnostics.Add(DiagnosticAt.Error($"String literal's length ({literalStatement.Value.Length}) doesn't match with the type's length ({length})", literalStatement));
                             }
 
                             type = new ArrayType(arrayType.Of, length);
@@ -1027,7 +1027,7 @@ public partial class StatementCompiler
 
         if (GetConstant(newVariable.Identifier.Content, newVariable.File, out _, out _))
         {
-            Diagnostics.Add(Diagnostic.Error($"Symbol name \"{newVariable.Identifier}\" conflicts with an another symbol name", newVariable.Identifier, newVariable.File));
+            Diagnostics.Add(DiagnosticAt.Error($"Symbol name \"{newVariable.Identifier}\" conflicts with an another symbol name", newVariable.Identifier, newVariable.File));
             return false;
         }
 
@@ -1042,7 +1042,7 @@ public partial class StatementCompiler
             {
                 if (type is null)
                 {
-                    Diagnostics.Add(Diagnostic.Warning($"External constant \"{newVariable.ExternalConstantName}\" not found", newVariable));
+                    Diagnostics.Add(DiagnosticAt.Warning($"External constant \"{newVariable.ExternalConstantName}\" not found", newVariable));
                 }
             }
             else
@@ -1055,7 +1055,7 @@ public partial class StatementCompiler
 
                 if (!externalConstant.Value.TryCast(type, out CompiledValue castedValue))
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Can't cast external constant value {externalConstant.Value} of type \"{externalConstant.Value.Type}\" to {type}", newVariable));
+                    Diagnostics.Add(DiagnosticAt.Error($"Can't cast external constant value {externalConstant.Value} of type \"{externalConstant.Value.Type}\" to {type}", newVariable));
                     return false;
                 }
 
@@ -1073,7 +1073,7 @@ public partial class StatementCompiler
         {
             if (!InternalConstants.TryGetValue(newVariable.InternalConstantName, out GeneralType? internalConstantType))
             {
-                Diagnostics.Add(Diagnostic.Warning($"Internal constant \"{newVariable.InternalConstantName}\" not found", newVariable));
+                Diagnostics.Add(DiagnosticAt.Warning($"Internal constant \"{newVariable.InternalConstantName}\" not found", newVariable));
             }
             else
             {
@@ -1120,7 +1120,7 @@ public partial class StatementCompiler
 
         if (type is null)
         {
-            Diagnostics.Add(Diagnostic.Error($"Initial value for variable declaration with implicit type is required", newVariable));
+            Diagnostics.Add(DiagnosticAt.Error($"Initial value for variable declaration with implicit type is required", newVariable));
             type = BuiltinType.Any;
         }
 
@@ -1167,7 +1167,7 @@ public partial class StatementCompiler
 
             if (GeneratorStructDefinition is null)
             {
-                Diagnostics.Add(Diagnostic.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", compiledVariable));
+                Diagnostics.Add(DiagnosticAt.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", compiledVariable));
                 return false;
             }
 
@@ -1218,7 +1218,7 @@ public partial class StatementCompiler
 
         if (!GetInstructionLabel(instructionLabel.Identifier.Content, out CompiledLabelDeclaration? compiledInstructionLabelDeclaration, out _))
         {
-            Diagnostics.Add(Diagnostic.Internal($"Instruction label \"{instructionLabel.Identifier.Content}\" not found. Possibly not compiled or some other internal errors (not your fault)", instructionLabel.Identifier, instructionLabel.File));
+            Diagnostics.Add(DiagnosticAt.Internal($"Instruction label \"{instructionLabel.Identifier.Content}\" not found. Possibly not compiled or some other internal errors (not your fault)", instructionLabel.Identifier, instructionLabel.File));
             return false;
         }
 
@@ -1233,7 +1233,7 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length > 1)
             {
-                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Return}\": required {0} or {1} passed {keywordCall.Arguments.Length}", keywordCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"{StatementKeywords.Return}\": required {0} or {1} passed {keywordCall.Arguments.Length}", keywordCall));
                 return false;
             }
 
@@ -1264,13 +1264,13 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length > 1)
             {
-                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Yield}\": required {0} or {1} passed {keywordCall.Arguments.Length}", keywordCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"{StatementKeywords.Yield}\": required {0} or {1} passed {keywordCall.Arguments.Length}", keywordCall));
                 return false;
             }
 
             if (Frames.Last.CompiledGeneratorContext is null)
             {
-                Diagnostics.Add(Diagnostic.Error($"Yield statements are not allowed in this context", keywordCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Yield statements are not allowed in this context", keywordCall));
                 return false;
             }
 
@@ -1365,7 +1365,7 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Crash}\": required {1} passed {keywordCall.Arguments}", keywordCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"{StatementKeywords.Crash}\": required {1} passed {keywordCall.Arguments}", keywordCall));
                 return false;
             }
 
@@ -1409,7 +1409,7 @@ public partial class StatementCompiler
         {
             if (keywordCall.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"{StatementKeywords.Goto}\": required {1} passed {keywordCall.Arguments.Length}", keywordCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"{StatementKeywords.Goto}\": required {1} passed {keywordCall.Arguments.Length}", keywordCall));
                 return false;
             }
 
@@ -1429,7 +1429,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Unknown keyword \"{keywordCall.Keyword}\"", keywordCall.Keyword, keywordCall.File));
+        Diagnostics.Add(DiagnosticAt.Error($"Unknown keyword \"{keywordCall.Keyword}\"", keywordCall.Keyword, keywordCall.File));
         return false;
     }
     bool CompileStatement(SimpleAssignmentStatement setter, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
@@ -1672,7 +1672,7 @@ public partial class StatementCompiler
     {
         if (statement is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", statement, false));
             compiledStatement = null;
             return false;
         }
@@ -1707,7 +1707,7 @@ public partial class StatementCompiler
 
             if (anyCall.Arguments.Arguments.Length != 1)
             {
-                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
                 return false;
             }
 
@@ -1733,7 +1733,7 @@ public partial class StatementCompiler
             }
             else
             {
-                Diagnostics.Add(Diagnostic.Error($"Type \"{argument}\" not found", argument));
+                Diagnostics.Add(DiagnosticAt.Error($"Type \"{argument}\" not found", argument));
                 return false;
             }
 
@@ -1756,31 +1756,30 @@ public partial class StatementCompiler
             return true;
         }
 
-        if (GetFunction(anyCall, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFound, AddCompilable) &&
-            anyCall.ToFunctionCall(out FunctionCallExpression? functionCall))
+        if (anyCall.ToFunctionCall(out FunctionCallExpression? functionCall))
         {
-            if (anyCall.Expression is IdentifierExpression _identifier2)
-            { _identifier2.AnalyzedType = TokenAnalyzedType.FunctionName; }
+            if (GetFunction(functionCall, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFound, AddCompilable))
+            {
+                if (anyCall.Expression is IdentifierExpression _identifier2)
+                { _identifier2.AnalyzedType = TokenAnalyzedType.FunctionName; }
 
-            if (anyCall.Expression is FieldExpression _field)
-            { _field.Identifier.AnalyzedType = TokenAnalyzedType.FunctionName; }
+                if (anyCall.Expression is FieldExpression _field)
+                { _field.Identifier.AnalyzedType = TokenAnalyzedType.FunctionName; }
 
-            SetStatementReference(anyCall, result.Function);
-            TrySetStatementReference(anyCall.Expression, result);
-            SetStatementType(anyCall, result.Function.Type);
+                SetStatementReference(anyCall, result.Function);
+                TrySetStatementReference(anyCall.Expression, result);
+                SetStatementType(anyCall, result.Function.Type);
 
-            result.Function.References.Add(new(anyCall, anyCall.File));
-            result.OriginalFunction.References.Add(new(anyCall, anyCall.File));
+                result.Function.References.Add(new(anyCall, anyCall.File));
+                result.OriginalFunction.References.Add(new(anyCall, anyCall.File));
 
-            return CompileFunctionCall(functionCall, functionCall.MethodArguments, result, out compiledStatement);
+                return CompileFunctionCall(functionCall, functionCall.MethodArguments, result, out compiledStatement);
+            }
         }
 
         if (!CompileExpression(anyCall.Expression, out CompiledExpression? functionValue))
         {
-            if (notFound is not null)
-            {
-                Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            }
+            Diagnostics.Add(DiagnosticAt.Error("Function not found", anyCall.Expression));
             return false;
         }
 
@@ -1813,15 +1812,7 @@ public partial class StatementCompiler
 
         if (!functionValue.Type.Is(out FunctionType? functionType))
         {
-            if (notFound is not null)
-            {
-                Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            }
-            else
-            {
-                Diagnostics.Add(Diagnostic.Error($"This isn't a function", anyCall.Expression));
-            }
-
+            Diagnostics.Add(DiagnosticAt.Error($"This isn't a function", anyCall.Expression));
             return false;
         }
 
@@ -1829,8 +1820,7 @@ public partial class StatementCompiler
 
         if (anyCall.Arguments.Arguments.Length != functionType.Parameters.Length)
         {
-            if (notFound is not null) Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Arguments.Length}", new Position(anyCall.Arguments.Arguments.As<IPositioned>().DefaultIfEmpty(anyCall.Arguments.Brackets)), anyCall.File));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Arguments.Length}", new Position(anyCall.Arguments.Arguments.As<IPositioned>().DefaultIfEmpty(anyCall.Arguments.Brackets)), anyCall.File));
             return false;
         }
 
@@ -1852,8 +1842,7 @@ public partial class StatementCompiler
             return false;
         }))
         {
-            if (notFound is not null) Diagnostics.Add(notFound.ToError(anyCall.Expression));
-            Diagnostics.Add(Diagnostic.Error($"Argument types of caller \"...({string.Join(", ", compiledArguments.Select(v => v.Type))})\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
+            Diagnostics.Add(DiagnosticAt.Error($"Argument types of caller \"...({string.Join(", ", compiledArguments.Select(v => v.Type))})\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
             return false;
         }
 
@@ -1984,7 +1973,7 @@ public partial class StatementCompiler
                     if (!leftBType.TryGetNumericType(out NumericType leftNType1) ||
                         !rightBType.TryGetNumericType(out NumericType rightNType1))
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
+                        Diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
                         return false;
                     }
                     NumericType numericType = leftNType1 > rightNType1 ? leftNType1 : rightNType1;
@@ -2041,13 +2030,13 @@ public partial class StatementCompiler
 
                     if (!leftType.TryGetNumericType(out leftNType))
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
+                        Diagnostics.Add(DiagnosticAt.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
                         ok = false;
                     }
 
                     if (!rightType.TryGetNumericType(out rightNType))
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
+                        Diagnostics.Add(DiagnosticAt.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
                         ok = false;
                     }
 
@@ -2107,7 +2096,7 @@ public partial class StatementCompiler
                 evaluated.TryCast(compiledStatement.Type, out CompiledValue casted))
             {
                 compiledStatement = CompiledConstantValue.Create(casted, compiledStatement);
-                Diagnostics.Add(Diagnostic.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
+                Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
                 SetPredictedValue(@operator, casted);
             }
 
@@ -2119,7 +2108,7 @@ public partial class StatementCompiler
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
+            Diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
             return false;
         }
     }
@@ -2145,13 +2134,13 @@ public partial class StatementCompiler
 
             if (!operatorDefinition.CanUse(@operator.File))
             {
-                Diagnostics.Add(Diagnostic.Error($"Operator \"{operatorDefinition.ToReadable()}\" cannot be called due to its protection level", @operator.Operator, @operator.File));
+                Diagnostics.Add(DiagnosticAt.Error($"Operator \"{operatorDefinition.ToReadable()}\" cannot be called due to its protection level", @operator.Operator, @operator.File));
                 return false;
             }
 
             if (UnaryOperatorCallExpression.ParameterCount != operatorDefinition.ParameterCount)
             {
-                Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to operator \"{operatorDefinition.ToReadable()}\": required {operatorDefinition.ParameterCount} passed {UnaryOperatorCallExpression.ParameterCount}", @operator));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to operator \"{operatorDefinition.ToReadable()}\": required {operatorDefinition.ParameterCount} passed {UnaryOperatorCallExpression.ParameterCount}", @operator));
                 return false;
             }
 
@@ -2185,7 +2174,7 @@ public partial class StatementCompiler
                 evaluated.TryCast(compiledStatement.Type, out CompiledValue casted))
             {
                 compiledStatement = CompiledConstantValue.Create(casted, compiledStatement);
-                Diagnostics.Add(Diagnostic.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
+                Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
                 SetPredictedValue(@operator, casted);
                 operatorDefinition.References.Add(new Reference<Expression>(@operator, @operator.File, true));
             }
@@ -2218,7 +2207,7 @@ public partial class StatementCompiler
                         evaluated.TryCast(compiledStatement.Type, out CompiledValue casted))
                     {
                         compiledStatement = CompiledConstantValue.Create(casted, compiledStatement);
-                        Diagnostics.Add(Diagnostic.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
+                        Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
                         SetPredictedValue(@operator, casted);
                     }
 
@@ -2242,7 +2231,7 @@ public partial class StatementCompiler
                         evaluated.TryCast(compiledStatement.Type, out CompiledValue casted))
                     {
                         compiledStatement = CompiledConstantValue.Create(casted, compiledStatement);
-                        Diagnostics.Add(Diagnostic.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
+                        Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
                         SetPredictedValue(@operator, casted);
                     }
 
@@ -2266,7 +2255,7 @@ public partial class StatementCompiler
                         evaluated.TryCast(compiledStatement.Type, out CompiledValue casted))
                     {
                         compiledStatement = CompiledConstantValue.Create(casted, compiledStatement);
-                        Diagnostics.Add(Diagnostic.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
+                        Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
                         SetPredictedValue(@operator, casted);
                     }
 
@@ -2290,7 +2279,7 @@ public partial class StatementCompiler
                         evaluated.TryCast(compiledStatement.Type, out CompiledValue casted))
                     {
                         compiledStatement = CompiledConstantValue.Create(casted, compiledStatement);
-                        Diagnostics.Add(Diagnostic.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
+                        Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Operator call evaluated with result \"{casted}\"", @operator));
                         SetPredictedValue(@operator, casted);
                     }
 
@@ -2298,14 +2287,14 @@ public partial class StatementCompiler
                 }
                 default:
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
                     return false;
                 }
             }
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File).WithSuberrors(operatorNotFoundError.ToError(@operator)));
+            Diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File).WithSuberrors(operatorNotFoundError.ToError(@operator)));
             return false;
         }
     }
@@ -2392,7 +2381,7 @@ public partial class StatementCompiler
                     };
                     if (!frame.Value.CurrentReturnType.SameAs(_compiledStatementWithValue.Type))
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Lambda expression value's type ({_compiledStatementWithValue.Type}) doesn't match the return type {frame.Value.CurrentReturnType}", _compiledStatementWithValue));
+                        Diagnostics.Add(DiagnosticAt.Error($"Lambda expression value's type ({_compiledStatementWithValue.Type}) doesn't match the return type {frame.Value.CurrentReturnType}", _compiledStatementWithValue));
                     }
                 }
             }
@@ -2858,7 +2847,7 @@ public partial class StatementCompiler
 
         if (variable is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", variable, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", variable, false));
             return false;
         }
 
@@ -2976,14 +2965,14 @@ public partial class StatementCompiler
             SetStatementType(variable, val.Type);
 
             if (val.IsGlobal)
-            { Diagnostics.Add(Diagnostic.Internal($"Trying to get local variable \"{val.Identifier}\" but it was compiled as a global variable.", variable)); }
+            { Diagnostics.Add(DiagnosticAt.Internal($"Trying to get local variable \"{val.Identifier}\" but it was compiled as a global variable.", variable)); }
 
             if (Frames.Last.CompiledGeneratorContext is not null)
             {
                 //Debugger.Break();
                 if (GeneratorStructDefinition is null)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
+                    Diagnostics.Add(DiagnosticAt.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
                     return false;
                 }
 
@@ -3029,7 +3018,7 @@ public partial class StatementCompiler
             Frames.Last.CapturesGlobalVariables = true;
 
             if (!globalVariable.IsGlobal)
-            { Diagnostics.Add(Diagnostic.Internal($"Trying to get global variable \"{globalVariable.Identifier}\" but it was compiled as a local variable.", variable)); }
+            { Diagnostics.Add(DiagnosticAt.Internal($"Trying to get global variable \"{globalVariable.Identifier}\" but it was compiled as a local variable.", variable)); }
 
             compiledStatement = new CompiledVariableAccess()
             {
@@ -3112,11 +3101,11 @@ public partial class StatementCompiler
                 SetStatementType(variable, outerLocal.Type);
 
                 if (outerLocal.IsGlobal)
-                { Diagnostics.Add(Diagnostic.Internal($"Trying to get local variable \"{outerLocal.Identifier}\" but it was compiled as a global variable.", variable)); }
+                { Diagnostics.Add(DiagnosticAt.Internal($"Trying to get local variable \"{outerLocal.Identifier}\" but it was compiled as a global variable.", variable)); }
 
                 if (Frames.Last.CompiledGeneratorContext is not null)
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"aaaaaaa", variable));
+                    Diagnostics.Add(DiagnosticAt.Internal($"aaaaaaa", variable));
                     return false;
                 }
 
@@ -3135,7 +3124,7 @@ public partial class StatementCompiler
             }
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Symbol \"{variable.Content}\" not found", variable)
+        Diagnostics.Add(DiagnosticAt.Error($"Symbol \"{variable.Content}\" not found", variable)
             .WithSuberrors(
                 constantNotFoundError.ToError(variable),
                 parameterNotFoundError.ToError(variable),
@@ -3170,7 +3159,7 @@ public partial class StatementCompiler
         GeneralType addressType = to.Type;
         if (!addressType.Is(out PointerType? pointerType))
         {
-            Diagnostics.Add(Diagnostic.Error($"This isn't a pointer", pointer.Expression));
+            Diagnostics.Add(DiagnosticAt.Error($"This isn't a pointer", pointer.Expression));
             return false;
         }
 
@@ -3257,7 +3246,7 @@ public partial class StatementCompiler
 
             default:
             {
-                Diagnostics.Add(Diagnostic.Error($"Unknown type \"{instanceType}\"", newInstance.Type, newInstance.File));
+                Diagnostics.Add(DiagnosticAt.Error($"Unknown type \"{instanceType}\"", newInstance.Type, newInstance.File));
                 return false;
             }
         }
@@ -3295,7 +3284,7 @@ public partial class StatementCompiler
 
         if (!compiledFunction.CanUse(constructorCall.File))
         {
-            Diagnostics.Add(Diagnostic.Error($"Constructor \"{compiledFunction.ToReadable()}\" could not be called due to its protection level", constructorCall.Type, constructorCall.File));
+            Diagnostics.Add(DiagnosticAt.Error($"Constructor \"{compiledFunction.ToReadable()}\" could not be called due to its protection level", constructorCall.Type, constructorCall.File));
             return false;
         }
 
@@ -3326,7 +3315,7 @@ public partial class StatementCompiler
 
         if (field.Identifier is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", field.Identifier, field.File, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", field.Identifier, field.File, false));
             return false;
         }
 
@@ -3334,7 +3323,7 @@ public partial class StatementCompiler
         {
             if (!arrayType.Length.HasValue)
             {
-                Diagnostics.Add(Diagnostic.Error("I will eventually implement this", field));
+                Diagnostics.Add(DiagnosticAt.Error("I will eventually implement this", field));
                 return false;
             }
 
@@ -3362,7 +3351,7 @@ public partial class StatementCompiler
 
             if (!prevType.Is(out StructType? structPointerType))
             {
-                Diagnostics.Add(Diagnostic.Error($"Could not get the field offsets of type \"{prevType}\"", field.Object));
+                Diagnostics.Add(DiagnosticAt.Error($"Could not get the field offsets of type \"{prevType}\"", field.Object));
                 return false;
             }
 
@@ -3388,7 +3377,7 @@ public partial class StatementCompiler
 
         if (!prev.Type.Is(out StructType? structType))
         {
-            Diagnostics.Add(Diagnostic.Error($"Type `{prev.Type}` doesn't have any fields", field.Identifier, field.File));
+            Diagnostics.Add(DiagnosticAt.Error($"Type `{prev.Type}` doesn't have any fields", field.Identifier, field.File));
             return false;
         }
 
@@ -3434,7 +3423,7 @@ public partial class StatementCompiler
                 SetPredictedValue(index.Index, computedIndexData);
 
                 if (computedIndexData < 0 || (arrayType.Length.HasValue && computedIndexData >= arrayType.Length.Value))
-                { Diagnostics.Add(Diagnostic.Warning($"Index out of range", index.Index)); }
+                { Diagnostics.Add(DiagnosticAt.Warning($"Index out of range", index.Index)); }
             }
 
             compiledStatement = new CompiledElementAccess()
@@ -3461,7 +3450,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Index getter for type \"{baseStatement.Type}\" not found", index));
+        Diagnostics.Add(DiagnosticAt.Error($"Index getter for type \"{baseStatement.Type}\" not found", index));
         return false;
     }
     bool CompileExpression(ArgumentExpression modifiedStatement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
@@ -3491,7 +3480,7 @@ public partial class StatementCompiler
             }
             else if (!item.Type.SameAs(itemType))
             {
-                Diagnostics.Add(Diagnostic.Error($"List element at index {i} should be a {itemType} and not {item.Type}", item));
+                Diagnostics.Add(DiagnosticAt.Error($"List element at index {i} should be a {itemType} and not {item.Type}", item));
             }
 
             result.Add(item);
@@ -3499,7 +3488,7 @@ public partial class StatementCompiler
 
         if (itemType is null)
         {
-            Diagnostics.Add(Diagnostic.Error($"Could not infer the list element type", listValue));
+            Diagnostics.Add(DiagnosticAt.Error($"Could not infer the list element type", listValue));
             itemType = BuiltinType.Any;
         }
 
@@ -3569,7 +3558,7 @@ public partial class StatementCompiler
             TryComputeSimple(typeCast.Expression, out CompiledValue prevValue) &&
             prevValue.TryCast(targetBuiltinType.RuntimeType, out CompiledValue castedValue))
         {
-            Diagnostics.Add(Diagnostic.OptimizationNotice($"Type cast evaluated, converting {prevValue} ({prevValue.Type}) to {castedValue} ({castedValue.Type})", typeCast));
+            Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Type cast evaluated, converting {prevValue} ({prevValue.Type}) to {castedValue} ({castedValue.Type})", typeCast));
             compiledStatement = new CompiledConstantValue()
             {
                 Value = castedValue,
@@ -3627,7 +3616,7 @@ public partial class StatementCompiler
     {
         if (statement is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", statement, false));
             compiledStatement = null;
             return false;
         }
@@ -3660,7 +3649,7 @@ public partial class StatementCompiler
 
         if (target is IMissingNode)
         {
-            Diagnostics.Add(Diagnostic.Error($"Incomplete AST", target, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", target, false));
             compiledStatement = null;
             CompileExpression(value, out _);
             return false;
@@ -3673,7 +3662,7 @@ public partial class StatementCompiler
             case IndexCallExpression v: return CompileSetter(v, value, out compiledStatement);
             case DereferenceExpression v: return CompileSetter(v, value, out compiledStatement);
             default:
-                Diagnostics.Add(Diagnostic.Error($"The left side of the assignment operator should be a variable, field or memory address. Passed \"{target.GetType().Name}\"", target));
+                Diagnostics.Add(DiagnosticAt.Error($"The left side of the assignment operator should be a variable, field or memory address. Passed \"{target.GetType().Name}\"", target));
                 return false;
         }
     }
@@ -3714,7 +3703,7 @@ public partial class StatementCompiler
             target.AnalyzedType = TokenAnalyzedType.ConstantName;
             SetStatementReference(target, constant);
 
-            Diagnostics.Add(Diagnostic.Error($"Can not set constant value: it is readonly", target));
+            Diagnostics.Add(DiagnosticAt.Error($"Can not set constant value: it is readonly", target));
             return false;
         }
 
@@ -3762,14 +3751,14 @@ public partial class StatementCompiler
             if (!CompileExpression(value, out CompiledExpression? _value, variable.Type)) return false;
 
             if (variable.IsGlobal)
-            { Diagnostics.Add(Diagnostic.Internal($"Trying to set local variable \"{variable.Identifier}\" but it was compiled as a global variable.", target)); }
+            { Diagnostics.Add(DiagnosticAt.Internal($"Trying to set local variable \"{variable.Identifier}\" but it was compiled as a global variable.", target)); }
 
             if (Frames.Last.CompiledGeneratorContext is not null)
             {
                 //Debugger.Break();
                 if (GeneratorStructDefinition is null)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
+                    Diagnostics.Add(DiagnosticAt.Error($"No struct found with an [{AttributeConstants.BuiltinIdentifier}(\"generator\")] attribute.", variable));
                     return false;
                 }
 
@@ -3835,7 +3824,7 @@ public partial class StatementCompiler
             if (!CompileExpression(value, out CompiledExpression? _value, globalVariable.Type)) return false;
 
             if (!globalVariable.IsGlobal)
-            { Diagnostics.Add(Diagnostic.Internal($"Trying to set global variable \"{globalVariable.Identifier}\" but it was compiled as a local variable.", target)); }
+            { Diagnostics.Add(DiagnosticAt.Internal($"Trying to set global variable \"{globalVariable.Identifier}\" but it was compiled as a local variable.", target)); }
 
             compiledStatement = new CompiledSetter()
             {
@@ -3856,7 +3845,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Symbol \"{target.Content}\" not found", target)
+        Diagnostics.Add(DiagnosticAt.Error($"Symbol \"{target.Content}\" not found", target)
             .WithSuberrors(
                 parameterNotFoundError.ToError(target),
                 variableNotFoundError.ToError(target),
@@ -3880,7 +3869,7 @@ public partial class StatementCompiler
 
         if (prevType.Is<ArrayType>() && target.Identifier.Content == "Length")
         {
-            Diagnostics.Add(Diagnostic.Error("Array type's length is readonly", target));
+            Diagnostics.Add(DiagnosticAt.Error("Array type's length is readonly", target));
             return false;
         }
 
@@ -3895,7 +3884,7 @@ public partial class StatementCompiler
 
             if (!prevType.Is(out StructType? structPointerType))
             {
-                Diagnostics.Add(Diagnostic.Error($"Could not get the field offsets of type \"{prevType}\"", target.Object));
+                Diagnostics.Add(DiagnosticAt.Error($"Could not get the field offsets of type \"{prevType}\"", target.Object));
                 return false;
             }
 
@@ -3969,7 +3958,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Type `{prevType}` doesn't have any fields", target.Identifier, target.File));
+        Diagnostics.Add(DiagnosticAt.Error($"Type `{prevType}` doesn't have any fields", target.Identifier, target.File));
         return false;
     }
     bool CompileSetter(IndexCallExpression target, Expression value, [NotNullWhen(true)] out CompiledStatement? compiledStatement)
@@ -4054,7 +4043,7 @@ public partial class StatementCompiler
 
         if (!prev.Type.Is<PointerType>())
         {
-            Diagnostics.Add(Diagnostic.Error($"Type \"{prev.Type}\" isn't a pointer", target.Expression));
+            Diagnostics.Add(DiagnosticAt.Error($"Type \"{prev.Type}\" isn't a pointer", target.Expression));
             return false;
         }
 
@@ -4140,7 +4129,7 @@ public partial class StatementCompiler
         if (function.Identifier is not null &&
             LanguageConstants.KeywordList.Contains(function.Identifier.ToString()))
         {
-            Diagnostics.Add(Diagnostic.Error($"The identifier \"{function.Identifier}\" is reserved as a keyword. Do not use it as a function name", function.Identifier, function.File));
+            Diagnostics.Add(DiagnosticAt.Error($"The identifier \"{function.Identifier}\" is reserved as a keyword. Do not use it as a function name", function.Identifier, function.File));
             goto end;
         }
 
@@ -4157,7 +4146,7 @@ public partial class StatementCompiler
 
         if (function.Block is null)
         {
-            Diagnostics.Add(Diagnostic.Error($"Function \"{function.ToReadable()}\" does not have a body", function));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", function));
             goto end;
         }
 
@@ -4578,7 +4567,7 @@ public partial class StatementCompiler
         }
 
         FunctionFlags topLevelFlags = default;
-        ILocated? firstHeapUsageLocation = null;
+        CompiledStatement? firstHeapUsageLocation = null;
         StatementWalker.Visit(CompiledTopLevelStatements.Append(GeneratedFunctions.Where(v => v.Function is IExposeable exposeable && exposeable.ExposedFunctionName is not null).Select(v => v.Body)), v =>
         {
             FunctionFlags flags = GetStatementFlags(v);
@@ -4597,9 +4586,9 @@ public partial class StatementCompiler
             if (!TryGetBuiltinFunction(BuiltinFunctions.InitializeHeap, ImmutableArray.Create<GeneralType>(), entryFile, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFoundError, AddCompilable))
             {
                 Diagnostics.Add(
-                    Diagnostic.Error($"Failed to generate heap initialization code", firstHeapUsageLocation)
+                    DiagnosticAt.Error($"Failed to generate heap initialization code", firstHeapUsageLocation)
                     .WithSuberrors(
-                        Diagnostic.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.InitializeHeap}\")] not found", firstHeapUsageLocation)
+                        DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.InitializeHeap}\")] not found", firstHeapUsageLocation)
                         .WithSuberrors(
                             notFoundError.ToError(firstHeapUsageLocation)
                         )
@@ -4608,18 +4597,23 @@ public partial class StatementCompiler
             }
             else if (!Settings.IgnoreTopLevelStatements)
             {
-                CompiledTopLevelStatements.Insert(0, new CompiledFunctionCall()
+                if (CompileFunctionCall(new FunctionCallExpression(
+                    null,
+                    Token.CreateAnonymous(result.Function.Identifier.Content, TokenType.Identifier, firstHeapUsageLocation.Location.Position),
+                    ArgumentListExpression.CreateAnonymous(TokenPair.CreateAnonymous(firstHeapUsageLocation.Location.Position, "(", ")"), entryFile),
+                    entryFile
+                ), ImmutableArray<ArgumentExpression>.Empty, result, out CompiledExpression? call))
                 {
-                    Arguments = ImmutableArray<CompiledArgument>.Empty,
-                    Function = result.Function,
-                    Location = new Location(Position.UnknownPosition, entryFile),
-                    Type = result.Function.Type,
-                    SaveValue = false,
-                });
+                    CompiledTopLevelStatements.Insert(0, call);
+                }
+                else
+                {
+                    Diagnostics.Add(DiagnosticAt.Warning($"Heap initialization code not generated", firstHeapUsageLocation));
+                }
             }
             else
             {
-                Diagnostics.Add(Diagnostic.Warning($"Heap initialization code not generated because top level statements are ignored by the settings. Use a memory with an already initialized heap when you execute the code.", firstHeapUsageLocation));
+                Diagnostics.Add(DiagnosticAt.Warning($"Heap initialization code not generated because top level statements are ignored by the settings. Use a memory with an already initialized heap when you execute the code.", firstHeapUsageLocation));
             }
         }
     }

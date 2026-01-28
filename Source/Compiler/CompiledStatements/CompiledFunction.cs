@@ -8,7 +8,7 @@ public enum FunctionFlags
     DeallocatesMemory = 0x4,
 }
 
-public class CompiledFunction : ISimpleReadable
+public class CompiledFunction : IReadable
 {
     public ICompiledFunctionDefinition Function;
     public CompiledBlock Body;
@@ -29,7 +29,6 @@ public class CompiledFunction : ISimpleReadable
         body = Body;
     }
 
-    public string ToReadable(FindStatementType typeSearch) => Function.ToReadable(typeSearch);
     public string ToReadable() => Function.ToReadable();
     public override string? ToString() => Function.ToString() ?? base.ToString();
 }

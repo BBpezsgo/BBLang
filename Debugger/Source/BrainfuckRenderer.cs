@@ -542,7 +542,6 @@ public class BrainfuckRenderer
 
         try
         {
-            Console.CursorVisible = false;
             while (!cancel)
             {
                 while (!Console.IsOutputRedirected && Console.KeyAvailable)
@@ -584,7 +583,6 @@ public class BrainfuckRenderer
         finally
         {
             Console.ResetColor();
-            Console.CursorVisible = true;
         }
     }
 }

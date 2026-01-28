@@ -38,7 +38,7 @@ public static class Output
 
     public static void LogError(string message) => Log(message, ErrorColor);
 
-    public static void LogError(LanguageException exception, IEnumerable<ISourceProvider>? sourceProviders = null)
+    public static void LogError(LanguageExceptionAt exception, IEnumerable<ISourceProvider>? sourceProviders = null)
     {
         Console.ForegroundColor = ErrorColor;
         Console.WriteLine(exception.ToString());
@@ -52,10 +52,10 @@ public static class Output
         Console.ResetColor();
     }
 
-    public static void LogDiagnostic(Diagnostic diagnostic, IEnumerable<ISourceProvider>? sourceProviders = null)
+    public static void LogDiagnostic(DiagnosticAt diagnostic, IEnumerable<ISourceProvider>? sourceProviders = null)
         => LogDiagnostic(diagnostic, 0, sourceProviders);
 
-    static void LogDiagnostic(Diagnostic diagnostic, int depth, IEnumerable<ISourceProvider>? sourceProviders = null, Diagnostic? parent = null)
+    static void LogDiagnostic(DiagnosticAt diagnostic, int depth, IEnumerable<ISourceProvider>? sourceProviders = null, DiagnosticAt? parent = null)
     {
         DiagnosticsLevel level = diagnostic.Level;
 
@@ -107,7 +107,7 @@ public static class Output
 
         Console.ResetColor();
 
-        foreach (Diagnostic subdiagnostic in diagnostic.SubErrors)
+        foreach (DiagnosticAt subdiagnostic in diagnostic.SubErrors)
         { LogDiagnostic(subdiagnostic, depth + 1, sourceProviders, diagnostic); }
     }
 

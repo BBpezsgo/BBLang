@@ -3,7 +3,7 @@
 namespace LanguageCore.Runtime;
 
 [ExcludeFromCodeCoverage]
-public class RuntimeException : LanguageExceptionWithoutContext
+public class RuntimeException : LanguageException
 {
     const int CallStackIndent = 1;
 
@@ -41,7 +41,7 @@ public class RuntimeException : LanguageExceptionWithoutContext
             file = sourcePosition.Location.File;
             if (sourcePosition.Location.File is not null &&
                 DebugInformation.OriginalFiles.TryGetValue(sourcePosition.Location.File, out ImmutableArray<Tokenizing.Token> tokens))
-            { arrows = LanguageException.GetArrows(sourcePosition.Location.Position, tokens); }
+            { arrows = LanguageExceptionAt.GetArrows(sourcePosition.Location.Position, tokens); }
         }
         else
         { position = Position.UnknownPosition; }
@@ -52,7 +52,7 @@ public class RuntimeException : LanguageExceptionWithoutContext
 
         StringBuilder result = new();
 
-        result.Append(LanguageException.Format(Message, position, file));
+        result.Append(LanguageExceptionAt.Format(Message, position, file));
 
         result.AppendLine();
 
@@ -462,15 +462,15 @@ public class RuntimeException : LanguageExceptionWithoutContext
 
             if (DebugInformation.TryGetSourceLocation(callTraceItem.InstructionPointer, out SourceCodeLocation sourceLocation))
             {
-                result.Append(LanguageException.Format(null, sourceLocation.Location));
+                result.Append(LanguageExceptionAt.Format(null, sourceLocation.Location));
             }
             else if (function is CompiledFunctionDefinition compiledFunctionDefinition2)
             {
-                result.Append(LanguageException.Format(null, compiledFunctionDefinition2.Identifier.Position, function.File));
+                result.Append(LanguageExceptionAt.Format(null, compiledFunctionDefinition2.Identifier.Position, function.File));
             }
             else
             {
-                result.Append(LanguageException.Format(null, Position.UnknownPosition, function.File));
+                result.Append(LanguageExceptionAt.Format(null, Position.UnknownPosition, function.File));
             }
 
             return true;

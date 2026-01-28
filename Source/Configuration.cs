@@ -69,7 +69,7 @@ public sealed class Configuration
                         }
                         else
                         {
-                            diagnostics.Add(Diagnostic.Error($"Invalid integer `{arg}`", location));
+                            diagnostics.Add(DiagnosticAt.Error($"Invalid integer `{arg.ToString()}`", location));
                         }
                     }
                     else
@@ -80,7 +80,7 @@ public sealed class Configuration
                         }
                         else
                         {
-                            diagnostics.Add(Diagnostic.Error($"Invalid integer `{arg}`", location));
+                            diagnostics.Add(DiagnosticAt.Error($"Invalid integer `{arg.ToString()}`", location));
                         }
                     }
                 }
@@ -97,17 +97,17 @@ public sealed class Configuration
                     }
                     else
                     {
-                        diagnostics.Add(Diagnostic.Error($"[Configuration]: External function {name} already exists", location));
+                        diagnostics.Add(DiagnosticAt.Error($"[Configuration]: External function {name} already exists", location));
                     }
                 }
                 else
                 {
-                    diagnostics.Add(Diagnostic.Error($"[Configuration]: Invalid config", location));
+                    diagnostics.Add(DiagnosticAt.Error($"[Configuration]: Invalid config", location));
                 }
             }
             else
             {
-                diagnostics.Add(Diagnostic.Error($"Invalid configuration key `{key}`", location));
+                diagnostics.Add(DiagnosticAt.Error($"Invalid configuration key `{key.ToString()}`", location));
             }
         }
 
@@ -139,7 +139,7 @@ public sealed class Configuration
             i = decl.IndexOf('=');
             if (i == -1)
             {
-                diagnostics.Add(Diagnostic.Error($"Invalid configuration", location));
+                diagnostics.Add(DiagnosticAt.Error($"Invalid configuration", location));
                 continue;
             }
 

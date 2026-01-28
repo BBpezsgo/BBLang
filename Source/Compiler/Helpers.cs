@@ -159,7 +159,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 BinaryOperatorCallExpression or
                 UnaryOperatorCallExpression)
             {
-                Diagnostics.Add(Diagnostic.Hint($"Unnecessary explicit temp modifier (\"{statement.Value.GetType().Name}\" statements are implicitly deallocated)", statement.Modifier, statement.File));
+                Diagnostics.Add(DiagnosticAt.Hint($"Unnecessary explicit temp modifier (\"{statement.Value.GetType().Name}\" statements are implicitly deallocated)", statement.Modifier, statement.File));
             }
 
             explicitly = true;
@@ -599,31 +599,6 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
 
     bool GetFunction(
-        AnyCallExpression call,
-
-        [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
-        [NotNullWhen(false)] out PossibleDiagnostic? error,
-        Action<CompliableTemplate<CompiledFunctionDefinition>>? addCompilable = null)
-    {
-        result = null;
-        error = null;
-
-        if (!call.ToFunctionCall(out FunctionCallExpression? functionCall))
-        {
-            error ??= new PossibleDiagnostic($"Function \"{call.ToReadable(FindStatementType)}\" not found");
-            return false;
-        }
-
-        return GetFunction(
-            functionCall,
-
-            out result,
-            out error,
-            addCompilable
-        );
-    }
-
-    bool GetFunction(
         FunctionCallExpression functionCallStatement,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
@@ -676,7 +651,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         variableDeclaration.Identifier.AnalyzedType = TokenAnalyzedType.ConstantName;
 
         if (GetConstant(variableDeclaration.Identifier.Content, variableDeclaration.File, out _, out _))
-        { Diagnostics.Add(Diagnostic.Error($"Constant \"{variableDeclaration.Identifier}\" already defined", variableDeclaration.Identifier, variableDeclaration.File)); }
+        { Diagnostics.Add(DiagnosticAt.Error($"Constant \"{variableDeclaration.Identifier}\" already defined", variableDeclaration.Identifier, variableDeclaration.File)); }
 
         CompileVariableAttributes(variableDeclaration);
 
@@ -698,7 +673,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             else if (variableDeclaration.InitialValue is null)
             {
-                Diagnostics.Add(Diagnostic.Error($"External constant \"{variableDeclaration.ExternalConstantName}\" not found", variableDeclaration));
+                Diagnostics.Add(DiagnosticAt.Error($"External constant \"{variableDeclaration.ExternalConstantName}\" not found", variableDeclaration));
                 constantValue = default;
             }
         }
@@ -707,7 +682,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             if (!InternalConstants.TryGetValue(variableDeclaration.InternalConstantName, out GeneralType? internalConstantType))
             {
-                Diagnostics.Add(Diagnostic.Warning($"Internal constant \"{variableDeclaration.InternalConstantName}\" not found", variableDeclaration));
+                Diagnostics.Add(DiagnosticAt.Warning($"Internal constant \"{variableDeclaration.InternalConstantName}\" not found", variableDeclaration));
             }
             else
             {
@@ -715,7 +690,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
                 if (!GetInitialValue(constantType, out constantValue))
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Invalid type `{constantType}` specified for internal constant", variableDeclaration.Type));
+                    Diagnostics.Add(DiagnosticAt.Error($"Invalid type `{constantType}` specified for internal constant", variableDeclaration.Type));
                     constantValue = default;
                 }
 
@@ -725,7 +700,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         if (variableDeclaration.InitialValue is null)
         {
-            Diagnostics.Add(Diagnostic.Error($"Constant value must have initial value", variableDeclaration));
+            Diagnostics.Add(DiagnosticAt.Error($"Constant value must have initial value", variableDeclaration));
             constantValue = default;
         }
         else
@@ -733,7 +708,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompileExpression(variableDeclaration.InitialValue, out CompiledExpression? compiledInitialValue, constantType);
             if (!TryCompute(compiledInitialValue, out constantValue))
             {
-                Diagnostics.Add(Diagnostic.Error($"Constant value must be evaluated at compile-time", variableDeclaration.InitialValue));
+                Diagnostics.Add(DiagnosticAt.Error($"Constant value must be evaluated at compile-time", variableDeclaration.InitialValue));
                 constantValue = default;
             }
         }
@@ -746,7 +721,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             {
                 if (!constantValue.TryCast(builtinType.RuntimeType, out CompiledValue castedConstantValue))
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Can't cast constant value {constantValue} of type \"{constantValue.Type}\" to {constantType}", variableDeclaration));
+                    Diagnostics.Add(DiagnosticAt.Error($"Can't cast constant value {constantValue} of type \"{constantValue.Type}\" to {constantType}", variableDeclaration));
                 }
                 else
                 {
@@ -1602,7 +1577,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             if (!attribute.TryGetValue(out string? literalTypeName))
             {
-                Diagnostics.Add(Diagnostic.Error($"Attribute \"{attribute.Identifier}\" needs one string argument", attribute));
+                Diagnostics.Add(DiagnosticAt.Error($"Attribute \"{attribute.Identifier}\" needs one string argument", attribute));
                 return default;
             }
             return literalTypeName;
@@ -1697,7 +1672,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         if (!prevType.Is(out FunctionType? functionType))
         {
             type = null;
-            diagnostics.Add(Diagnostic.Error($"This isn't a function", anyCall.Expression));
+            diagnostics.Add(DiagnosticAt.Error($"This isn't a function", anyCall.Expression));
             diagnostics.AddRange(subdiagnostics);
             return false;
         }
@@ -1712,13 +1687,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         if (expectedType is null || !expectedType.Is(out FunctionType? functionType))
         {
-            diagnostics.Add(Diagnostic.Internal($"No bro please no", lambdaExpression));
+            diagnostics.Add(DiagnosticAt.Internal($"No bro please no", lambdaExpression));
             return false;
         }
 
         if (functionType.Parameters.Length != lambdaExpression.Parameters.Parameters.Length)
         {
-            diagnostics.Add(Diagnostic.Error($"Idk how to explain this", lambdaExpression));
+            diagnostics.Add(DiagnosticAt.Error($"Idk how to explain this", lambdaExpression));
             return false;
         }
 
@@ -1729,7 +1704,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             if (!CompileType(lambdaExpression.Parameters.Parameters[i].Type, out GeneralType? definedParameterType, diagnostics)) return false;
             if (!expectedParameterType.SameAs(definedParameterType))
             {
-                diagnostics.Add(Diagnostic.Error($"Expected `{expectedParameterType}` defined `{definedParameterType}` ", lambdaExpression));
+                diagnostics.Add(DiagnosticAt.Error($"Expected `{expectedParameterType}` defined `{definedParameterType}` ", lambdaExpression));
                 return false;
             }
             parameterTypes[i] = definedParameterType;
@@ -1753,13 +1728,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             else if (!currentItemType.SameAs(itemType))
             {
-                diagnostics.Add(Diagnostic.Error($"List element at index {i} should be a {itemType} and not {currentItemType}", item));
+                diagnostics.Add(DiagnosticAt.Error($"List element at index {i} should be a {itemType} and not {currentItemType}", item));
             }
         }
 
         if (itemType is null)
         {
-            diagnostics.Add(Diagnostic.Error($"Could not infer the list element type", list));
+            diagnostics.Add(DiagnosticAt.Error($"Could not infer the list element type", list));
             itemType = BuiltinType.Any;
         }
 
@@ -1805,7 +1780,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             else
             {
                 type = SizeofStatementType;
-                diagnostics.Add(Diagnostic.Warning($"No type defined for integer literals, using the default {type}", functionCall).WithSuberrors(internalTypeError.ToError(functionCall)));
+                diagnostics.Add(DiagnosticAt.Warning($"No type defined for integer literals, using the default {type}", functionCall).WithSuberrors(internalTypeError.ToError(functionCall)));
             }
             return true;
         }
@@ -1862,7 +1837,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 if (!leftBType.TryGetNumericType(out NumericType leftNType1) ||
                     !rightBType.TryGetNumericType(out NumericType rightNType1))
                 {
-                    diagnostics.Add(Diagnostic.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
+                    diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
                     return false;
                 }
                 NumericType numericType = leftNType1 > rightNType1 ? leftNType1 : rightNType1;
@@ -1880,7 +1855,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                         if (!GetUsedBy("boolean", out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
                         {
                             type = BooleanType;
-                            diagnostics.Add(Diagnostic.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
+                            diagnostics.Add(DiagnosticAt.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
                         }
                         else
                         {
@@ -1907,7 +1882,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                         break;
 
                     default:
-                        diagnostics.Add(Diagnostic.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
+                        diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
                         type = BuiltinType.Void;
                         break;
                 }
@@ -1925,13 +1900,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         if (!leftType.TryGetNumericType(out NumericType leftNType))
         {
-            diagnostics.Add(Diagnostic.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
+            diagnostics.Add(DiagnosticAt.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
             ok = false;
         }
 
         if (!rightType.TryGetNumericType(out NumericType rightNType))
         {
-            diagnostics.Add(Diagnostic.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
+            diagnostics.Add(DiagnosticAt.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
             ok = false;
         }
 
@@ -1997,7 +1972,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 if (!GetUsedBy("boolean", out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
                 {
                     type = BooleanType;
-                    diagnostics.Add(Diagnostic.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
+                    diagnostics.Add(DiagnosticAt.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
                 }
                 else
                 {
@@ -2022,7 +1997,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             default:
             {
-                diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
+                diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
                 return false;
             }
         }
@@ -2098,7 +2073,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 }
 
                 SetStatementType(literal, type = BuiltinType.I32);
-                diagnostics.Add(Diagnostic.Warning($"No type defined for integer literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
+                diagnostics.Add(DiagnosticAt.Warning($"No type defined for integer literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
             case FloatLiteralExpression:
@@ -2110,7 +2085,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 }
 
                 SetStatementType(literal, type = BuiltinType.F32);
-                diagnostics.Add(Diagnostic.Warning($"No type defined for float literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
+                diagnostics.Add(DiagnosticAt.Warning($"No type defined for float literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
             case StringLiteralExpression stringLiteral:
@@ -2133,11 +2108,11 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 if (!GetLiteralType(LiteralType.Char, out GeneralType? charType, out PossibleDiagnostic? charInternalTypeError))
                 {
                     charType = BuiltinType.Char;
-                    diagnostics.Add(Diagnostic.Warning($"No type defined for characters, using the default {charType}", literal).WithSuberrors(charInternalTypeError.ToError(literal)));
+                    diagnostics.Add(DiagnosticAt.Warning($"No type defined for characters, using the default {charType}", literal).WithSuberrors(charInternalTypeError.ToError(literal)));
                 }
 
                 SetStatementType(literal, type = new PointerType(new ArrayType(charType, stringLiteral.Value.Length + 1)));
-                diagnostics.Add(Diagnostic.Warning($"No type defined for string literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
+                diagnostics.Add(DiagnosticAt.Warning($"No type defined for string literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
             case CharLiteralExpression charLiteral:
@@ -2182,7 +2157,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 }
 
                 SetStatementType(literal, type = BuiltinType.Char);
-                diagnostics.Add(Diagnostic.Warning($"No type defined for character literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
+                diagnostics.Add(DiagnosticAt.Warning($"No type defined for character literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
                 return true;
             }
             default:
@@ -2284,7 +2259,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return true;
         }
 
-        diagnostics.Add(Diagnostic.Error($"Symbol \"{identifier.Content}\" not found", identifier)
+        diagnostics.Add(DiagnosticAt.Error($"Symbol \"{identifier.Content}\" not found", identifier)
             .WithSuberrors(
                 parameterNotFoundError.ToError(identifier),
                 variableNotFoundError.ToError(identifier),
@@ -2369,12 +2344,12 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 return true;
             }
 
-            diagnostics.Add(Diagnostic.Error($"Field definition \"{field.Identifier}\" not found in type \"{prevStatementType}\"", field.Identifier, field.File));
+            diagnostics.Add(DiagnosticAt.Error($"Field definition \"{field.Identifier}\" not found in type \"{prevStatementType}\"", field.Identifier, field.File));
             return false;
         }
         else
         {
-            diagnostics.Add(Diagnostic.Error($"Type \"{prevStatementType}\" does not have a field \"{field.Identifier}\"", field));
+            diagnostics.Add(DiagnosticAt.Error($"Type \"{prevStatementType}\" does not have a field \"{field.Identifier}\"", field));
             return false;
         }
     }
@@ -2421,7 +2396,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             case LambdaExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
             default:
                 type = null;
-                diagnostics.Add(Diagnostic.Error($"Statement \"{statement.GetType().Name}\" does not have a type", statement));
+                diagnostics.Add(DiagnosticAt.Error($"Statement \"{statement.GetType().Name}\" does not have a type", statement));
                 return false;
         }
     }
@@ -3049,6 +3024,11 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         inlined = statement;
         return true;
     }
+    static bool Inline(CompiledCompilerVariableAccess statement, InlineContext context, out CompiledExpression inlined)
+    {
+        inlined = statement;
+        return true;
+    }
 
     static bool Inline(CompiledStatement? statement, InlineContext context, [NotNullIfNotNull(nameof(statement))] out CompiledStatement? inlined)
     {
@@ -3122,6 +3102,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompiledDummyExpression v => Inline(v, context, out inlined),
             CompiledString v => Inline(v, context, out inlined),
             CompiledStackString v => Inline(v, context, out inlined),
+            CompiledCompilerVariableAccess v => Inline(v, context, out inlined),
 
             _ => throw new NotImplementedException(statement.GetType().ToString()),
         };
@@ -4695,12 +4676,6 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return ImmutableArray.Create(statement);
         }
 
-        if (!didNotify)
-        {
-            diagnostics.Add(Diagnostic.Warning($"Trimming unnecessary expression", statementWithValue));
-            didNotify = true;
-        }
-
         if (statementWithValue
             is CompiledSizeof
             or CompiledConstantValue
@@ -4716,6 +4691,12 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             or CompiledList
             or CompiledStackString)
         {
+            if (!didNotify)
+            {
+                diagnostics.Add(DiagnosticAt.Warning($"Trimming unnecessary expression", statementWithValue));
+                didNotify = true;
+            }
+
             return ImmutableArray<CompiledStatement>.Empty;
         }
 

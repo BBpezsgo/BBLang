@@ -4,29 +4,6 @@ namespace LanguageCore.Compiler;
 
 public abstract class CodeGenerator : IRuntimeInfoProvider
 {
-    public readonly struct CompliableTemplate<T> where T : ITemplateable<T>
-    {
-        public readonly T OriginalFunction;
-        public readonly T Function;
-        public readonly Dictionary<string, GeneralType> TypeArguments;
-
-        public CompliableTemplate(T function, Dictionary<string, GeneralType> typeArguments)
-        {
-            OriginalFunction = function;
-            TypeArguments = typeArguments;
-
-            foreach (GeneralType argument in TypeArguments.Values)
-            {
-                if (argument.Is<GenericType>())
-                { throw new InternalExceptionWithoutContext($"{argument} is generic"); }
-            }
-
-            Function = OriginalFunction.InstantiateTemplate(typeArguments);
-        }
-
-        public override string ToString() => Function?.ToString() ?? "null";
-    }
-
     public readonly struct ControlFlowBlock
     {
         public int? FlagAddress { get; }
@@ -128,11 +105,6 @@ public abstract class CodeGenerator : IRuntimeInfoProvider
 
     #region Find Size
 
-    protected BitWidth FindBitWidth(GeneralType type)
-    {
-        if (!FindBitWidth(type, out BitWidth size, out PossibleDiagnostic? error)) error.Throw();
-        return size;
-    }
     protected BitWidth FindBitWidth(GeneralType type, ILocated location)
     {
         if (!FindBitWidth(type, out BitWidth size, out PossibleDiagnostic? error)) error.ToError(location).Throw();
@@ -318,6 +290,6 @@ public abstract class CodeGenerator : IRuntimeInfoProvider
             if (CompiledParameters[i] != parameter) continue;
             return i;
         }
-        throw new LanguageException($"Parameter {parameter.Identifier.Content} not found", parameter.Position, parameter.File);
+        throw new LanguageExceptionAt($"Parameter {parameter.Identifier.Content} not found", parameter.Position, parameter.File);
     }
 }

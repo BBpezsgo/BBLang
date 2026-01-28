@@ -2,8 +2,8 @@
 
 public interface IReadOnlyDiagnosticsCollection
 {
-    IReadOnlyCollection<Diagnostic> Diagnostics { get; }
-    IReadOnlyCollection<DiagnosticWithoutContext> DiagnosticsWithoutContext { get; }
+    IReadOnlyCollection<DiagnosticAt> Diagnostics { get; }
+    IReadOnlyCollection<Diagnostic> DiagnosticsWithoutContext { get; }
     bool HasErrors { get; }
 
     void Throw();
@@ -12,12 +12,12 @@ public interface IReadOnlyDiagnosticsCollection
 [ExcludeFromCodeCoverage]
 public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
 {
-    readonly List<Diagnostic> _diagnostics;
-    readonly List<DiagnosticWithoutContext> _diagnosticsWithoutContext;
+    readonly List<DiagnosticAt> _diagnostics;
+    readonly List<Diagnostic> _diagnosticsWithoutContext;
     readonly Stack<Override> _overrides;
 
-    public IReadOnlyCollection<Diagnostic> Diagnostics => _diagnostics;
-    public IReadOnlyCollection<DiagnosticWithoutContext> DiagnosticsWithoutContext => _diagnosticsWithoutContext;
+    public IReadOnlyCollection<DiagnosticAt> Diagnostics => _diagnostics;
+    public IReadOnlyCollection<Diagnostic> DiagnosticsWithoutContext => _diagnosticsWithoutContext;
 
     public readonly struct Override : IDisposable
     {
@@ -99,7 +99,7 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
         AddRange(other._diagnosticsWithoutContext);
     }
 
-    public void Add(Diagnostic? diagnostic)
+    public void Add(DiagnosticAt? diagnostic)
     {
         if (diagnostic is null) return;
 
@@ -108,18 +108,21 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
         _diagnostics.Add(diagnostic);
     }
 
-    public void Add(IDiagnostic? diagnostic)
+    public void Add(Diagnostic? diagnostic)
     {
-        if (diagnostic is null) return;
         switch (diagnostic)
         {
-            case Diagnostic v: Add(v); break;
-            case DiagnosticWithoutContext v: Add(v); break;
+            case DiagnosticAt v: Add(v); break;
+            case Diagnostic v:
+                if (_diagnosticsWithoutContext.Any(v => v.Equals(v)))
+                { return; }
+                _diagnosticsWithoutContext.Add(v); break;
+            case null: break;
             default: throw new UnreachableException();
         }
     }
 
-    public bool Update(Diagnostic old, Diagnostic diagnostic)
+    public bool Update(DiagnosticAt old, DiagnosticAt diagnostic)
     {
         if (diagnostic is null) return false;
 
@@ -135,25 +138,18 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
         return false;
     }
 
+    public void AddRange(IEnumerable<DiagnosticAt> diagnostic)
+    { foreach (DiagnosticAt item in diagnostic) Add(item); }
+
     public void AddRange(IEnumerable<Diagnostic> diagnostic)
     { foreach (Diagnostic item in diagnostic) Add(item); }
-
-    public void Add(DiagnosticWithoutContext diagnostic)
-    {
-        if (_diagnosticsWithoutContext.Any(v => v.Equals(diagnostic)))
-        { return; }
-        _diagnosticsWithoutContext.Add(diagnostic);
-    }
-
-    public void AddRange(IEnumerable<DiagnosticWithoutContext> diagnostic)
-    { foreach (DiagnosticWithoutContext item in diagnostic) Add(item); }
 }
 
 public static class DiagnosticsCollectionExtensions
 {
     public static void Print(this IReadOnlyDiagnosticsCollection diagnosticsCollection, IEnumerable<ISourceProvider>? sourceProviders = null)
     {
-        foreach (DiagnosticWithoutContext diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
+        foreach (Diagnostic diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
         {
             switch (diagnostic.Level)
             {
@@ -172,15 +168,15 @@ public static class DiagnosticsCollectionExtensions
             }
         }
 
-        foreach (Diagnostic diagnostic in diagnosticsCollection.Diagnostics)
+        foreach (DiagnosticAt diagnostic in diagnosticsCollection.Diagnostics)
         { Output.LogDiagnostic(diagnostic, sourceProviders); }
     }
 
-    static void WriteTo(IDiagnostic diagnostic, StringBuilder writer, int depth)
+    static void WriteTo(Diagnostic diagnostic, StringBuilder writer, int depth)
     {
         writer.Append(' ', depth * 2);
         writer.AppendLine(diagnostic.ToString());
-        foreach (IDiagnostic item in diagnostic.SubErrors)
+        foreach (Diagnostic item in diagnostic.SubErrors)
         {
             WriteTo(item, writer, depth + 1);
         }
@@ -188,13 +184,13 @@ public static class DiagnosticsCollectionExtensions
 
     public static void WriteErrorsTo(this IReadOnlyDiagnosticsCollection diagnosticsCollection, StringBuilder writer)
     {
-        foreach (DiagnosticWithoutContext diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
+        foreach (Diagnostic diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
         {
             if (diagnostic.Level != DiagnosticsLevel.Error) continue;
             WriteTo(diagnostic, writer, 0);
         }
 
-        foreach (Diagnostic diagnostic in diagnosticsCollection.Diagnostics)
+        foreach (DiagnosticAt diagnostic in diagnosticsCollection.Diagnostics)
         {
             if (diagnostic.Level != DiagnosticsLevel.Error) continue;
             WriteTo(diagnostic, writer, 0);

@@ -164,7 +164,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         if (!address.Type.Is(out FunctionType? addressType))
         {
-            Diagnostics.Add(Diagnostic.Error($"This should be a function pointer and not \"{address.Type}\"", address));
+            Diagnostics.Add(DiagnosticAt.Error($"This should be a function pointer and not \"{address.Type}\"", address));
             return;
         }
 
@@ -199,7 +199,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Code.MarkLabel(returnLabel);
     }
 
-    void Call(InstructionLabel label, ILocated callerLocation, bool captureGlobalVariables)
+    void Call(InstructionLabel label, bool captureGlobalVariables)
     {
         InstructionLabel returnLabel = Code.DefineLabel();
         Code.Emit(Opcode.Push, returnLabel.Absolute());
@@ -217,7 +217,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Code.MarkLabel(returnLabel);
     }
 
-    void Return(ILocated location)
+    void Return()
     {
         PopTo(Register.BasePointer);
         if (HasCapturedGlobalVariables)
@@ -239,10 +239,10 @@ public partial class CodeGeneratorForMain : CodeGenerator
         if (variable.IsGlobal)
         {
             if (!GeneratedVariables.TryGetValue(variable, out generatedVariable))
-            { throw new LanguageException($"Variable `{variable}` was not compiled", variable.Location.Position, variable.Location.File); }
+            { throw new LanguageExceptionAt($"Variable `{variable}` was not compiled", variable.Location.Position, variable.Location.File); }
 
             if (!HasCapturedGlobalVariables)
-            { throw new LanguageException($"Unexpected global variable `{variable}`", variable.Location.Position, variable.Location.File); }
+            { throw new LanguageExceptionAt($"Unexpected global variable `{variable}`", variable.Location.Position, variable.Location.File); }
 
             return new AddressOffset(
                 new AddressPointer(AbsoluteGlobalAddress),
@@ -272,7 +272,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
 
         if (!GeneratedVariables.TryGetValue(variable, out generatedVariable))
-        { throw new LanguageException($"Variable {variable} was not compiled", variable.Location.Position, variable.Location.File); }
+        { throw new LanguageExceptionAt($"Variable {variable} was not compiled", variable.Location.Position, variable.Location.File); }
 
         return new AddressOffset(
             Register.BasePointer,
@@ -342,7 +342,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             Code.Emit(Opcode.MathSub, Register.StackPointer, InstructionOperand.Immediate(size));
             ScopeSizes.LastRef += size;
             if (ScopeSizes.Last >= Settings.StackSize)
-            { Diagnostics.Add(DiagnosticWithoutContext.Warning("Stack will overflow")); }
+            { Diagnostics.Add(Diagnostic.Warning("Stack will overflow")); }
             return;
         }
 
@@ -704,7 +704,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Code.Emit(Opcode.Push, value);
         ScopeSizes.LastRef += (int)value.BitWidth;
         if (ScopeSizes.Last >= Settings.StackSize)
-        { Diagnostics.Add(DiagnosticWithoutContext.Warning("Stack will overflow")); }
+        { Diagnostics.Add(Diagnostic.Warning("Stack will overflow")); }
     }
     void Push(PreparationInstructionOperand value)
     {
@@ -718,7 +718,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             _ => throw new UnreachableException(),
         };
         if (ScopeSizes.Last >= Settings.StackSize)
-        { Diagnostics.Add(DiagnosticWithoutContext.Warning("Stack will overflow")); }
+        { Diagnostics.Add(Diagnostic.Warning("Stack will overflow")); }
     }
 
     void CheckPointerNull(bool preservePointer = true)
@@ -1024,8 +1024,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         {
             foreach (char c in value)
             {
-                res.Add((byte)((c & 0xff00) >> 8));
                 res.Add((byte)(c & 0x00ff));
+                res.Add((byte)((c & 0xff00) >> 8));
             }
             res.Add(0);
             res.Add(0);

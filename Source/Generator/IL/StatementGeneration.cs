@@ -77,14 +77,14 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!EmitFunction(cleanup.Destructor, out DynamicMethod? function))
         {
-            Diagnostics.Add(Diagnostic.Internal($"Failed to emit function \"{cleanup.Destructor}\"", cleanup));
+            Diagnostics.Add(DiagnosticAt.Internal($"Failed to emit function \"{cleanup.Destructor}\"", cleanup));
             successful = false;
             return;
         }
 
         if (function.GetParameters().Length != 1)
         {
-            Diagnostics.Add(Diagnostic.Internal($"Invalid destructor", cleanup));
+            Diagnostics.Add(DiagnosticAt.Internal($"Invalid destructor", cleanup));
             successful = false;
             return;
         }
@@ -114,7 +114,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 EmitValue(statement.Value.F32, il);
                 return;
             case RuntimeType.Null:
-                Diagnostics.Add(Diagnostic.Internal($"Value has type of null", statement));
+                Diagnostics.Add(DiagnosticAt.Internal($"Value has type of null", statement));
                 return;
             default:
                 throw new UnreachableException();
@@ -366,7 +366,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             }
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Unimplemented binary operator {statement.Operator}", statement));
+        Diagnostics.Add(DiagnosticAt.Error($"Unimplemented binary operator {statement.Operator}", statement));
         successful = false;
         return;
     }
@@ -417,7 +417,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             }
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Unimplemented unary operator {statement.Operator}", statement));
+        Diagnostics.Add(DiagnosticAt.Error($"Unimplemented unary operator {statement.Operator}", statement));
         successful = false;
         return;
     }
@@ -430,7 +430,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
             if (!EmittedGlobalVariables.TryGetValue(statement, out FieldInfo? field))
             {
-                Diagnostics.Add(Diagnostic.Error($"Variable \"{statement.Identifier}\" wasn't emitted for some reason", statement, successful));
+                Diagnostics.Add(DiagnosticAt.Error($"Variable \"{statement.Identifier}\" wasn't emitted for some reason", statement, successful));
                 successful = false;
                 return;
             }
@@ -479,7 +479,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
             if (!EmittedGlobalVariables.TryGetValue(statement.Variable, out FieldInfo? field))
             {
-                Diagnostics.Add(Diagnostic.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
+                Diagnostics.Add(DiagnosticAt.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
                 successful = false;
                 return;
             }
@@ -490,7 +490,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!LocalBuilders.TryGetValue(statement.Variable, out LocalBuilder? local))
         {
-            Diagnostics.Add(Diagnostic.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
+            Diagnostics.Add(DiagnosticAt.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
             successful = false;
             return;
         }
@@ -536,7 +536,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             FieldInfo? field = type.GetField(statement.Field.Identifier.Content);
             if (field is null)
             {
-                Diagnostics.Add(Diagnostic.Error($"Field \"{statement.Field.Identifier.Content}\" not found in type {type}", _object));
+                Diagnostics.Add(DiagnosticAt.Error($"Field \"{statement.Field.Identifier.Content}\" not found in type {type}", _object));
                 successful = false;
                 return;
             }
@@ -544,7 +544,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Error($"This should be a struct", statement.Object));
+            Diagnostics.Add(DiagnosticAt.Error($"This should be a struct", statement.Object));
             successful = false;
             return;
         }
@@ -559,7 +559,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!EmitFunction(statement.Function, out DynamicMethod? function))
         {
-            Diagnostics.Add(Diagnostic.Internal($"Failed to emit function \"{statement.Function}\"", statement, false));
+            Diagnostics.Add(DiagnosticAt.Internal($"Failed to emit function \"{statement.Function}\"", statement, false));
             successful = false;
             return;
         }
@@ -617,16 +617,16 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     return;
                 }
 
-                Diagnostics.Add(Diagnostic.Error($"Non-static external functions not supported", statement, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Non-static external functions not supported", statement, false));
                 successful = false;
                 return;
             }
             case ExternalFunctionStub:
-                Diagnostics.Add(Diagnostic.Error($"Can't call an external function stub", statement, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Can't call an external function stub", statement, false));
                 successful = false;
                 return;
             default:
-                Diagnostics.Add(Diagnostic.Error($"{statement.Function.GetType()} external functions not supported", statement));
+                Diagnostics.Add(DiagnosticAt.Error($"{statement.Function.GetType()} external functions not supported", statement));
                 successful = false;
                 return;
         }
@@ -653,7 +653,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
             if (!EmittedGlobalVariables.TryGetValue(statement.Variable, out FieldInfo? field))
             {
-                Diagnostics.Add(Diagnostic.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
+                Diagnostics.Add(DiagnosticAt.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
                 successful = false;
                 return;
             }
@@ -665,7 +665,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!LocalBuilders.TryGetValue(statement.Variable, out LocalBuilder? local))
         {
-            Diagnostics.Add(Diagnostic.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
+            Diagnostics.Add(DiagnosticAt.Error($"Variable \"{statement.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
             successful = false;
             return;
         }
@@ -724,7 +724,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             FieldInfo? field = type.GetField(statement.Field.Identifier.Content);
             if (field is null)
             {
-                Diagnostics.Add(Diagnostic.Error($"Field \"{statement.Field.Identifier.Content}\" not found in type {type}", _object));
+                Diagnostics.Add(DiagnosticAt.Error($"Field \"{statement.Field.Identifier.Content}\" not found in type {type}", _object));
                 successful = false;
                 return;
             }
@@ -734,7 +734,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Error($"This should be a struct", statement.Object));
+            Diagnostics.Add(DiagnosticAt.Error($"This should be a struct", statement.Object));
             successful = false;
         }
     }
@@ -742,7 +742,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (!Settings.AllowPointers)
         {
-            Diagnostics.Add(Diagnostic.Error($"Pointers are banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Pointers are banned by the generator settings", statement, false));
             successful = false;
             return;
         }
@@ -754,7 +754,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             case CompiledFieldAccess:
                 break;
             default:
-                Diagnostics.Add(Diagnostic.Error($"Unsafe!!!", statement, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Unsafe!!!", statement, false));
                 successful = false;
                 break;
         }
@@ -763,7 +763,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         EmitStatement(value, il, ref successful);
         if (!statement.Address.Type.Is(out PointerType? pointer))
         {
-            Diagnostics.Add(Diagnostic.Error($"This should be a pointer", statement.Address));
+            Diagnostics.Add(DiagnosticAt.Error($"This should be a pointer", statement.Address));
             successful = false;
             return;
         }
@@ -806,7 +806,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             }
             else
             {
-                Diagnostics.Add(Diagnostic.OptimizationNotice($"Element size is 1 byte 😀", statement.Base));
+                Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Element size is 1 byte 😀", statement.Base));
                 il.Emit(OpCodes.Add);
             }
 
@@ -839,19 +839,19 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
 
         Debugger.Break();
-        Diagnostics.Add(Diagnostic.Error($"Unimplemented index setter {statement.Base.Type}[{statement.Index.Type}]", statement));
+        Diagnostics.Add(DiagnosticAt.Error($"Unimplemented index setter {statement.Base.Type}[{statement.Index.Type}]", statement));
         successful = false;
     }
     void EmitSetter(CompiledRegisterAccess statement, CompiledExpression value, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Error($"Direct register access isn't supported in MSIL", statement, false));
+        Diagnostics.Add(DiagnosticAt.Error($"Direct register access isn't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledDereference statement, ILProxy il, ref bool successful)
     {
         if (!Settings.AllowPointers)
         {
-            Diagnostics.Add(Diagnostic.Error($"Pointers are banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Pointers are banned by the generator settings", statement, false));
             successful = false;
             return;
         }
@@ -864,7 +864,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 break;
             default:
                 Debugger.Break();
-                Diagnostics.Add(Diagnostic.Error($"Unsafe!!!", statement, false));
+                Diagnostics.Add(DiagnosticAt.Error($"Unsafe!!!", statement, false));
                 successful = false;
                 return;
         }
@@ -873,7 +873,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!statement.Address.Type.Is(out PointerType? pointer))
         {
-            Diagnostics.Add(Diagnostic.Error($"This should be a pointer", statement.Address));
+            Diagnostics.Add(DiagnosticAt.Error($"This should be a pointer", statement.Address));
             successful = false;
             return;
         }
@@ -903,7 +903,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (LoopLabels.Pop() != loopEnd)
         {
-            Diagnostics.Add(Diagnostic.Internal($"Something went wrong ...", statement));
+            Diagnostics.Add(DiagnosticAt.Internal($"Something went wrong ...", statement));
             successful = false;
         }
     }
@@ -940,7 +940,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (LoopLabels.Pop() != loopEnd)
         {
-            Diagnostics.Add(Diagnostic.Internal($"Something went wrong ...", statement));
+            Diagnostics.Add(DiagnosticAt.Internal($"Something went wrong ...", statement));
             successful = false;
         }
     }
@@ -984,7 +984,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (LoopLabels.Count == 0)
         {
-            Diagnostics.Add(Diagnostic.Error($"You can only break in a loop", statement));
+            Diagnostics.Add(DiagnosticAt.Error($"You can only break in a loop", statement));
             successful = false;
             return;
         }
@@ -1002,7 +1002,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (!Settings.AllowPointers)
         {
-            Diagnostics.Add(Diagnostic.Error($"Pointers are banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Pointers are banned by the generator settings", statement, false));
             successful = false;
             return;
         }
@@ -1017,7 +1017,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                     if (!EmittedGlobalVariables.TryGetValue(v.Variable, out FieldInfo? field))
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Variable \"{v.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
+                        Diagnostics.Add(DiagnosticAt.Error($"Variable \"{v.Variable.Identifier}\" wasn't emitted for some reason", statement, successful));
                         successful = false;
                         return;
                     }
@@ -1028,7 +1028,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                 if (!LocalBuilders.TryGetValue(v.Variable, out LocalBuilder? local))
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Variable \"{v.Variable.Identifier}\" not compiled", statement, successful));
+                    Diagnostics.Add(DiagnosticAt.Error($"Variable \"{v.Variable.Identifier}\" not compiled", statement, successful));
                     successful = false;
                     return;
                 }
@@ -1071,7 +1071,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     FieldInfo? field = type.GetField(v.Field.Identifier.Content);
                     if (field is null)
                     {
-                        Diagnostics.Add(Diagnostic.Error($"Field \"{v.Field.Identifier.Content}\" not found in type {type}", _object));
+                        Diagnostics.Add(DiagnosticAt.Error($"Field \"{v.Field.Identifier.Content}\" not found in type {type}", _object));
                         successful = false;
                         return;
                     }
@@ -1079,7 +1079,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 }
                 else
                 {
-                    Diagnostics.Add(Diagnostic.Error($"This should be a struct", v.Object));
+                    Diagnostics.Add(DiagnosticAt.Error($"This should be a struct", v.Object));
                     successful = false;
                 }
                 break;
@@ -1089,7 +1089,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 {
                     if (baseArrayType.Of.SameAs(BuiltinType.Char))
                     {
-                        Diagnostics.Add(Diagnostic.Internal($"Nah", statement));
+                        Diagnostics.Add(DiagnosticAt.Internal($"Nah", statement));
                         successful = false;
                         break;
                     }
@@ -1122,12 +1122,12 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     break;
                 }
 
-                Diagnostics.Add(Diagnostic.Error($"This should be an array", v.Base));
+                Diagnostics.Add(DiagnosticAt.Error($"This should be an array", v.Base));
                 successful = false;
                 break;
             default:
                 Debugger.Break();
-                Diagnostics.Add(Diagnostic.Error($"Can't get the address of \"{statement.Of}\" ({statement.Of.GetType().Name})", statement.Of));
+                Diagnostics.Add(DiagnosticAt.Error($"Can't get the address of \"{statement.Of}\" ({statement.Of.GetType().Name})", statement.Of));
                 successful = false;
                 break;
         }
@@ -1136,14 +1136,14 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (!Settings.AllowHeap)
         {
-            Diagnostics.Add(Diagnostic.Error($"Heap is banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Heap is banned by the generator settings", statement, false));
             successful = false;
             return;
         }
 
         if (!statement.Type.Is(out PointerType? pointerType))
         {
-            Diagnostics.Add(Diagnostic.Internal("What", statement));
+            Diagnostics.Add(DiagnosticAt.Internal("What", statement));
             successful = false;
             return;
         }
@@ -1161,7 +1161,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                 if (arrayType.Length is null)
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"The array's length must be specified", statement));
+                    Diagnostics.Add(DiagnosticAt.Internal($"The array's length must be specified", statement));
                     successful = false;
                     return;
                 }
@@ -1186,7 +1186,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                 if (constructor is null)
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"Type \"{type}\" doesn't have a parameterless constructor", statement));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Type \"{type}\" doesn't have a parameterless constructor", statement));
                     successful = false;
                     return;
                 }
@@ -1238,7 +1238,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     if (!resultPointerType.To.Is(out CompiledArrayTypeExpression? resultArrayType) ||
                         !resultArrayType.Of.SameAs(sizeofArrayType.Of))
                     {
-                        Diagnostics.Add(Diagnostic.Internal($"Invalid heap allocation types", sizeofArgument));
+                        Diagnostics.Add(DiagnosticAt.Internal($"Invalid heap allocation types", sizeofArgument));
                         successful = false;
                         return;
                     }
@@ -1256,7 +1256,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 {
                     if (!resultPointerType.To.SameAs(sizeofArgument.Of))
                     {
-                        Diagnostics.Add(Diagnostic.Internal($"Invalid heap allocation types", sizeofArgument));
+                        Diagnostics.Add(DiagnosticAt.Internal($"Invalid heap allocation types", sizeofArgument));
                         successful = false;
                         return;
                     }
@@ -1283,14 +1283,14 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                 if (!valueArgument.Type.SameAs(BuiltinType.I32))
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"Invalid heap allocation sizes", statement));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Invalid heap allocation sizes", statement));
                     successful = false;
                     return;
                 }
 
                 if (valueArgument.Value.I32 != size)
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"Invalid heap allocation sizes", statement));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Invalid heap allocation sizes", statement));
                     successful = false;
                     return;
                 }
@@ -1307,7 +1307,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             }
             else
             {
-                Diagnostics.Add(Diagnostic.Error($"Unrecognised allocation", allocatorCaller, successful));
+                Diagnostics.Add(DiagnosticAt.Error($"Unrecognised allocation", allocatorCaller, successful));
                 successful = false;
                 return;
             }
@@ -1353,7 +1353,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 EmitStatement(statement.Value, il, ref successful);
                 if (!fromTypePT.Equals(toTypeP))
                 {
-                    Diagnostics.Add(Diagnostic.Warning($"Be careful! (casting {statement.Value.Type.FinalValue} to {statement.Type.FinalValue})", statement));
+                    Diagnostics.Add(DiagnosticAt.Warning($"Be careful! (casting {statement.Value.Type.FinalValue} to {statement.Type.FinalValue})", statement));
                 }
                 return;
             }
@@ -1373,7 +1373,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             {
                 EmitStatement(statement.Value, il, ref successful);
                 il.Emit(OpCodes.Ldnull);
-                Diagnostics.Add(Diagnostic.Warning($"Be careful! (casting {statement.Value.Type} to {statement.Type})", statement));
+                Diagnostics.Add(DiagnosticAt.Warning($"Be careful! (casting {statement.Value.Type} to {statement.Type})", statement));
                 return;
             }
         }
@@ -1386,7 +1386,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             {
                 EmitStatement(statement.Value, il, ref successful);
                 il.Emit(OpCodes.Conv_I);
-                Diagnostics.Add(Diagnostic.Warning($"Be careful! (casting {statement.Value.Type} to {statement.Type})", statement));
+                Diagnostics.Add(DiagnosticAt.Warning($"Be careful! (casting {statement.Value.Type} to {statement.Type})", statement));
                 return;
             }
         }
@@ -1408,7 +1408,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
 
         EmitStatement(statement.Value, il, ref successful);
-        Diagnostics.Add(Diagnostic.Internal($"Fake type casts are unsafe (tried to cast {statement.Value.Type} to {statement.Type})", statement, false));
+        Diagnostics.Add(DiagnosticAt.Internal($"Fake type casts are unsafe (tried to cast {statement.Value.Type} to {statement.Type})", statement, false));
         successful = false;
     }
     void EmitStatement(CompiledCast statement, ILProxy il, ref bool successful)
@@ -1430,13 +1430,13 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     case BasicType.F32: il.Emit(OpCodes.Conv_R4); break;
                     default:
                         successful = false;
-                        Diagnostics.Add(Diagnostic.Error($"Invalid casting type {v.Type}", statement));
+                        Diagnostics.Add(DiagnosticAt.Error($"Invalid casting type {v.Type}", statement));
                         break;
                 }
                 return;
             default:
                 successful = false;
-                Diagnostics.Add(Diagnostic.Error($"Unimplemented casting type {statement.Type.FinalValue}", statement));
+                Diagnostics.Add(DiagnosticAt.Error($"Unimplemented casting type {statement.Type.FinalValue}", statement));
                 break;
         }
     }
@@ -1444,7 +1444,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (!Settings.AllowCrash)
         {
-            Diagnostics.Add(Diagnostic.Error($"Crashing is banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Crashing is banned by the generator settings", statement, false));
             successful = false;
             return;
         }
@@ -1467,7 +1467,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 il.Emit(OpCodes.Throw);
                 break;
             default:
-                Diagnostics.Add(Diagnostic.Internal($"Unimplemented value for crash reason", statement.Value));
+                Diagnostics.Add(DiagnosticAt.Internal($"Unimplemented value for crash reason", statement.Value));
                 successful = false;
                 break;
         }
@@ -1493,7 +1493,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (!EmitFunction(statement.Function, out DynamicMethod? function))
         {
-            Diagnostics.Add(Diagnostic.Internal($"Failed to emit function {statement.Function}", statement));
+            Diagnostics.Add(DiagnosticAt.Internal($"Failed to emit function {statement.Function}", statement));
             successful = false;
             return;
         }
@@ -1535,7 +1535,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         {
             if (!statement.Object.Type.Is<PointerType>())
             {
-                Diagnostics.Add(Diagnostic.Internal($"This should be a pointer", statement.Object));
+                Diagnostics.Add(DiagnosticAt.Internal($"This should be a pointer", statement.Object));
                 successful = false;
                 return;
             }
@@ -1590,7 +1590,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             }
             default:
             {
-                Diagnostics.Add(Diagnostic.Internal($"Only structs supported for stack allocations", statement));
+                Diagnostics.Add(DiagnosticAt.Internal($"Only structs supported for stack allocations", statement));
                 successful = false;
                 break;
             }
@@ -1600,7 +1600,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (!Settings.AllowHeap)
         {
-            Diagnostics.Add(Diagnostic.Error($"Heap is banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Heap is banned by the generator settings", statement, false));
             successful = false;
             return;
         }
@@ -1646,7 +1646,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
             if (statement.Index is CompiledConstantValue evaluatedIndex && evaluatedIndex.Value == 0)
             {
-                Diagnostics.Add(Diagnostic.OptimizationNotice($"Index 0", statement.Base));
+                Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Index 0", statement.Base));
             }
             else
             {
@@ -1668,7 +1668,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 }
                 else
                 {
-                    Diagnostics.Add(Diagnostic.OptimizationNotice($"Element size is 1 byte 😀", statement.Base));
+                    Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Element size is 1 byte 😀", statement.Base));
                     il.Emit(OpCodes.Add);
                 }
             }
@@ -1697,14 +1697,14 @@ public partial class CodeGeneratorForIL : CodeGenerator
             return;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"This should be an array", statement.Base));
+        Diagnostics.Add(DiagnosticAt.Error($"This should be an array", statement.Base));
         successful = false;
     }
     void EmitStatement(CompiledFunctionReference statement, ILProxy il, ref bool successful)
     {
         if (!Settings.AllowPointers)
         {
-            Diagnostics.Add(Diagnostic.Error($"Pointers are banned by the generator settings", statement, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Pointers are banned by the generator settings", statement, false));
             successful = false;
             return;
         }
@@ -1712,7 +1712,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         //var function = GetOrEmitFunctionSignature(statement.Function);
         //il.Emit(OpCodes.Ldftn, function);
 
-        Diagnostics.Add(Diagnostic.Error($"Function address getters not supported", statement, successful));
+        Diagnostics.Add(DiagnosticAt.Error($"Function address getters not supported", statement, successful));
         successful = false;
     }
     void EmitStatement(CompiledRuntimeCall statement, ILProxy il, ref bool successful)
@@ -1758,27 +1758,27 @@ public partial class CodeGeneratorForIL : CodeGenerator
     void EmitStatement(CompiledRegisterAccess statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Error($"Direct register access isn't supported in MSIL", statement, false));
+        Diagnostics.Add(DiagnosticAt.Error($"Direct register access isn't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledLabelReference statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Error($"Label references aren't supported in MSIL", statement, false));
+        Diagnostics.Add(DiagnosticAt.Error($"Label references aren't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledList statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Error($"Arrays on stack isn't supported in MSIL", statement, false));
+        Diagnostics.Add(DiagnosticAt.Error($"Arrays on stack isn't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledLambda statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Error($"bleh", statement, false));
+        Diagnostics.Add(DiagnosticAt.Error($"bleh", statement, false));
     }
     void EmitStatement(CompiledCompilerVariableAccess statement, ILProxy il, ref bool successful)
     {
         successful = false;
-        Diagnostics.Add(Diagnostic.Error($"Internal variables aren't supported in MSIL", statement, false));
+        Diagnostics.Add(DiagnosticAt.Error($"Internal variables aren't supported in MSIL", statement, false));
     }
     void EmitStatement(CompiledStatement statement, ILProxy il, ref bool successful)
     {
@@ -1868,7 +1868,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
         else
         {
-            Diagnostics.Add(Diagnostic.OptimizationNotice($"Element size is 1 byte 😀", @base));
+            Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Element size is 1 byte 😀", @base));
             il.Emit(OpCodes.Add);
         }
     }
@@ -2370,13 +2370,13 @@ public partial class CodeGeneratorForIL : CodeGenerator
         if (function.Function is IHaveAttributes attributes &&
             attributes.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
         {
-            Diagnostics.Add(Diagnostic.Error($"Function {function.ToReadable()} marked as MSIL incompatible", attributes.Attributes.First(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier), false));
+            Diagnostics.Add(DiagnosticAt.Error($"Function {function.ToReadable()} marked as MSIL incompatible", attributes.Attributes.First(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier), false));
             return false;
         }
 
         if (!function.Function.IsMsilCompatible)
         {
-            Diagnostics.Add(Diagnostic.Error($"Function {function.ToReadable()} is not MSIL incompatible", (ILocated)function.Function, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Function {function.ToReadable()} is not MSIL incompatible", (ILocated)function.Function, false));
             return false;
         }
 
@@ -2614,7 +2614,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!CheckCode(marshaled))
         {
-            Diagnostics.Add(DiagnosticWithoutContext.Error("Failed to generate valid MSIL"));
+            Diagnostics.Add(Diagnostic.Error("Failed to generate valid MSIL"));
             return false;
         }
 
@@ -2629,7 +2629,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!successful && !Diagnostics.HasErrors)
         {
-            Diagnostics.Add(DiagnosticWithoutContext.Internal($"Failed to generate valid MSIL"));
+            Diagnostics.Add(Diagnostic.Internal($"Failed to generate valid MSIL"));
         }
 
         StringBuilder builder = new();

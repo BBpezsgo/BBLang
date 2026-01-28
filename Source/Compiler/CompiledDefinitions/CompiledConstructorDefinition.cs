@@ -93,14 +93,4 @@ public class CompiledConstructorDefinition : ConstructorDefinition,
         result.Append(')');
         return result.ToString();
     }
-
-    public static string ToReadable(TypeInstance identifier, IEnumerable<GeneralType> parameters)
-    {
-        StringBuilder result = new();
-        result.Append(identifier.ToString());
-        result.Append('(');
-        result.AppendJoin(", ", parameters);
-        result.Append(')');
-        return result.ToString();
-    }
 }

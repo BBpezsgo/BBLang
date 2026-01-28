@@ -5,7 +5,7 @@ class TokenizerPreprocessorContext
     readonly DiagnosticsCollection Diagnostics;
     readonly Stack<PreprocessConditionItem> PreprocessConditionStack = new();
     readonly HashSet<string> PreprocessorVariables;
-    readonly Uri? File;
+    readonly Uri File;
 
     public bool IsPreprocessSkipping => PreprocessConditionStack.Any(v => !v.PreviousConditions[^1]);
 
@@ -27,7 +27,7 @@ class TokenizerPreprocessorContext
         }
     }
 
-    public TokenizerPreprocessorContext(DiagnosticsCollection diagnostics, IEnumerable<string> variables, Uri? file)
+    public TokenizerPreprocessorContext(DiagnosticsCollection diagnostics, IEnumerable<string> variables, Uri file)
     {
         Diagnostics = diagnostics;
         PreprocessorVariables = new HashSet<string>(variables);
@@ -41,7 +41,7 @@ class TokenizerPreprocessorContext
             case "#if":
             {
                 if (argument is null)
-                { Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File)); }
+                { Diagnostics.Add(DiagnosticAt.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File)); }
 
                 PreprocessConditionItem v = PreprocessConditionStack.Push(new PreprocessConditionItem(PreprocessConditionPhase.If));
                 v.PreviousConditions.Add(PreprocessorVariables.Contains(argument?.Content.TrimStart() ?? string.Empty));
@@ -53,12 +53,12 @@ class TokenizerPreprocessorContext
             {
                 if (PreprocessConditionStack.Count == 0)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File));
                     break;
                 }
 
                 if (PreprocessConditionStack.Last.Phase == PreprocessConditionPhase.Else)
-                { Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File)); }
+                { Diagnostics.Add(DiagnosticAt.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File)); }
 
                 PreprocessConditionStack.Last.Phase = PreprocessConditionPhase.Else;
                 PreprocessConditionStack.Last.PreviousConditions.Add(PreprocessConditionStack.Last.PreviousConditions.All(v => !v) && PreprocessorVariables.Contains(argument?.Content.TrimStart() ?? string.Empty));
@@ -70,12 +70,12 @@ class TokenizerPreprocessorContext
             {
                 if (PreprocessConditionStack.Count == 0)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File));
                     break;
                 }
 
                 if (PreprocessConditionStack.Last.Phase == PreprocessConditionPhase.Else)
-                { Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File)); }
+                { Diagnostics.Add(DiagnosticAt.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File)); }
 
                 PreprocessConditionStack.Last.Phase = PreprocessConditionPhase.Else;
                 PreprocessConditionStack.Last.PreviousConditions.Add(PreprocessConditionStack.Last.PreviousConditions.All(v => !v));
@@ -87,7 +87,7 @@ class TokenizerPreprocessorContext
             {
                 if (PreprocessConditionStack.Count == 0)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Unexpected preprocessor tag \"{name}\"", name.Position, File));
                     break;
                 }
 
@@ -103,7 +103,7 @@ class TokenizerPreprocessorContext
 
                 if (argument is null)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File));
                     break;
                 }
 
@@ -119,7 +119,7 @@ class TokenizerPreprocessorContext
 
                 if (argument is null)
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Argument expected after preprocessor tag \"{name}\"", name.Position.After(), File));
                     break;
                 }
 
@@ -130,7 +130,7 @@ class TokenizerPreprocessorContext
 
             default:
             {
-                Diagnostics.Add(Diagnostic.Error($"Unknown preprocessor tag \"{name}\"", name.Position.After(), File));
+                Diagnostics.Add(DiagnosticAt.Error($"Unknown preprocessor tag \"{name}\"", name.Position.After(), File));
                 break;
             }
         }

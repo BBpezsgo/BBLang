@@ -38,7 +38,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         AddComment(" .:");
 
         InstructionLabel label = LabelForDefinition(deallocator);
-        Call(label, cleanup.Location, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
+        Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (deallocator.InstructionOffset == InvalidFunctionAddress)
         { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, cleanup.Location, deallocator)); }
@@ -82,7 +82,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         AddComment(" .:");
 
         InstructionLabel label = LabelForDefinition(cleanup.Destructor);
-        Call(label, cleanup.Location, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
+        Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (cleanup.Destructor.InstructionOffset == InvalidFunctionAddress)
         { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, cleanup.Location, cleanup.Destructor)); }
@@ -331,7 +331,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (!CanReturn)
         {
-            Diagnostics.Add(Diagnostic.Error($"Can't return for some reason", keywordCall.Location));
+            Diagnostics.Add(DiagnosticAt.Error($"Can't return for some reason", keywordCall.Location));
             return;
         }
 
@@ -379,7 +379,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         if (throwValue is CompiledString literalThrowValue && Settings.Optimizations.HasFlag(GeneratorOptimizationSettings.CrashStringOnStack))
         {
             _statistics.Optimizations++;
-            Diagnostics.Add(Diagnostic.OptimizationNotice("String allocated on stack", throwValue));
+            Diagnostics.Add(DiagnosticAt.OptimizationNotice("String allocated on stack", throwValue));
             Push(new InstructionOperand('\0', InstructionOperandType.Immediate16));
             for (int i = literalThrowValue.Value.Length - 1; i >= 0; i--)
             {
@@ -404,7 +404,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         if (BreakInstructions.Count == 0)
         {
-            Diagnostics.Add(Diagnostic.Error($"The keyword \"{StatementKeywords.Break}\" does not available in the current context", keywordCall));
+            Diagnostics.Add(DiagnosticAt.Error($"The keyword \"{StatementKeywords.Break}\" does not available in the current context", keywordCall));
             return;
         }
 
@@ -441,7 +441,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             CompiledParameter parameter = compiledFunction.Parameters[i + alreadyPassed];
 
             if (FindSize(argumentType, argument) != FindSize(parameter.Type, parameter))
-            { Diagnostics.Add(Diagnostic.Internal($"Bad argument type passed: expected \"{parameter.Type}\" passed \"{argumentType}\"", argument.Value)); }
+            { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameter.Type}\" passed \"{argumentType}\"", argument.Value)); }
 
             AddComment($" Pass {parameter}:");
 
@@ -460,12 +460,6 @@ public partial class CodeGeneratorForMain : CodeGenerator
             GenerateCodeForStatement(parameters[i].Value, function.Parameters[i]);
             parameterCleanup.Push(parameters[i].Cleanup);
         }
-    }
-    Stack<CompiledCleanup> GenerateCodeForParameterPassing(IReadOnlyList<CompiledArgument> parameters, FunctionType function)
-    {
-        Stack<CompiledCleanup> parameterCleanup = new();
-        GenerateCodeForParameterPassing(parameters, function, parameterCleanup);
-        return parameterCleanup;
     }
     void GenerateCodeForParameterCleanup(Stack<CompiledCleanup> parameterCleanup)
     {
@@ -506,7 +500,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
 
         InstructionLabel label = LabelForDefinition(caller.Declaration);
-        Call(label, caller, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
+        Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (caller.Declaration.InstructionOffset == InvalidFunctionAddress)
         {
@@ -601,7 +595,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                     Type = caller.Type,
                 });
 
-                Diagnostics.Add(Diagnostic.OptimizationNotice($"Function {f.Function.ToReadable()} compiled into MSIL", caller));
+                Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Function {f.Function.ToReadable()} compiled into MSIL", caller));
 
                 Diagnostics.AddRange(ILGenerator.Diagnostics);
 
@@ -613,7 +607,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             //{
             //    ILGenerator.GenerateImplMarshaled(f, out _);
             //}
-            Diagnostics.Add(Diagnostic.FailedOptimization($"Failed to generate MSIL for function {f.Function}", caller).WithSuberrors(ILGenerator.Diagnostics.Diagnostics.Where(v => v.Level == DiagnosticsLevel.Error)));
+            Diagnostics.Add(DiagnosticAt.FailedOptimization($"Failed to generate MSIL for function {f.Function}", caller).WithSuberrors(ILGenerator.Diagnostics.Diagnostics.Where(v => v.Level == DiagnosticsLevel.Error)));
             ILGenerator.Diagnostics.Clear();
         }
 
@@ -631,7 +625,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         AddComment(" .:");
 
         InstructionLabel label = LabelForDefinition(caller.Function);
-        Call(label, caller, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
+        Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (caller.Function.InstructionOffset == InvalidFunctionAddress)
         {
@@ -668,13 +662,13 @@ public partial class CodeGeneratorForMain : CodeGenerator
         GeneralType prevType = anyCall.Function.Type;
         if (!prevType.Is(out FunctionType? functionType))
         {
-            Diagnostics.Add(Diagnostic.Error($"This isn't a function", anyCall.Function));
+            Diagnostics.Add(DiagnosticAt.Error($"This isn't a function", anyCall.Function));
             return;
         }
 
         if (anyCall.Arguments.Length != functionType.Parameters.Length)
         {
-            Diagnostics.Add(Diagnostic.Error($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Length}", anyCall));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{functionType}\": required {functionType.Parameters.Length} passed {anyCall.Arguments.Length}", anyCall));
             return;
         }
 
@@ -694,7 +688,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             return false;
         }))
         {
-            Diagnostics.Add(Diagnostic.Error($"Argument types of caller \"{anyCall}\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
+            Diagnostics.Add(DiagnosticAt.Error($"Argument types of caller \"{anyCall}\" doesn't match with callee \"{functionType}\"", anyCall).WithSuberrors(argumentError?.ToError(anyCall)));
             return;
         }
 
@@ -1024,7 +1018,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
             default:
             {
-                Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator}\"", @operator));
+                Diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator}\"", @operator));
                 return;
             }
         }
@@ -1222,7 +1216,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         GeneralType addressType = pointer.Address.Type;
         if (!addressType.Is(out PointerType? pointerType))
         {
-            Diagnostics.Add(Diagnostic.Error($"This isn't a pointer", pointer.Address));
+            Diagnostics.Add(DiagnosticAt.Error($"This isn't a pointer", pointer.Address));
             return;
         }
 
@@ -1402,14 +1396,14 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
         else
         {
-            Diagnostics.Add(Diagnostic.Internal($"Invalid type \"{constructorCall.Object.Type}\" used for constructor", constructorCall.Object));
+            Diagnostics.Add(DiagnosticAt.Internal($"Invalid type \"{constructorCall.Object.Type}\" used for constructor", constructorCall.Object));
             return;
         }
 
         AddComment(" .:");
 
         InstructionLabel label = LabelForDefinition(compiledFunction);
-        Call(label, constructorCall, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
+        Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (compiledFunction.InstructionOffset == InvalidFunctionAddress)
         { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, constructorCall, compiledFunction)); }
@@ -1444,7 +1438,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             if (!prevType.Is(out StructType? structPointerType))
             {
-                Diagnostics.Add(Diagnostic.Error($"Could not get the field offsets of type \"{prevType}\"", field.Object));
+                Diagnostics.Add(DiagnosticAt.Error($"Could not get the field offsets of type \"{prevType}\"", field.Object));
                 return;
             }
 
@@ -1505,7 +1499,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             if (!indexType.Is<BuiltinType>())
             {
-                Diagnostics.Add(Diagnostic.Error($"Index must be a builtin type (i.e. int) and not \"{indexType}\"", index.Index));
+                Diagnostics.Add(DiagnosticAt.Error($"Index must be a builtin type (i.e. int) and not \"{indexType}\"", index.Index));
                 return;
             }
 
@@ -1514,7 +1508,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             {
                 if (arrayType.Length.HasValue && (evaluatedIndex.Value < 0 || evaluatedIndex.Value >= arrayType.Length.Value))
                 {
-                    Diagnostics.Add(Diagnostic.Warning($"Index out of range", index.Index));
+                    Diagnostics.Add(DiagnosticAt.Warning($"Index out of range", index.Index));
                 }
                 address = new AddressOffset(address, (int)evaluatedIndex.Value * FindSize(arrayType.Of, index.Base));
 
@@ -1554,7 +1548,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             return;
         }
 
-        Diagnostics.Add(Diagnostic.Error($"Index getter for type \"{prevType}\" not found", index));
+        Diagnostics.Add(DiagnosticAt.Error($"Index getter for type \"{prevType}\" not found", index));
     }
     void GenerateAddressResolver(Address address)
     {
@@ -1595,7 +1589,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
                 if (!indexType.Is<BuiltinType>())
                 {
-                    Diagnostics.Add(Diagnostic.Error($"Index type must be builtin (ie. \"int\") and not \"{indexType}\"", runtimeIndex.IndexValue));
+                    Diagnostics.Add(DiagnosticAt.Error($"Index type must be builtin (ie. \"int\") and not \"{indexType}\"", runtimeIndex.IndexValue));
                     return;
                 }
 
@@ -1787,12 +1781,12 @@ public partial class CodeGeneratorForMain : CodeGenerator
                     return;
                 }
 
-                Diagnostics.Add(Diagnostic.Error($"Can't modify the size of the value. You tried to convert from \"{statementBuiltinType}\" (size of {statementSize}) to \"{targetbuiltinType}\" (size of {targetSize})", typeCast));
+                Diagnostics.Add(DiagnosticAt.Error($"Can't modify the size of the value. You tried to convert from \"{statementBuiltinType}\" (size of {statementSize}) to \"{targetbuiltinType}\" (size of {targetSize})", typeCast));
                 return;
             }
         }
 
-        Diagnostics.Add(Diagnostic.Warning($"Ignoring invalid type cast ({statementType} -> {targetType})", typeCast));
+        Diagnostics.Add(DiagnosticAt.Warning($"Ignoring invalid type cast ({statementType} -> {targetType})", typeCast));
         GenerateCodeForStatement(typeCast.Value, targetType);
     }
     void GenerateCodeForStatement(CompiledCompilerVariableAccess statement, GeneralType? expectedType = null, bool resolveReference = true)
@@ -1973,7 +1967,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
             default:
             {
-                Diagnostics.Add(Diagnostic.Error($"Unknown operator \"{@operator.Operator}\"", @operator));
+                Diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator}\"", @operator));
                 return;
             }
         }
@@ -2315,7 +2309,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         if (FindBitWidth(statementToSet.Address.Type, statementToSet.Address) != PointerBitWidth)
         {
-            Diagnostics.Add(Diagnostic.Error($"Type \"{statementToSet.Address.Type}\" cant be a pointer", statementToSet.Address));
+            Diagnostics.Add(DiagnosticAt.Error($"Type \"{statementToSet.Address.Type}\" cant be a pointer", statementToSet.Address));
             return;
         }
 
@@ -2359,7 +2353,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         AddComment("Scope exit");
         if (!scope.Equals(CleanupStack2.Pop()))
-        { Diagnostics.Add(Diagnostic.Internal($"There was something went wrong in a scope.", position, file)); }
+        { Diagnostics.Add(DiagnosticAt.Internal($"There was something went wrong in a scope.", position, file)); }
 
         CleanupVariables(scope.Variables, new Location(position, file), false);
 
@@ -2434,7 +2428,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             if (size <= 0)
             {
-                Diagnostics.Add(Diagnostic.Error($"Variable has a size of {size}", newVariable));
+                Diagnostics.Add(DiagnosticAt.Error($"Variable has a size of {size}", newVariable));
                 return default;
             }
 
@@ -2442,7 +2436,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
 
         if (size != FindSize(newVariable.Cleanup.TrashType, newVariable))
-        { Diagnostics.Add(Diagnostic.Internal($"Variable size ({FindSize(newVariable.Cleanup.TrashType, newVariable)} bytes) and initial value size ({size} bytes) mismatch", newVariable.InitialValue!)); }
+        { Diagnostics.Add(DiagnosticAt.Internal($"Variable size ({FindSize(newVariable.Cleanup.TrashType, newVariable)} bytes) and initial value size ({size} bytes) mismatch", newVariable.InitialValue!)); }
 
         return newVariable.Cleanup;
     }
@@ -2509,7 +2503,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (body is null)
         {
-            Diagnostics.Add(Diagnostic.Error($"Function \"{function.ToReadable()}\" does not have a body", (ILocated)function));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", (ILocated)function));
             return;
         }
 
@@ -2587,7 +2581,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         ReturnInstructions.Pop();
 
         AddComment("Return");
-        Return(body.Location.After());
+        Return();
 
         if (body != null) AddComment("}");
 
@@ -2836,7 +2830,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                     goto ok;
                 }
 
-                if (!Diagnostics.HasErrors) Diagnostics.Add(Diagnostic.Error($"Function {undefinedOffset.Called} wasn't compiled for some reason", undefinedOffset.CallerLocation));
+                if (!Diagnostics.HasErrors) Diagnostics.Add(DiagnosticAt.Error($"Function {undefinedOffset.Called} wasn't compiled for some reason", undefinedOffset.CallerLocation));
                 goto failed;
             ok:;
             }
@@ -2857,7 +2851,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 if (f.ExposedFunctionName is null) continue;
                 if (f.InstructionOffset == InvalidFunctionAddress)
                 {
-                    Diagnostics.Add(Diagnostic.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Identifier, f.File));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Identifier, f.File));
                     continue;
                 }
                 CompiledFunction e = Functions.First(v => v.Function == f);

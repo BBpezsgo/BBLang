@@ -3,7 +3,7 @@ using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
-public class ConstructorCallExpression : Expression, IReadable, IReferenceableTo<CompiledConstructorDefinition>, IHaveType
+public class ConstructorCallExpression : Expression, IReferenceableTo<CompiledConstructorDefinition>, IHaveType
 {
     /// <summary>
     /// Set by the compiler
@@ -41,24 +41,6 @@ public class ConstructorCallExpression : Expression, IReadable, IReferenceableTo
 
         result.Append(SurroundingBrackets?.End);
         result.Append(Semicolon);
-        return result.ToString();
-    }
-
-    public string ToReadable(FindStatementType typeSearch)
-    {
-        StringBuilder result = new();
-        result.Append(Type.ToString());
-        result.Append('.');
-        result.Append(Keyword.Content);
-        result.Append('(');
-        for (int i = 0; i < Arguments.Arguments.Length; i++)
-        {
-            if (i > 0) result.Append(", ");
-
-            result.Append(typeSearch.Invoke(Arguments.Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
-        }
-        result.Append(')');
-
         return result.ToString();
     }
 }

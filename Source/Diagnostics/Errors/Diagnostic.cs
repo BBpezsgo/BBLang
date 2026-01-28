@@ -1,145 +1,51 @@
-using LanguageCore.Compiler;
-
 namespace LanguageCore;
 
 [ExcludeFromCodeCoverage]
 public class Diagnostic :
-    IEquatable<Diagnostic>,
-    IDiagnostic
+    IEquatable<Diagnostic>
 {
     public DiagnosticsLevel Level { get; }
     public string Message { get; }
-    public Position Position { get; }
-    public Uri? File { get; }
-    public ImmutableArray<IDiagnostic> SubErrors { get; }
+
+    public ImmutableArray<Diagnostic> SubErrors { get; }
+
+#if DEBUG
     bool IsDebugged;
+#endif
 
-    IEnumerable<IDiagnostic> IDiagnostic.SubErrors => SubErrors;
-
-    public Diagnostic(DiagnosticsLevel level, string message, Position position, Uri? file, bool @break, ImmutableArray<IDiagnostic> suberrors)
+    protected Diagnostic(DiagnosticsLevel level, string message, bool @break, ImmutableArray<Diagnostic> suberrors)
     {
         Level = level;
         Message = message;
-        Position = position;
-        File = file;
         SubErrors = suberrors;
-        IsDebugged = false;
 
         if (@break)
         { Break(); }
     }
 
-    public Diagnostic(DiagnosticsLevel level, string message, Position position, Uri? file, bool @break, ImmutableArray<Diagnostic> suberrors)
-    {
-        Level = level;
-        Message = message;
-        Position = position;
-        File = file;
-        SubErrors = suberrors.CastArray<IDiagnostic>();
-        IsDebugged = false;
+    public Diagnostic(DiagnosticsLevel level, string message, ImmutableArray<Diagnostic> suberrors)
+        : this(level, message, level == DiagnosticsLevel.Error, suberrors) { }
 
-        if (@break)
-        { Break(); }
-    }
-
-    public Diagnostic WithSuberrors(IDiagnostic? suberror) => suberror is null ? this : new(Level, Message, Position, File, false, ImmutableArray.Create<IDiagnostic>(suberror));
-    public Diagnostic WithSuberrors(params IDiagnostic?[] suberrors) => WithSuberrors(suberrors.Where(v => v is not null).ToImmutableArray()!);
-    public Diagnostic WithSuberrors(IEnumerable<IDiagnostic?> suberrors) => WithSuberrors(suberrors.Where(v => v is not null).ToImmutableArray()!);
-    public Diagnostic WithSuberrors(ImmutableArray<IDiagnostic> suberrors)
-    {
-        if (SubErrors.IsDefaultOrEmpty)
-        {
-            return suberrors.IsDefaultOrEmpty ? this : new(Level, Message, Position, File, false, suberrors);
-        }
-        else
-        {
-            return suberrors.IsDefaultOrEmpty ? this : new(Level, Message, Position, File, false, SubErrors.AddRange(suberrors));
-        }
-    }
+    public virtual Diagnostic WithSuberrors(Diagnostic? suberror) => suberror is null ? this : new(Level, Message, false, ImmutableArray.Create(suberror));
+    public virtual Diagnostic WithSuberrors(params Diagnostic?[] suberrors) => WithSuberrors(suberrors.Where(v => v is not null).ToImmutableArray()!);
+    public virtual Diagnostic WithSuberrors(IEnumerable<Diagnostic?> suberrors) => WithSuberrors(suberrors.Where(v => v is not null).ToImmutableArray()!);
+    public virtual Diagnostic WithSuberrors(ImmutableArray<Diagnostic> suberrors) => suberrors.IsDefaultOrEmpty ? this : new(Level, Message, false, SubErrors.AddRange(suberrors));
 
     [DoesNotReturn]
-    public void Throw() => throw this.ToException();
+    public virtual void Throw() => throw ToException();
 
-    #region Internal
+    public virtual LanguageException ToException() => new(Message, SubErrors.ToImmutableArray(v => v.ToException() as Exception));
 
-    public static Diagnostic Internal(string message, IPositioned? position, Uri? file, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, position?.Position ?? Position.UnknownPosition, file, @break, ImmutableArray<IDiagnostic>.Empty);
+    public static Diagnostic Internal(string message, bool @break = true)
+        => new(DiagnosticsLevel.Error, message, @break, ImmutableArray<Diagnostic>.Empty);
 
-    public static Diagnostic Internal(string message, Position position, Uri? file, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, position, file, @break, ImmutableArray<IDiagnostic>.Empty);
+    public static Diagnostic Error(string message, bool @break = true)
+        => new(DiagnosticsLevel.Error, message, @break, ImmutableArray<Diagnostic>.Empty);
 
-    public static Diagnostic Internal(string message, ILocated location, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, location.Location.Position, location.Location.File, @break, ImmutableArray<IDiagnostic>.Empty);
+    public static Diagnostic Warning(string message, bool @break = true)
+        => new(DiagnosticsLevel.Warning, message, @break, ImmutableArray<Diagnostic>.Empty);
 
-    #endregion
-
-    #region Error
-
-    public static Diagnostic Error(string message, IPositioned? position, Uri? file, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, position?.Position ?? Position.UnknownPosition, file, @break, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Error(string message, Position position, Uri? file, bool @break = false)
-        => new(DiagnosticsLevel.Error, message, position, file, @break, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Error(string message, ILocated location, bool @break = true)
-        => new(DiagnosticsLevel.Error, message, location.Location.Position, location.Location.File, @break, ImmutableArray<IDiagnostic>.Empty);
-
-    #endregion
-
-    #region Warning
-
-    public static Diagnostic Warning(string message, IPositioned? position, Uri? file)
-        => new(DiagnosticsLevel.Warning, message, position?.Position ?? Position.UnknownPosition, file, false, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Warning(string message, Position position, Uri? file)
-        => new(DiagnosticsLevel.Warning, message, position, file, false, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Warning(string message, ILocated location)
-        => new(DiagnosticsLevel.Warning, message, location.Location.Position, location.Location.File, false, ImmutableArray<IDiagnostic>.Empty);
-
-    #endregion
-
-    #region Information
-
-    public static Diagnostic Information(string message, IPositioned? position, Uri? file)
-        => new(DiagnosticsLevel.Information, message, position?.Position ?? Position.UnknownPosition, file, false, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Information(string message, Position position, Uri? file)
-        => new(DiagnosticsLevel.Information, message, position, file, false, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Information(string message, ILocated location)
-        => new(DiagnosticsLevel.Information, message, location.Location.Position, location.Location.File, false, ImmutableArray<IDiagnostic>.Empty);
-
-    #endregion
-
-    #region Hint
-
-    public static Diagnostic Hint(string message, IPositioned? position, Uri? file)
-        => new(DiagnosticsLevel.Hint, message, position?.Position ?? Position.UnknownPosition, file, false, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Hint(string message, Position position, Uri? file)
-        => new(DiagnosticsLevel.Hint, message, position, file, false, ImmutableArray<IDiagnostic>.Empty);
-
-    public static Diagnostic Hint(string message, ILocated location)
-        => new(DiagnosticsLevel.Hint, message, location.Location.Position, location.Location.File, false, ImmutableArray<IDiagnostic>.Empty);
-
-    #endregion
-
-    #region OptimizationNotice
-
-    public static Diagnostic OptimizationNotice(string message, ILocated location)
-        => new(DiagnosticsLevel.OptimizationNotice, message, location.Location.Position, location.Location.File, false, ImmutableArray<IDiagnostic>.Empty);
-
-    #endregion
-
-    #region FailedOptimization
-
-    public static Diagnostic FailedOptimization(string message, ILocated location)
-        => new(DiagnosticsLevel.FailedOptimization, message, location.Location.Position, location.Location.File, false, ImmutableArray<IDiagnostic>.Empty);
-
-    #endregion
-
-    public Diagnostic Break()
+    public virtual Diagnostic Break()
     {
         if (!IsDebugged)
         {
@@ -156,23 +62,12 @@ public class Diagnostic :
         return this;
     }
 
-    public (string SourceCode, string Arrows)? GetArrows(IEnumerable<ISourceProvider>? sourceProviders = null)
-    {
-        if (File == null) return null;
-        if (!File.IsFile) return null;
-        string? source = SourceCodeManager.LoadSource(sourceProviders, File.ToString());
-        return source is not null ? LanguageException.GetArrows(Position, source) : null;
-    }
-
-    public override string ToString()
-        => LanguageException.Format(Message, Position, File);
+    public override string ToString() => Message;
 
     public bool Equals([NotNullWhen(true)] Diagnostic? other)
     {
         if (other is null) return false;
         if (Message != other.Message) return false;
-        if (Position != other.Position) return false;
-        if (File != other.File) return false;
         return true;
     }
 

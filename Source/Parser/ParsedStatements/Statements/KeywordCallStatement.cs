@@ -3,7 +3,7 @@ using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
-public class KeywordCallStatement : Statement, IReadable, IReferenceableTo<CompiledCleanup>
+public class KeywordCallStatement : Statement, IReferenceableTo<CompiledCleanup>
 {
     public CompiledCleanup? Reference { get; set; }
 
@@ -44,22 +44,6 @@ public class KeywordCallStatement : Statement, IReadable, IReferenceableTo<Compi
         }
 
         result.Append(Semicolon);
-        return result.ToString();
-    }
-
-    public string ToReadable(FindStatementType typeSearch)
-    {
-        StringBuilder result = new();
-        result.Append(Keyword.Content);
-        result.Append('(');
-        for (int i = 0; i < Arguments.Length; i++)
-        {
-            if (i > 0) result.Append(", ");
-
-            result.Append(typeSearch.Invoke(Arguments[i], out GeneralType? type, new()) ? type.ToString() : '?');
-        }
-        result.Append(')');
-
         return result.ToString();
     }
 }

@@ -20,10 +20,11 @@ const int HeapSize = 512;
 
 const int HeaderSize = sizeof(BlockHeader);
 
+[Internal("heap_start")]
 const int HeapStart = 0;
 
 [Builtin("init_heap")]
-void init_heap()
+export inline void init_heap()
 {
     if ((!#BRAINFUCK) && (!#IL))
     {

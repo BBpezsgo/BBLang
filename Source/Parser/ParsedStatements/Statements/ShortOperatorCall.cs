@@ -3,7 +3,7 @@ using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
-public class ShortOperatorCall : AssignmentStatement, IReadable, IReferenceableTo<CompiledOperatorDefinition>
+public class ShortOperatorCall : AssignmentStatement, IReferenceableTo<CompiledOperatorDefinition>
 {
     /// <summary>
     /// Set by the compiler
@@ -43,18 +43,6 @@ public class ShortOperatorCall : AssignmentStatement, IReadable, IReferenceableT
         { result.Append(Operator); }
 
         result.Append(Semicolon);
-        return result.ToString();
-    }
-
-    public string ToReadable(FindStatementType typeSearch)
-    {
-        StringBuilder result = new();
-
-        result.Append(Operator.Content);
-        result.Append('(');
-        result.Append(typeSearch.Invoke(Expression, out GeneralType? type, new()) ? type.ToString() : '?');
-        result.Append(')');
-
         return result.ToString();
     }
 

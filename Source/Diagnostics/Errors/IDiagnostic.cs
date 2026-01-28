@@ -10,10 +10,3 @@ public enum DiagnosticsLevel
     OptimizationNotice,
     FailedOptimization,
 }
-
-public interface IDiagnostic
-{
-    DiagnosticsLevel Level { get; }
-    string Message { get; }
-    IEnumerable<IDiagnostic> SubErrors { get; }
-}

@@ -91,18 +91,18 @@ public class SourceCodeManager
             catch (Exception ex)
             {
                 if (finishedFile.Initiator is null)
-                { Diagnostics.Add(DiagnosticWithoutContext.Error(ex.Message)); }
+                { Diagnostics.Add(Diagnostic.Error(ex.Message)); }
                 else
-                { Diagnostics.Add(Diagnostic.Error(ex.Message, finishedFile.Initiator)); }
+                { Diagnostics.Add(DiagnosticAt.Error(ex.Message, finishedFile.Initiator)); }
                 break;
             }
 
             if (content is null)
             {
                 if (finishedFile.Initiator is null)
-                { Diagnostics.Add(DiagnosticWithoutContext.Error($"File \"{finishedFile.Uri}\" not found")); }
+                { Diagnostics.Add(Diagnostic.Error($"File \"{finishedFile.Uri}\" not found")); }
                 else
-                { Diagnostics.Add(Diagnostic.Error($"File \"{finishedFile.Uri}\" not found", finishedFile.Initiator)); }
+                { Diagnostics.Add(DiagnosticAt.Error($"File \"{finishedFile.Uri}\" not found", finishedFile.Initiator)); }
                 break;
             }
 
@@ -112,8 +112,8 @@ public class SourceCodeManager
             TokenizerResult tokens = Tokenizer.Tokenize(
                 text,
                 Diagnostics,
-                PreprocessorVariables,
                 finishedFile.Uri,
+                PreprocessorVariables,
                 TokenizerSettings
             );
 
@@ -207,9 +207,9 @@ public class SourceCodeManager
                         if (res.Stream is null)
                         {
                             if (initiator is null)
-                            { Diagnostics.Add(DiagnosticWithoutContext.Error($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream")); }
+                            { Diagnostics.Add(Diagnostic.Error($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream")); }
                             else
-                            { Diagnostics.Add(Diagnostic.Error($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream", initiator.Position, initiator.File)); }
+                            { Diagnostics.Add(DiagnosticAt.Error($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream", initiator.Position, initiator.File)); }
                             return false;
                         }
 #if UNITY
@@ -228,9 +228,9 @@ public class SourceCodeManager
                         resolvedUri = res.ResolvedUri!;
                         wasHandlerFound = true;
                         if (initiator is null)
-                        { Diagnostics.Add(DiagnosticWithoutContext.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"")); }
+                        { Diagnostics.Add(Diagnostic.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"")); }
                         else
-                        { Diagnostics.Add(Diagnostic.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"", initiator.Position, initiator.File)); }
+                        { Diagnostics.Add(DiagnosticAt.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"", initiator.Position, initiator.File)); }
                         return false;
                     case SourceProviderResultType.NextHandler:
                         continue;
@@ -251,7 +251,14 @@ public class SourceCodeManager
                         if (initiator is not null) initiator.CompiledUri = resolvedUri;
                         if (res.Stream is null)
                         {
-                            Diagnostics.Add(Diagnostic.Internal($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream", initiator?.Position ?? Position.UnknownPosition, initiator?.File));
+                            if (initiator is null)
+                            {
+                                Diagnostics.Add(Diagnostic.Internal($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream"));
+                            }
+                            else
+                            {
+                                Diagnostics.Add(DiagnosticAt.Internal($"Invalid handler for \"{resolvedUri}\": resulted in success but not provided a data stream", initiator.Position, initiator.File));
+                            }
                             return false;
                         }
                         PendingFiles.Add(new PendingFile(resolvedUri, initiator, res.Stream, initiatorIndex.Next(), version));
@@ -264,9 +271,9 @@ public class SourceCodeManager
                         resolvedUri = res.ResolvedUri!;
                         wasHandlerFound = true;
                         if (initiator is null)
-                        { Diagnostics.Add(DiagnosticWithoutContext.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"")); }
+                        { Diagnostics.Add(Diagnostic.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"")); }
                         else
-                        { Diagnostics.Add(Diagnostic.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"", initiator.Position, initiator.File)); }
+                        { Diagnostics.Add(DiagnosticAt.Error(res.ErrorMessage ?? $"Failed to load \"{resolvedUri?.ToString() ?? requestedFile}\"", initiator.Position, initiator.File)); }
                         return false;
                     case SourceProviderResultType.NextHandler:
                         continue;
@@ -281,16 +288,16 @@ public class SourceCodeManager
         if (initiator is not null)
         {
             if (wasHandlerFound)
-            { Diagnostics.Add(Diagnostic.Error($"File \"{requestedFile}\" not found", initiator)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"File \"{requestedFile}\" not found", initiator)); }
             else
-            { Diagnostics.Add(Diagnostic.Error($"No handler exists for \"{requestedFile}\"", initiator)); }
+            { Diagnostics.Add(DiagnosticAt.Error($"No handler exists for \"{requestedFile}\"", initiator)); }
         }
         else
         {
             if (wasHandlerFound)
-            { Diagnostics.Add(DiagnosticWithoutContext.Error($"File \"{requestedFile}\" not found")); }
+            { Diagnostics.Add(Diagnostic.Error($"File \"{requestedFile}\" not found")); }
             else
-            { Diagnostics.Add(DiagnosticWithoutContext.Error($"No handler exists for \"{requestedFile}\"")); }
+            { Diagnostics.Add(Diagnostic.Error($"No handler exists for \"{requestedFile}\"")); }
         }
         return false;
     }

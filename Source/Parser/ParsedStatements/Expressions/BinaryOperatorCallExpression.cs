@@ -3,7 +3,7 @@ using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
-public class BinaryOperatorCallExpression : Expression, IReadable, IReferenceableTo<CompiledOperatorDefinition>
+public class BinaryOperatorCallExpression : Expression, IReferenceableTo<CompiledOperatorDefinition>
 {
     public const int ParameterCount = 2;
 
@@ -73,20 +73,6 @@ public class BinaryOperatorCallExpression : Expression, IReadable, IReferenceabl
 
         result.Append(SurroundingBrackets?.End);
         result.Append(Semicolon);
-        return result.ToString();
-    }
-
-    public string ToReadable(FindStatementType typeSearch)
-    {
-        StringBuilder result = new();
-
-        result.Append(Operator.Content);
-        result.Append('(');
-        result.Append(typeSearch.Invoke(Left, out GeneralType? type1, new()) ? type1.ToString() : '?');
-        result.Append(", ");
-        result.Append(typeSearch.Invoke(Right, out GeneralType? type2, new()) ? type2.ToString() : '?');
-        result.Append(')');
-
         return result.ToString();
     }
 }
