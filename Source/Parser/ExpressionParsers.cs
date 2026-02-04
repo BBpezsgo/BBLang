@@ -273,7 +273,10 @@ public sealed partial class Parser
         }
 
         if (!ExpectAnyExpression(out Expression? expression))
-        { throw new SyntaxException("Expected expression", bracketStart.Position.After(), File); }
+        {
+            expression = new MissingExpression(bracketStart.Position.After(), File);
+            Diagnostics.Add(DiagnosticAt.Error("Expected expression", bracketStart.Position.After(), File));
+        }
 
         if (!ExpectOperator(")", out Token? bracketEnd))
         {
@@ -581,7 +584,10 @@ public sealed partial class Parser
         }
 
         if (!ExpectOneValue(out Expression? statement))
-        { throw new SyntaxException($"Expected value after unary prefix operator `{unaryPrefixOperator}`", unaryPrefixOperator.Position.After(), File); }
+        {
+            statement = new MissingExpression(unaryPrefixOperator.Position.After(), File);
+            Diagnostics.Add(DiagnosticAt.Error($"Expected value after unary prefix operator `{unaryPrefixOperator}`", unaryPrefixOperator.Position.After(), File));
+        }
 
         unaryPrefixOperator.AnalyzedType = TokenAnalyzedType.MathOperator;
 
@@ -770,7 +776,22 @@ public sealed partial class Parser
             { break; }
 
             if (!ExpectOperator(",", out Token? comma))
-            { throw new SyntaxException($"Expected `,` or `)`", argument.Location.After()); }
+            {
+                Diagnostics.Add(DiagnosticAt.Error($"Expected `,` or `)`", argument.Location.After()));
+
+                int v = CurrentTokenIndex;
+                if (ExpectArgument(out _, ArgumentModifiers))
+                {
+                    CurrentTokenIndex = v;
+                    comma = new MissingToken(TokenType.Operator, argument.Position.After(), ",");
+                }
+                else
+                {
+                    bracketEnd = new MissingToken(TokenType.Operator, argument.Position.After(), ")");
+                    break;
+                }
+            }
+
             commas.Add(comma);
 
             lastPosition = comma.Position;

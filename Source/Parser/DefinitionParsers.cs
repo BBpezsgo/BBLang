@@ -165,7 +165,19 @@ public sealed partial class Parser
             { break; }
 
             if (!ExpectOperator(",", out Token? comma))
-            { throw new SyntaxException("Expected `,` or `>`", parameter.Position.After(), File); }
+            {
+                Diagnostics.Add(DiagnosticAt.Error("Expected `,` or `>`", parameter.Position.After(), File));
+
+                if (CurrentToken?.TokenType == TokenType.Identifier)
+                {
+                    comma = new MissingToken(TokenType.Operator, parameter.Position.After(), ",");
+                }
+                else
+                {
+                    endBracket = new MissingToken(TokenType.Operator, parameter.Position.After(), ">");
+                    break;
+                }
+            }
 
             lastPosition = comma.Position;
         }
@@ -568,7 +580,21 @@ public sealed partial class Parser
                     { break; }
 
                     if (!ExpectOperator(",", out Token? comma))
-                    { throw new SyntaxException($"Expected `,` or `)`", argument.Location.After()); }
+                    {
+                        Diagnostics.Add(DiagnosticAt.Error($"Expected `,` or `)`", argument.Location.After()));
+
+                        int v = CurrentTokenIndex;
+                        if (ExpectLiteral(out _))
+                        {
+                            CurrentTokenIndex = v;
+                            comma = new MissingToken(TokenType.Operator, argument.Position.After(), ",");
+                        }
+                        else
+                        {
+                            bracketParametersEnd = new MissingToken(TokenType.Operator, argument.Position.After(), ")");
+                            break;
+                        }
+                    }
 
                     lastPosition = comma.Position;
 
@@ -582,7 +608,7 @@ public sealed partial class Parser
         if (!ExpectOperator("]", out Token? bracketEnd))
         {
             bracketEnd = new MissingToken(TokenType.Operator, lastPosition.After(), "]");
-            throw new SyntaxException("Expected `]`", bracketEnd, File);
+            Diagnostics.Add(DiagnosticAt.Error("Expected `]`", bracketEnd, File));
         }
 
         attribute = new AttributeUsage(attributeT, parameters.ToImmutableArray(), new TokenPair(bracketStart, bracketEnd), File);

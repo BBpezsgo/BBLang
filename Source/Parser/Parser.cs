@@ -174,29 +174,22 @@ public sealed partial class Parser
 #endif
         CurrentTokenIndex = 0;
 
-        try
+        ParseCodeHeader();
+
+        SkipCrapTokens();
+
+        EndlessCheck endlessSafe = new();
+        while (CurrentToken != null && ParseCodeBlock())
         {
-            ParseCodeHeader();
-
             SkipCrapTokens();
-
-            EndlessCheck endlessSafe = new();
-            while (CurrentToken != null && ParseCodeBlock())
-            {
-                SkipCrapTokens();
-                endlessSafe.Step();
-            }
-
-            SkipCrapTokens();
-
-            if (CurrentToken != null)
-            {
-                Diagnostics.Add(DiagnosticAt.Error($"Unexpected token `{CurrentToken}`", CurrentToken, File, false));
-            }
+            endlessSafe.Step();
         }
-        catch (SyntaxException syntaxException)
+
+        SkipCrapTokens();
+
+        if (CurrentToken != null)
         {
-            Diagnostics.Add(syntaxException.ToDiagnostic());
+            Diagnostics.Add(DiagnosticAt.Error($"Unexpected token `{CurrentToken}`", CurrentToken, File, false));
         }
 
         return new ParserResult(
