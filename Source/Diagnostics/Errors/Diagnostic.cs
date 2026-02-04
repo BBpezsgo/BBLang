@@ -9,7 +9,7 @@ public class Diagnostic :
 
     public ImmutableArray<Diagnostic> SubErrors { get; }
 
-#if DEBUG
+#if DEBUG && !UNITY
     bool IsDebugged;
 #endif
 
@@ -47,13 +47,13 @@ public class Diagnostic :
 
     public virtual Diagnostic Break()
     {
+#if DEBUG && !UNITY
         if (!IsDebugged)
         {
-#if DEBUG && !UNITY
             Debugger.Break();
-#endif
         }
         IsDebugged = true;
+#endif
 
 #if TESTING
         Throw();

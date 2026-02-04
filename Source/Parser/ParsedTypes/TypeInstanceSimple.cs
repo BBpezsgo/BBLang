@@ -1,4 +1,5 @@
 using LanguageCore.Compiler;
+using LanguageCore.Parser.Statements;
 using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser;
@@ -6,17 +7,26 @@ namespace LanguageCore.Parser;
 public class TypeInstanceSimple : TypeInstance, IEquatable<TypeInstanceSimple?>, IReferenceableTo
 {
     public Token Identifier { get; }
+    TokenPair? TypeArgumentsBrackets { get; }
     public ImmutableArray<TypeInstance>? TypeArguments { get; }
     public object? Reference { get; set; }
 
-    public override Position Position =>
-        new Position(Identifier)
-        .Union(TypeArguments);
+    public override Position Position => TypeArguments is null
+        ? Identifier.Position
+        : new Position(Identifier).Union(TypeArguments).Union(TypeArgumentsBrackets);
 
-    public TypeInstanceSimple(Token identifier, Uri file, ImmutableArray<TypeInstance>? typeArguments = null) : base(file)
+    public TypeInstanceSimple(Token identifier, Uri file) : base(file)
+    {
+        Identifier = identifier;
+        TypeArguments = null;
+        TypeArgumentsBrackets = null;
+    }
+
+    public TypeInstanceSimple(Token identifier, Uri file, ImmutableArray<TypeInstance> typeArguments, TokenPair typeArgumentsBrackets) : base(file)
     {
         Identifier = identifier;
         TypeArguments = typeArguments;
+        TypeArgumentsBrackets = typeArgumentsBrackets;
     }
 
     public override bool Equals(object? obj) => obj is TypeInstanceSimple other && Equals(other);
@@ -40,24 +50,24 @@ public class TypeInstanceSimple : TypeInstance, IEquatable<TypeInstanceSimple?>,
 
     public override int GetHashCode() => HashCode.Combine((byte)3, Identifier, TypeArguments);
 
-    public static TypeInstanceSimple CreateAnonymous(string name, Uri file, ImmutableArray<TypeInstance>? typeArguments = null)
-        => new(Token.CreateAnonymous(name), file, typeArguments);
+    public static TypeInstanceSimple CreateAnonymous(string name, Uri file)
+        => new(Token.CreateAnonymous(name), file);
 
     public static TypeInstanceSimple CreateAnonymous(string name, Uri file, ImmutableArray<Token>? typeArguments)
     {
-        TypeInstance[]? genericTypesConverted;
         if (typeArguments == null)
-        { genericTypesConverted = null; }
+        {
+            return new TypeInstanceSimple(Token.CreateAnonymous(name), file);
+        }
         else
         {
-            genericTypesConverted = new TypeInstance[typeArguments.Value.Length];
+            TypeInstance[] genericTypesConverted = new TypeInstance[typeArguments.Value.Length];
             for (int i = 0; i < typeArguments.Value.Length; i++)
             {
-                genericTypesConverted[i] = TypeInstanceSimple.CreateAnonymous(typeArguments.Value[i].Content, file);
+                genericTypesConverted[i] = CreateAnonymous(typeArguments.Value[i].Content, file);
             }
+            return new TypeInstanceSimple(Token.CreateAnonymous(name), file, genericTypesConverted.ToImmutableArray(), TokenPair.CreateAnonymous("<", ">"));
         }
-
-        return new TypeInstanceSimple(Token.CreateAnonymous(name), file, genericTypesConverted?.ToImmutableArray());
     }
 
     public override string ToString()

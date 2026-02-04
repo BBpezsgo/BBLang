@@ -700,7 +700,7 @@ public partial class StatementCompiler
             _parameters,
             @struct,
             new ConstructorDefinition(
-                new TypeInstanceSimple(@struct.Identifier, @struct.File, ImmutableArray.Create<TypeInstance>(new TypeInstanceSimple(genericParameter, @struct.File))),
+                new TypeInstanceSimple(@struct.Identifier, @struct.File, ImmutableArray.Create<TypeInstance>(new TypeInstanceSimple(genericParameter, @struct.File)), TokenPair.CreateAnonymous("<", ">")),
                 ImmutableArray<Token>.Empty,
                 new ParameterDefinitionCollection(
                     _parameters.As<ParameterDefinition>(),

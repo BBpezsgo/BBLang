@@ -1,13 +1,11 @@
-using LanguageCore.Compiler;
 using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Parser.Statements;
 
-public class NewInstanceExpression : Expression, IHaveType, IInFile, IReferenceableTo<ICompiledFunctionDefinition>
+public class NewInstanceExpression : Expression, IHaveType, IInFile
 {
     public Token Keyword { get; }
     public TypeInstance Type { get; }
-    public ICompiledFunctionDefinition? Reference { get; set; }
 
     public override Position Position => new(Keyword, Type);
 

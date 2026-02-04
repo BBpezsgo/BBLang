@@ -102,12 +102,13 @@ public sealed partial class Parser
                 pointerOperator.AnalyzedType = TokenAnalyzedType.TypeModifier;
                 type = new TypeInstancePointer(type, pointerOperator, File);
             }
-            else if (ExpectOperator("<"))
+            else if (ExpectOperator("<", out Token? angleBracketStart))
             {
                 if (type is not TypeInstanceSimple)
                 { throw new NotImplementedException(); }
 
                 List<TypeInstance> genericTypes = new();
+                Token? angleBracketEnd;
 
                 while (true)
                 {
@@ -119,7 +120,7 @@ public sealed partial class Parser
 
                     genericTypes.Add(typeParameter);
 
-                    if (ExpectOperator(">"))
+                    if (ExpectOperator(">", out angleBracketEnd))
                     { break; }
 
                     if (ExpectOperator(">>", out Token? doubleEnd))
@@ -128,6 +129,7 @@ public sealed partial class Parser
                         if (newA == null || newB == null)
                         { throw new UnreachableException($"I failed at token splitting :("); }
                         CurrentTokenIndex--;
+                        angleBracketEnd = newA;
                         Tokens[CurrentTokenIndex] = newB;
                         break;
                     }
@@ -136,7 +138,7 @@ public sealed partial class Parser
                     { continue; }
                 }
 
-                type = new TypeInstanceSimple(possibleType, File, genericTypes.ToImmutableArray());
+                type = new TypeInstanceSimple(possibleType, File, genericTypes.ToImmutableArray(), new TokenPair(angleBracketStart, angleBracketEnd));
                 withGenerics = true;
             }
             else if (!withGenerics && ExpectOperator("(", out Token? bracketStart))

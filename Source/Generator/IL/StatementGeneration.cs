@@ -1351,7 +1351,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 IsUnmanaged(toTypePT))
             {
                 EmitStatement(statement.Value, il, ref successful);
-                if (!fromTypePT.Equals(toTypeP))
+                if (!fromTypePT.Equals(toTypePT))
                 {
                     Diagnostics.Add(DiagnosticAt.Warning($"Be careful! (casting {statement.Value.Type.FinalValue} to {statement.Type.FinalValue})", statement));
                 }

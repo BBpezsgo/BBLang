@@ -675,12 +675,10 @@ public partial class CodeGeneratorForMain : CodeGenerator
         PossibleDiagnostic? argumentError = null;
         if (!Utils.SequenceEquals(anyCall.Arguments, functionType.Parameters, (argument, parameter) =>
         {
-            GeneralType argumentType = argument.Type;
-
-            if (argument.Equals(parameter))
+            if (argument.Type.SameAs(parameter))
             { return true; }
 
-            if (StatementCompiler.CanCastImplicitly(argumentType, parameter, null, out argumentError))
+            if (StatementCompiler.CanCastImplicitly(argument.Type, parameter, null, out argumentError))
             { return true; }
 
             argumentError = argumentError.TrySetLocation(argument);

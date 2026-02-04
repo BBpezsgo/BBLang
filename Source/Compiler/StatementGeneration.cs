@@ -290,6 +290,14 @@ public partial class StatementCompiler
             return false;
         }
 
+        SetStatementReference(type, result switch
+        {
+            CompiledAliasTypeExpression v => v.Definition,
+            CompiledStructTypeExpression v => v.Struct,
+            CompiledGenericTypeExpression v => v.Definition,
+            _ => null,
+        });
+
         type.Identifier.AnalyzedType = result.FinalValue switch
         {
             CompiledGenericTypeExpression => TokenAnalyzedType.TypeParameter,
@@ -1831,12 +1839,10 @@ public partial class StatementCompiler
         PossibleDiagnostic? argumentError = null;
         if (!Utils.SequenceEquals(compiledArguments, functionType.Parameters, (argument, parameter) =>
         {
-            GeneralType argumentType = argument.Type;
-
-            if (argument.Equals(parameter))
+            if (argument.Type.SameAs(parameter))
             { return true; }
 
-            if (CanCastImplicitly(argumentType, parameter, out argumentError))
+            if (CanCastImplicitly(argument.Type, parameter, out argumentError))
             { return true; }
 
             argumentError = argumentError.TrySetLocation(argument);
@@ -3182,9 +3188,6 @@ public partial class StatementCompiler
             return false;
         }
 
-        //SetTypeType(newInstance.Type, instanceType);
-        //SetStatementType(newInstance, instanceType);
-
         switch (instanceType)
         {
             case CompiledPointerTypeExpression pointerType:
@@ -3192,13 +3195,13 @@ public partial class StatementCompiler
                 if (!CompileAllocation(pointerType.To, out compiledStatement))
                 { return false; }
 
-                SetStatementReference(newInstance, compiledStatement is CompiledFunctionCall cfc ? cfc.Function : null);
-
                 if (!CompileType(instanceType, out GeneralType? compiledType, out PossibleDiagnostic? typeError, true))
                 {
                     Diagnostics.Add(typeError.ToError(instanceType));
                     return false;
                 }
+
+                SetStatementType(newInstance, compiledType);
 
                 compiledStatement = new CompiledReinterpretation()
                 {
@@ -3218,7 +3221,10 @@ public partial class StatementCompiler
                     Diagnostics.Add(typeError.ToError(structType));
                     return false;
                 }
+
+                SetStatementType(newInstance, compiledType);
                 structType.Struct.References.AddReference(newInstance.Type, newInstance.File);
+
                 compiledStatement = new CompiledStackAllocation()
                 {
                     Type = compiledType,
@@ -3236,6 +3242,9 @@ public partial class StatementCompiler
                     Diagnostics.Add(typeError.ToError(arrayType));
                     return false;
                 }
+
+                SetStatementType(newInstance, compiledType);
+
                 compiledStatement = new CompiledStackAllocation()
                 {
                     Type = compiledType,
