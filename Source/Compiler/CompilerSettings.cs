@@ -1,3 +1,4 @@
+using System.Threading;
 using LanguageCore.Runtime;
 
 namespace LanguageCore.Compiler;
@@ -50,6 +51,7 @@ public struct CompilerSettings
     public bool IgnoreTopLevelStatements { get; set; }
     public ImmutableArray<ExpressionVariable> ExpressionVariables { get; set; }
     public IDictionary<Uri, CacheItem>? Cache { get; set; }
+    public CancellationToken CancellationToken { get; set; }
 
     [SetsRequiredMembers]
     public CompilerSettings(CompilerSettings other)
@@ -72,5 +74,6 @@ public struct CompilerSettings
         IgnoreTopLevelStatements = other.IgnoreTopLevelStatements;
         ExpressionVariables = other.ExpressionVariables;
         Cache = other.Cache;
+        CancellationToken = other.CancellationToken;
     }
 }

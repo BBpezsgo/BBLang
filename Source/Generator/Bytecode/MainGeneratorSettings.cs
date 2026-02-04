@@ -1,4 +1,5 @@
-﻿using LanguageCore.IL.Generator;
+﻿using System.Threading;
+using LanguageCore.IL.Generator;
 using LanguageCore.Runtime;
 
 namespace LanguageCore.BBLang.Generator;
@@ -26,6 +27,7 @@ public struct MainGeneratorSettings
     public bool CleanupGlobalVaraibles;
     public ILGeneratorSettings? ILGeneratorSettings;
     public bool IsExpression;
+    public CancellationToken CancellationToken;
 
     public MainGeneratorSettings(MainGeneratorSettings other)
     {
@@ -37,6 +39,7 @@ public struct MainGeneratorSettings
         CleanupGlobalVaraibles = other.CleanupGlobalVaraibles;
         ILGeneratorSettings = other.ILGeneratorSettings;
         IsExpression = other.IsExpression;
+        CancellationToken = other.CancellationToken;
     }
 
     public static MainGeneratorSettings Default => new()
@@ -48,5 +51,6 @@ public struct MainGeneratorSettings
         StackSize = BytecodeInterpreterSettings.Default.StackSize,
         CleanupGlobalVaraibles = true,
         ILGeneratorSettings = null,
+        CancellationToken = CancellationToken.None,
     };
 }

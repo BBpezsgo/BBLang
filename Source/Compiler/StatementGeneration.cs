@@ -1670,6 +1670,8 @@ public partial class StatementCompiler
     }
     bool CompileStatement(Statement statement, [NotNullWhen(true)] out CompiledStatement? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
     {
+        Settings.CancellationToken.ThrowIfCancellationRequested();
+
         if (statement is IMissingNode)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", statement, false));
@@ -3614,6 +3616,8 @@ public partial class StatementCompiler
     }
     bool CompileExpression(Expression statement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
     {
+        Settings.CancellationToken.ThrowIfCancellationRequested();
+
         if (statement is IMissingNode)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Incomplete AST", statement, false));

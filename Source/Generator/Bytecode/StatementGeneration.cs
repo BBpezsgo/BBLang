@@ -1818,6 +1818,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledStatement statement)
     {
+        Settings.CancellationToken.ThrowIfCancellationRequested();
+
         int startInstruction = Code.Offset;
 
         switch (statement)
@@ -1850,6 +1852,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledExpression statement, GeneralType? expectedType = null, bool resolveReference = true)
     {
+        Settings.CancellationToken.ThrowIfCancellationRequested();
+
         int startInstruction = Code.Offset;
 
         switch (statement)
