@@ -1,6 +1,7 @@
 
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LanguageCore;
@@ -29,17 +30,17 @@ public class HttpSourceProvider : ISourceProviderAsync, ISourceQueryProvider
         yield return file;
     }
 
-    public SourceProviderResultAsync TryLoad(string requestedFile, Uri? currentFile)
+    public SourceProviderResultAsync TryLoad(string requestedFile, Uri? currentFile, CancellationToken cancellationToken = default)
     {
         foreach (Uri file in GetQuery(requestedFile, currentFile))
         {
             using HttpClient client = new();
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"BBLang Compiler Source Collector");
-            using Task<HttpResponseMessage> getTask = client.GetAsync(file);
+            using Task<HttpResponseMessage> getTask = client.GetAsync(file, cancellationToken);
 
             try
             {
-                getTask.Wait();
+                getTask.Wait(cancellationToken);
             }
             catch (AggregateException ex)
             {

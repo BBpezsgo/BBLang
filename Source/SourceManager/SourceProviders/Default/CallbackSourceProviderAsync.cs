@@ -1,12 +1,13 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LanguageCore;
 
 #if UNITY
-public delegate UnityEngine.Awaitable<Stream>? FileParser(Uri file);
+public delegate UnityEngine.Awaitable<Stream>? FileParser(Uri file, CancellationToken cancellationToken);
 #else
-public delegate Task<Stream>? FileParser(Uri file);
+public delegate Task<Stream>? FileParser(Uri file, CancellationToken cancellationToken);
 #endif
 
 public class CallbackSourceProviderAsync : ISourceProviderAsync, ISourceQueryProvider
@@ -22,7 +23,7 @@ public class CallbackSourceProviderAsync : ISourceProviderAsync, ISourceQueryPro
 
     public IEnumerable<Uri> GetQuery(string requestedFile, Uri? currentFile) => new CallbackSourceProviderSync((Func<Uri, Stream?>)((v) => throw new InvalidOperationException()), BasePath).GetQuery(requestedFile, currentFile);
 
-    public SourceProviderResultAsync TryLoad(string requestedFile, Uri? currentFile)
+    public SourceProviderResultAsync TryLoad(string requestedFile, Uri? currentFile, CancellationToken cancellationToken = default)
     {
         Uri? lastFile = null;
 
@@ -30,7 +31,7 @@ public class CallbackSourceProviderAsync : ISourceProviderAsync, ISourceQueryPro
         {
             lastFile = file;
 #pragma warning disable IDE0008 // Use explicit type
-            var task = FileParser.Invoke(file);
+            var task = FileParser.Invoke(file, cancellationToken);
 #pragma warning restore IDE0008
 
             if (task is null) continue;
