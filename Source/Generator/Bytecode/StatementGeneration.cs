@@ -2740,6 +2740,17 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 IsInitialized = false,
             };
 
+            int absoluteGlobalAddress = FindSize(ExitCodeType) + GlobalVariablesSize;
+            CurrentScopeDebug.LastRef.Stack.Add(new StackElementInformation()
+            {
+                Address = currentOffset,
+                BasePointerRelative = false,
+                Kind = StackElementKind.GlobalVariable,
+                Size = size,
+                Identifier = variableDeclaration.Identifier,
+                Type = variableDeclaration.Type,
+            });
+
             CompiledGlobalVariables.Add(variableDeclaration);
             globalVariablesCleanup.Insert(0, variableDeclaration.Cleanup);
         }
@@ -2795,19 +2806,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         // 4 -> exit code
         if (ScopeSizes.Pop() != 4) { } // throw new InternalException("Bruh");
 
-        // foreach (CompiledVariable variable in CompiledGlobalVariables)
-        // {
-        //     int absoluteGlobalAddress = FindSize(ExitCodeType) + GlobalVariablesSize;
-        //     CurrentScopeDebug.LastRef.Stack.Add(new StackElementInformation()
-        //     {
-        //         Address = -(absoluteGlobalAddress + variable.MemoryAddress - 1),
-        //         BasePointerRelative = false,
-        //         Kind = StackElementKind.GlobalVariable,
-        //         Size = FindSize(variable.Type, variable),
-        //         Identifier = variable.Identifier.Content,
-        //         Type = variable.Type,
-        //     });
-        // }
+        ScopeInformation topLevelScope = CurrentScopeDebug.Pop();
+        topLevelScope.Location.Instructions.End = Code.Offset - 1;
 
         foreach ((ICompiledFunctionDefinition function, CompiledBlock body) in compilerResult.Functions)
         {
@@ -2838,12 +2838,6 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
         }
     failed:
-
-        // {
-        //     ScopeInformation scope = CurrentScopeDebug.Pop();
-        //     scope.Location.Instructions.End = Code.Offset - 1;
-        //     DebugInfo?.ScopeInformation.Add(scope);
-        // }
 
         Dictionary<string, ExposedFunction> exposedFunctions = new();
         if (!compilerResult.IsExpression)
@@ -2878,6 +2872,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
 
         Code.Insert(0, stringInitializationInstructions);
+        topLevelScope.Location.Instructions.End += stringInitializationInstructions.Count;
+
+        DebugInfo?.ScopeInformation.Add(topLevelScope);
 
         return new BBLangGeneratorResult()
         {

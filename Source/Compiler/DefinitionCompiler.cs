@@ -1078,6 +1078,10 @@ public partial class StatementCompiler
 
         // This should not be null ...
         if (res.ResolvedEntry is null) throw new InternalExceptionWithoutContext($"I can't really explain this error ...");
+
+        if (Diagnostics.HasErrors)
+        { return CompilerResult.MakeEmpty(res.ResolvedEntry); }
+
         return CompileInternal(res.ResolvedEntry, res.ParsedFiles);
     }
 

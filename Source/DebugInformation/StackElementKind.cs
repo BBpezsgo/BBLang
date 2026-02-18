@@ -4,5 +4,6 @@ public enum StackElementKind
 {
     Internal,
     Variable,
+    GlobalVariable,
     Parameter,
 }
