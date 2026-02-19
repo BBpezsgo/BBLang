@@ -239,7 +239,7 @@ public sealed partial class Parser
         if (tokens.Count == 0)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Expected identifier or string literal after keyword `{DeclarationKeywords.Using}`", keyword.Position.After(), File, false));
-            usingDefinition = new UsingDefinition(keyword, ImmutableArray<Token>.Empty, File);
+            usingDefinition = new UsingDefinition(keyword, ImmutableArray.Create<Token>(new MissingToken(TokenType.Identifier, keyword.Position.After())), File);
             return true;
         }
 

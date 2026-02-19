@@ -1639,6 +1639,56 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         if (!Frames.Last.IsTemplateInstance) expression.CompiledType = type;
         return type;
     }
+    TType SetStatementType<TType>(TypeInstance expression, TType type)
+        where TType : GeneralType
+    {
+        switch (expression, type)
+        {
+            case (TypeInstanceFunction v, FunctionType w): SetStatementType(v, w); break;
+            case (TypeInstancePointer v, PointerType w): SetStatementType(v, w); break;
+            case (TypeInstanceStackArray v, ArrayType w): SetStatementType(v, w); break;
+            case (TypeInstanceSimple v, _): SetStatementType(v, type); break;
+            default: throw new UnreachableException();
+        }
+        return type;
+    }
+    FunctionType SetStatementType(TypeInstanceFunction expression, FunctionType type)
+    {
+        if (Frames.Last.IsTemplateInstance) return type;
+
+        expression.CompiledType = type;
+
+        return type;
+    }
+    PointerType SetStatementType(TypeInstancePointer expression, PointerType type)
+    {
+        if (Frames.Last.IsTemplateInstance) return type;
+
+        expression.CompiledType = type;
+
+        SetStatementType(expression.To, type.To);
+
+        return type;
+    }
+    ArrayType SetStatementType(TypeInstanceStackArray expression, ArrayType type)
+    {
+        if (Frames.Last.IsTemplateInstance) return type;
+
+        expression.CompiledType = type;
+
+        SetStatementType(expression.StackArrayOf, type.Of);
+
+        return type;
+    }
+    TType SetStatementType<TType>(TypeInstanceSimple expression, TType type)
+        where TType : GeneralType
+    {
+        if (Frames.Last.IsTemplateInstance) return type;
+
+        expression.CompiledType = type;
+
+        return type;
+    }
     void TrySetStatementReference<TRef>(Statement statement, TRef? reference)
     {
         if (statement is IReferenceableTo<TRef> v1) SetStatementReference(v1, reference);
@@ -4730,6 +4780,8 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             result = null;
             return false;
         }
+
+        SetStatementType(type, result);
 
         return true;
     }

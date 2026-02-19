@@ -611,7 +611,7 @@ public partial class StatementCompiler
     bool CompileFunctionCall_External<TFunction>(ImmutableArray<CompiledArgument> arguments, bool saveValue, TFunction compiledFunction, IExternalFunction externalFunction, Location location, [NotNullWhen(true)] out CompiledExpression? compiledStatement)
         where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition
     {
-        CheckExternalFunctionDeclaration(this, compiledFunction, externalFunction, Diagnostics);
+        //CheckExternalFunctionDeclaration(this, compiledFunction, externalFunction, Diagnostics);
 
         compiledStatement = new CompiledExternalFunctionCall()
         {
@@ -1113,7 +1113,10 @@ public partial class StatementCompiler
             }
             else
             {
-                type ??= initialValue.Type;
+                type = type is null
+                    ? initialValue.Type
+                    : GeneralType.TryInsertConstants(type, initialValue.Type);
+
                 if (!CanCastImplicitly(initialValue, type, out CompiledExpression? assignedInitialValue, out PossibleDiagnostic? castError))
                 {
                     Diagnostics.Add(castError.ToError(initialValue));
@@ -1136,6 +1139,8 @@ public partial class StatementCompiler
         //{
         //    Diagnostics.Add(Diagnostic.Internal($"Failed to qualify all generics in variable \"{newVariable.Identifier}\" type \"{type}\" (what edge case is this???)", newVariable.Type, newVariable.File));
         //}
+
+        SetStatementType(newVariable.Type, type);
 
         CompiledCleanup? compiledCleanup = null;
         if (newVariable.Modifiers.Contains(ModifierKeywords.Temp))
@@ -3201,6 +3206,7 @@ public partial class StatementCompiler
                     return false;
                 }
 
+                SetStatementType(newInstance.Type, compiledType);
                 SetStatementType(newInstance, compiledType);
 
                 compiledStatement = new CompiledReinterpretation()
@@ -3222,6 +3228,7 @@ public partial class StatementCompiler
                     return false;
                 }
 
+                SetStatementType(newInstance.Type, compiledType);
                 SetStatementType(newInstance, compiledType);
                 structType.Struct.References.AddReference(newInstance.Type, newInstance.File);
 
@@ -3243,6 +3250,7 @@ public partial class StatementCompiler
                     return false;
                 }
 
+                SetStatementType(newInstance.Type, compiledType);
                 SetStatementType(newInstance, compiledType);
 
                 compiledStatement = new CompiledStackAllocation()
@@ -4151,7 +4159,7 @@ public partial class StatementCompiler
 
         if (function is IExternalFunctionDefinition externalFunctionDefinition &&
             externalFunctionDefinition.ExternalFunctionName is not null &&
-            ExternalFunctions.Any(v => v.Name == externalFunctionDefinition.ExternalFunctionName))
+            (ExternalFunctions.Any(v => v.Name == externalFunctionDefinition.ExternalFunctionName) || function.Block is null))
         {
             // FIXME: hmmm
             return false;

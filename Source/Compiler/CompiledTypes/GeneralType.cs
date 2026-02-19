@@ -187,7 +187,7 @@ public abstract class GeneralType :
             case GenericType genericType:
             {
                 if (!typeArguments.TryGetValue(genericType.Identifier, out GeneralType? passedTypeArgument))
-                { throw new InternalExceptionWithoutContext(); }
+                { return type; }
                 return passedTypeArgument;
             }
 
@@ -233,6 +233,26 @@ public abstract class GeneralType :
             default:
                 throw new NotImplementedException();
         }
+    }
+
+    public static GeneralType TryInsertConstants(GeneralType type, GeneralType source)
+        => InsertConstants(type, source) ?? type;
+
+    public static GeneralType? InsertConstants(GeneralType type, GeneralType source)
+    {
+        switch (type, source.FinalValue)
+        {
+            case (ArrayType a, ArrayType b):
+                if (!a.Length.HasValue && b.Length.HasValue) return new ArrayType(a.Of, b.Length.Value);
+                break;
+            case (PointerType a, PointerType b):
+                GeneralType? to = InsertConstants(a.To, b.To);
+                if (to is not null) return new PointerType(to);
+                break;
+            default:
+                break;
+        }
+        return null;
     }
 
     public static ImmutableArray<GeneralType> InsertTypeParameters(ImmutableArray<GeneralType> types, IReadOnlyDictionary<string, GeneralType> typeArguments)

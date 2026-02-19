@@ -6,6 +6,9 @@ namespace LanguageCore.Parser;
 
 public class TypeInstanceFunction : TypeInstance, IEquatable<TypeInstanceFunction?>
 {
+    /// <summary> Set by the compiler </summary>
+    public FunctionType? CompiledType { get; set; }
+
     public TypeInstance FunctionReturnType { get; }
     public ImmutableArray<TypeInstance> FunctionParameterTypes { get; }
     public Token? ClosureModifier { get; }

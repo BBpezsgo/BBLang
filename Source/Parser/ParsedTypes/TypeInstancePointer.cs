@@ -5,6 +5,9 @@ namespace LanguageCore.Parser;
 
 public class TypeInstancePointer : TypeInstance, IEquatable<TypeInstancePointer?>
 {
+    /// <summary> Set by the compiler </summary>
+    public PointerType? CompiledType { get; set; }
+
     public TypeInstance To { get; }
     public Token Operator { get; }
 
@@ -21,7 +24,7 @@ public class TypeInstancePointer : TypeInstance, IEquatable<TypeInstancePointer?
     public bool Equals(TypeInstancePointer? other)
     {
         if (other is null) return false;
-        return this.To.Equals(other.To);
+        return To.Equals(other.To);
     }
 
     public override int GetHashCode() => HashCode.Combine((byte)4, To);

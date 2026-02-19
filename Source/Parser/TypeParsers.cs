@@ -170,18 +170,18 @@ public sealed partial class Parser
 
                 type = new TypeInstanceFunction(type, parameterTypes.ToImmutableArray(), closureModifier, File, new(bracketStart, bracketEnd));
             }
-            else if (ExpectOperator("[", out _))
+            else if (ExpectOperator("[", out Token? arraySquareBracketStart))
             {
-                if (ExpectOperator("]"))
+                if (ExpectOperator("]", out Token? arraySquareBracketEnd))
                 {
-                    type = new TypeInstanceStackArray(type, null, File);
+                    type = new TypeInstanceStackArray(type, null, new(arraySquareBracketStart, arraySquareBracketEnd), File);
                 }
                 else if (ExpectAnyExpression(out Expression? sizeValue))
                 {
-                    if (!ExpectOperator("]"))
+                    if (!ExpectOperator("]", out arraySquareBracketEnd))
                     { return false; }
 
-                    type = new TypeInstanceStackArray(type, sizeValue, File);
+                    type = new TypeInstanceStackArray(type, sizeValue, new(arraySquareBracketStart, arraySquareBracketEnd), File);
                 }
                 else
                 {

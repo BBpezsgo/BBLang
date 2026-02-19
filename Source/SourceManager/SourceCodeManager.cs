@@ -153,6 +153,7 @@ public class SourceCodeManager
                     if (CompiledUris.Contains(query))
                     {
                         resolvedUri = query;
+                        if (initiator is not null) initiator.CompiledUri = resolvedUri;
                         return true;
                     }
                 }
@@ -166,6 +167,7 @@ public class SourceCodeManager
                             if (Cache.TryGetValue(query, out CacheItem? cache) && cache.Version == version)
                             {
                                 resolvedUri = query;
+                                if (initiator is not null) initiator.CompiledUri = resolvedUri;
 
                                 if (!CompiledUris.Add(query)) return true;
 
@@ -199,10 +201,10 @@ public class SourceCodeManager
                     case SourceProviderResultType.Success:
                         resolvedUri = res.ResolvedUri!;
                         wasHandlerFound = true;
+                        if (initiator is not null) initiator.CompiledUri = resolvedUri;
                         if (CompiledUris.Contains(resolvedUri))
                         { return true; }
                         CompiledUris.Add(resolvedUri);
-                        if (initiator is not null) initiator.CompiledUri = resolvedUri;
 
                         if (res.Stream is null)
                         {
@@ -244,11 +246,11 @@ public class SourceCodeManager
                     case SourceProviderResultType.Success:
                         resolvedUri = res.ResolvedUri!;
                         wasHandlerFound = true;
+                        if (initiator is not null) initiator.CompiledUri = resolvedUri;
                         if (CompiledUris.Contains(resolvedUri))
                         { return true; }
                         CompiledUris.Add(resolvedUri);
 
-                        if (initiator is not null) initiator.CompiledUri = resolvedUri;
                         if (res.Stream is null)
                         {
                             if (initiator is null)

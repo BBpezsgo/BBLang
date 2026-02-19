@@ -5,13 +5,18 @@ namespace LanguageCore.Parser;
 
 public class TypeInstanceStackArray : TypeInstance, IEquatable<TypeInstanceStackArray?>
 {
+    /// <summary> Set by the compiler </summary>
+    public ArrayType? CompiledType { get; set; }
+
     public Expression? StackArraySize { get; }
     public TypeInstance StackArrayOf { get; }
+    public TokenPair SquareBrackets { get; }
 
-    public TypeInstanceStackArray(TypeInstance stackArrayOf, Expression? sizeValue, Uri file) : base(file)
+    public TypeInstanceStackArray(TypeInstance stackArrayOf, Expression? sizeValue, TokenPair squareBrackets, Uri file) : base(file)
     {
         StackArrayOf = stackArrayOf;
         StackArraySize = sizeValue;
+        SquareBrackets = squareBrackets;
     }
 
     public override bool Equals(object? obj) => obj is TypeInstanceStackArray other && Equals(other);
@@ -28,7 +33,7 @@ public class TypeInstanceStackArray : TypeInstance, IEquatable<TypeInstanceStack
 
     public override int GetHashCode() => HashCode.Combine((byte)1, StackArrayOf, StackArraySize);
 
-    public override Position Position => new(StackArrayOf, StackArraySize);
+    public override Position Position => new(StackArrayOf, StackArraySize, SquareBrackets);
 
     public override string ToString() => $"{StackArrayOf}[{StackArraySize}]";
     public override string ToString(IReadOnlyDictionary<string, GeneralType>? typeArguments) => $"{StackArrayOf.ToString(typeArguments)}[{StackArraySize}]";

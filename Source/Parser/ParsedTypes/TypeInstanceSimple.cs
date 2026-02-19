@@ -6,6 +6,9 @@ namespace LanguageCore.Parser;
 
 public class TypeInstanceSimple : TypeInstance, IEquatable<TypeInstanceSimple?>, IReferenceableTo
 {
+    /// <summary> Set by the compiler </summary>
+    public GeneralType? CompiledType { get; set; }
+
     public Token Identifier { get; }
     TokenPair? TypeArgumentsBrackets { get; }
     public ImmutableArray<TypeInstance>? TypeArguments { get; }

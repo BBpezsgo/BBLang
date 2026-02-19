@@ -32,6 +32,56 @@ public static class Extensions
         }
     }
 
+    public static IEnumerable<TypeInstance> EnumerateTypeInstances(this ParserResult ast)
+    {
+        foreach (AliasDefinition item in ast.AliasDefinitions) yield return item.Value;
+
+        foreach (StructDefinition item in ast.Structs)
+        {
+            foreach (FieldDefinition v in item.Fields) yield return v.Type;
+
+            foreach (ConstructorDefinition v in item.Constructors)
+            {
+                yield return v.Type;
+                foreach (ParameterDefinition p in v.Parameters.Parameters) yield return p.Type;
+            }
+
+            foreach (FunctionDefinition v in item.Functions)
+            {
+                yield return v.Type;
+                foreach (ParameterDefinition p in v.Parameters.Parameters) yield return p.Type;
+            }
+
+            foreach (GeneralFunctionDefinition v in item.GeneralFunctions)
+            {
+                foreach (ParameterDefinition p in v.Parameters.Parameters) yield return p.Type;
+            }
+
+            foreach (FunctionDefinition v in item.Operators)
+            {
+                yield return v.Type;
+                foreach (ParameterDefinition p in v.Parameters.Parameters) yield return p.Type;
+            }
+        }
+
+        foreach (FunctionDefinition v in ast.Functions)
+        {
+            yield return v.Type;
+            foreach (ParameterDefinition p in v.Parameters.Parameters) yield return p.Type;
+        }
+
+        foreach (FunctionDefinition v in ast.Operators)
+        {
+            yield return v.Type;
+            foreach (ParameterDefinition p in v.Parameters.Parameters) yield return p.Type;
+        }
+
+        foreach (IHaveType item in ast.EnumerateStatements().OfType<IHaveType>())
+        {
+            yield return item.Type;
+        }
+    }
+
     public static bool EnumerateStatements(this CompilerResult parserResult, Func<CompiledStatement, bool> callback)
     {
         if (!parserResult.Statements.IsDefault)
