@@ -1,13 +1,7 @@
 ﻿namespace LanguageCore.Runtime;
 
-#if UNITY_BURST
-[Unity.Burst.BurstCompile]
-#endif
 public static class ALU
 {
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     static long SignExtend(int value, BitWidth width)
     {
         unchecked
@@ -19,9 +13,6 @@ public static class ALU
         }
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int Add(int a, int b, BitWidth width, ref Flags flags)
     {
         uint mask = GetMask(width);
@@ -45,9 +36,6 @@ public static class ALU
         return r.I32();
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     static uint GetSignBit(BitWidth width) => width switch
     {
         BitWidth._8 => 0x80,
@@ -57,9 +45,6 @@ public static class ALU
         _ => throw new UnreachableException(),
     };
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     static uint GetMask(BitWidth width) => width switch
     {
         BitWidth._8 => 0xFFu,
@@ -69,9 +54,6 @@ public static class ALU
         _ => throw new UnreachableException(),
     };
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int Subtract(int a, int b, BitWidth width, ref Flags flags)
     {
         uint mask = GetMask(width);
@@ -91,9 +73,6 @@ public static class ALU
         return result.I32();
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int DivSigned(int a, int b, BitWidth width, ref Flags flags, out int remainder)
     {
         long sa = SignExtend(a, width);
@@ -117,9 +96,6 @@ public static class ALU
         return (int)(q & GetMask(width));
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int DivUnsigned(int a, int b, BitWidth width, ref Flags flags, out int remainder)
     {
         uint mask = GetMask(width);
@@ -142,9 +118,6 @@ public static class ALU
         return (int)(q & mask);
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int MulSigned(int a, int b, BitWidth width, ref Flags flags)
     {
         long mask = (long)GetMask(width);
@@ -162,9 +135,6 @@ public static class ALU
         return (int)result;
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int MulUnsigned(int a, int b, BitWidth width, ref Flags flags)
     {
         ulong mask = GetMask(width);
@@ -178,9 +148,6 @@ public static class ALU
         return (int)result;
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int BitwiseAnd(int a, int b, BitWidth width, ref Flags flags)
     {
         int result = (a.U32() & b.U32()).I32();
@@ -192,9 +159,6 @@ public static class ALU
         return result;
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int BitwiseOr(int a, int b, BitWidth width, ref Flags flags)
     {
         int result = (a.U32() | b.U32()).I32();
@@ -206,9 +170,6 @@ public static class ALU
         return result;
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int BitwiseXor(int a, int b, BitWidth width, ref Flags flags)
     {
         int result = (a.U32() ^ b.U32()).I32();
@@ -220,9 +181,6 @@ public static class ALU
         return result;
     }
 
-#if UNITY_BURST
-    [Unity.Burst.BurstCompile]
-#endif
     public static int BitwiseNot(int a, BitWidth width, ref Flags flags)
     {
         int result = (~a.U32()).I32();
