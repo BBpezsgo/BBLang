@@ -1563,10 +1563,10 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         return GetUsedBy(literal switch
         {
-            LiteralType.Integer => "integer",
-            LiteralType.Float => "float",
-            LiteralType.String => "string",
-            LiteralType.Char => "char",
+            LiteralType.Integer => InternalTypes.Integer,
+            LiteralType.Float => InternalTypes.Float,
+            LiteralType.String => InternalTypes.String,
+            LiteralType.Char => InternalTypes.Char,
             _ => throw new UnreachableException(),
         }, out type, out error);
     }
@@ -1902,7 +1902,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                     case BinaryOperatorCallExpression.CompGEQ:
                     case BinaryOperatorCallExpression.CompEQ:
                     case BinaryOperatorCallExpression.CompNEQ:
-                        if (!GetUsedBy("boolean", out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
+                        if (!GetUsedBy(InternalTypes.Boolean, out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
                         {
                             type = BooleanType;
                             diagnostics.Add(DiagnosticAt.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
@@ -2019,7 +2019,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             case UnaryOperatorCallExpression.LogicalNOT:
             {
-                if (!GetUsedBy("boolean", out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
+                if (!GetUsedBy(InternalTypes.Boolean, out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
                 {
                     type = BooleanType;
                     diagnostics.Add(DiagnosticAt.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));

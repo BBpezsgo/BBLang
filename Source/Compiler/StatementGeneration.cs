@@ -2001,7 +2001,7 @@ public partial class StatementCompiler
                         case BinaryOperatorCallExpression.CompGEQ:
                         case BinaryOperatorCallExpression.CompEQ:
                         case BinaryOperatorCallExpression.CompNEQ:
-                            if (!GetUsedBy("boolean", out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
+                            if (!GetUsedBy(InternalTypes.Boolean, out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
                             {
                                 resultType = BooleanType;
                             }

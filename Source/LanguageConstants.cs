@@ -263,6 +263,23 @@ public static class AttributeConstants
     );
 }
 
+public static class InternalTypes
+{
+    public const string Integer = "integer";
+    public const string Float = "float";
+    public const string String = "string";
+    public const string Char = "char";
+    public const string Boolean = "boolean";
+
+    public static readonly ImmutableArray<string> List = ImmutableArray.Create(
+        Integer,
+        Float,
+        String,
+        Char,
+        Boolean
+    );
+}
+
 public static class BuiltinFunctions
 {
     public static ImmutableDictionary<string, BuiltinFunction> Prototypes { get; } = new Dictionary<string, BuiltinFunction>()
