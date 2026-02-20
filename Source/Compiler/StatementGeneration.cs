@@ -3426,7 +3426,7 @@ public partial class StatementCompiler
         if (!CompileExpression(index.Object, out CompiledExpression? baseStatement)) return false;
         if (!CompileExpression(index.Index, out CompiledExpression? indexStatement)) return false;
 
-        if (GetIndexGetter(baseStatement.Type, indexStatement.Type, index.File, out FunctionQueryResult<CompiledFunctionDefinition>? indexer, out PossibleDiagnostic? notFoundError, AddCompilable))
+        if (GetIndexGetter(index, out FunctionQueryResult<CompiledFunctionDefinition>? indexer, out PossibleDiagnostic? notFoundError, AddCompilable))
         {
             indexer.Function.References.Add(new(index, index.File));
             indexer.OriginalFunction.References.Add(new(index, index.File));
@@ -3469,7 +3469,7 @@ public partial class StatementCompiler
             return true;
         }
 
-        Diagnostics.Add(DiagnosticAt.Error($"Index getter for type \"{baseStatement.Type}\" not found", index));
+        Diagnostics.Add(DiagnosticAt.Error($"Index getter for type \"{baseStatement.Type}\" not found", index).WithSuberrors(notFoundError.ToError(index)));
         return false;
     }
     bool CompileExpression(ArgumentExpression modifiedStatement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
@@ -3537,12 +3537,25 @@ public partial class StatementCompiler
 
         if (statementType.Equals(targetType))
         {
-            // Diagnostics.Add(Diagnostic.Hint($"Redundant type conversion", typeCast.Keyword, typeCast.File));
+            Diagnostics.Add(DiagnosticAt.Hint($"Redundant type conversion", typeCast.Keyword, typeCast.File));
             compiledStatement = prev;
+            SetStatementType(typeCast, targetType);
             return true;
         }
 
+        if (statementType is PointerType statementPointerType
+            && targetType is PointerType targetPointerType
+            && targetPointerType.To is ArrayType targetArrayPointerType
+            && !targetArrayPointerType.Length.HasValue
+            && FindSize(statementPointerType.To, out var size1, out _, this)
+            && FindSize(targetArrayPointerType.Of, out var size2, out _, this)
+            && size1 % size2 == 0)
+        {
+            targetType = new PointerType(new ArrayType(targetArrayPointerType.Of, size1 / size2));
+        }
+
         SetStatementType(typeCast, targetType);
+        SetStatementType(typeCast.Type, targetType);
 
         compiledStatement = new CompiledReinterpretation()
         {

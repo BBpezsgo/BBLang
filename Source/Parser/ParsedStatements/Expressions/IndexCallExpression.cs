@@ -13,7 +13,7 @@ public class IndexCallExpression : Expression, IReferenceableTo<CompiledFunction
     public ArgumentExpression Index { get; }
     public TokenPair Brackets { get; }
 
-    public override Position Position => new(Object, Index);
+    public override Position Position => new(Object, Index, Brackets);
 
     public IndexCallExpression(
         Expression @object,

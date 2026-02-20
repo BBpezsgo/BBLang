@@ -427,6 +427,28 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         ) && result.Success;
     }
 
+    bool GetIndexGetter(
+        IndexCallExpression expression,
+
+        [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
+        [NotNullWhen(false)] out PossibleDiagnostic? error,
+        Action<CompliableTemplate<CompiledFunctionDefinition>>? addCompilable = null)
+    {
+        string identifier = BuiltinFunctionIdentifiers.IndexerGet;
+        FunctionQuery<CompiledFunctionDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(
+            identifier,
+            ImmutableArray.Create<ArgumentExpression>(ArgumentExpression.Wrap(expression.Object), expression.Index),
+            FunctionArgumentConverter,
+            expression.File,
+            null,
+            addCompilable);
+        return GetFunction(
+            query,
+            out result,
+            out error
+        );
+    }
+
     bool GetIndexSetter(
         GeneralType prevType,
         GeneralType elementType,
@@ -1648,7 +1670,9 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             case (TypeInstancePointer v, PointerType w): SetStatementType(v, w); break;
             case (TypeInstanceStackArray v, ArrayType w): SetStatementType(v, w); break;
             case (TypeInstanceSimple v, _): SetStatementType(v, type); break;
-            default: throw new UnreachableException();
+            default:
+                Diagnostics.Add(DiagnosticAt.Warning($"({expression.GetType().Name}, {type.GetType().Name})", expression));
+                break; // throw new UnreachableException($"({expression.GetType().Name}, {type.GetType().Name})");
         }
         return type;
     }
