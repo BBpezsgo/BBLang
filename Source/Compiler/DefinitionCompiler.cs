@@ -1130,16 +1130,16 @@ public partial class StatementCompiler
         CompiledGeneralFunctions.Set(previous.GeneralFunctionDefinitions);
         CompiledConstructors.Set(previous.ConstructorDefinitions);
 
-        if (parsedExpression.AST.TopLevelStatements.Length > 1)
-        {
-            Diagnostics.Add(DiagnosticAt.Error($"Expression should consists of one value only", parsedExpression.AST.TopLevelStatements[1]));
-            return CompilerResult.MakeEmpty(entryFile);
-        }
-        else if (parsedExpression.AST.TopLevelStatements.Length == 0)
-        {
-            Diagnostics.Add(DiagnosticAt.Error($"Expression doesn't have any values", new Location(Position.Zero, entryFile)));
-            return CompilerResult.MakeEmpty(entryFile);
-        }
+        //if (parsedExpression.AST.TopLevelStatements.Length > 1)
+        //{
+        //    Diagnostics.Add(DiagnosticAt.Error($"Expression should consists of one value only", parsedExpression.AST.TopLevelStatements[1]));
+        //    return CompilerResult.MakeEmpty(entryFile);
+        //}
+        //else if (parsedExpression.AST.TopLevelStatements.Length == 0)
+        //{
+        //    Diagnostics.Add(DiagnosticAt.Error($"Expression doesn't have any values", new Location(Position.Zero, entryFile)));
+        //    return CompilerResult.MakeEmpty(entryFile);
+        //}
 
         if (parsedExpression.AST.Functions.Length > 0) { Diagnostics.Add(DiagnosticAt.Error($"No function definitions allowed", parsedExpression.AST.Functions[0])); }
         if (parsedExpression.AST.Operators.Length > 0) { Diagnostics.Add(DiagnosticAt.Error($"No operator definitions allowed", parsedExpression.AST.Operators[0])); }

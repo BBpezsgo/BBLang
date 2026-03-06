@@ -1948,6 +1948,15 @@ public partial class StatementCompiler
             GeneralType leftType = compiledLeft.Type;
             GeneralType rightType = compiledRight.Type;
 
+            if (leftType.Is(out ReferenceType? lr))
+            {
+                leftType = lr.To;
+            }
+            else if (rightType.Is(out ReferenceType? rr))
+            {
+                rightType = rr.To;
+            }
+
             if (!leftType.TryGetNumericType(out NumericType leftNType) ||
                 !rightType.TryGetNumericType(out NumericType rightNType))
             {
@@ -1971,6 +1980,27 @@ public partial class StatementCompiler
             rightType = BuiltinType.CreateNumeric(rightNType, rightBitWidth);
 
             if (!CompileExpression(left, out compiledLeft, leftType)) return false;
+
+            if (compiledLeft.Type.Is(out ReferenceType? lr2))
+            {
+                compiledLeft = new CompiledDereference()
+                {
+                    Address = compiledLeft,
+                    Location = compiledLeft.Location,
+                    SaveValue = compiledLeft.SaveValue,
+                    Type = lr2.To,
+                };
+            }
+            else if (compiledRight.Type.Is(out ReferenceType? rr2))
+            {
+                compiledRight = new CompiledDereference()
+                {
+                    Address = compiledRight,
+                    Location = compiledRight.Location,
+                    SaveValue = compiledRight.SaveValue,
+                    Type = rr2.To,
+                };
+            }
 
             if (leftNType != NumericType.Float &&
                 rightNType == NumericType.Float)
@@ -2525,7 +2555,6 @@ public partial class StatementCompiler
                 lambdaStatement.File
             )
             {
-                InstructionOffset = InvalidFunctionAddress,
                 Location = lambdaStatement.Location,
                 SaveValue = lambdaStatement.SaveValue,
                 Type = functionType,
@@ -4452,7 +4481,6 @@ public partial class StatementCompiler
         bool compiledAnything = false;
         foreach (TFunction function in functions)
         {
-            if (function.InstructionOffset >= 0) continue;
             if (function.IsTemplate) continue;
             if (!Settings.CompileEverything)
             {
@@ -4474,8 +4502,6 @@ public partial class StatementCompiler
         {
             CompliableTemplate<T> function = functions[i];
             i++;
-
-            if (function.Function.InstructionOffset >= 0) continue;
 
             if (CompileFunction(function.Function, function.TypeArguments))
             { compiledAnything = true; }

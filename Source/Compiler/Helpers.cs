@@ -2780,7 +2780,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             if (inlinedArgument.Cleanup.Deallocator is not null ||
                 inlinedArgument.Cleanup.Destructor is not null)
             {
-                error = DiagnosticAt.Error($"Argument cleanup is not empty", statement);
+                error = DiagnosticAt.Error($"Argument cleanup is not empty", statement, false);
                 return false;
             }
 

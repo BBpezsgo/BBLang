@@ -864,7 +864,6 @@ public partial class CodeGeneratorForIL : CodeGenerator
             case CompiledFieldAccess:
                 break;
             default:
-                Debugger.Break();
                 Diagnostics.Add(DiagnosticAt.Error($"Unsafe!!!", statement, false));
                 successful = false;
                 return;

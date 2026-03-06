@@ -4,7 +4,7 @@ namespace LanguageCore.Compiler;
 
 public interface IHaveInstructionOffset
 {
-    int InstructionOffset { get; set; }
+
 }
 
 public interface ITemplateable<TSelf> where TSelf : notnull

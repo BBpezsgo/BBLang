@@ -553,6 +553,12 @@ public partial class StatementCompiler
                     return;
                 }
 
+                if (typeMatch >= TypeMatch.ImplicitCast && a.Is(out ReferenceType? ar) && ar.To.SameAs(definedType))
+                {
+                    typeMatch = TypeMatch.ImplicitCast;
+                    return;
+                }
+
                 if (typeMatch >= TypeMatch.ImplicitCast &&
                     TryReplaceArgument(ref compiledPassedArgument, a, definedType, definition, passed))
                 {

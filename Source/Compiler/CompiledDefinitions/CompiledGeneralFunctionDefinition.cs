@@ -11,7 +11,6 @@ public class CompiledGeneralFunctionDefinition : GeneralFunctionDefinition,
     IHaveInstructionOffset,
     ICompiledFunctionDefinition
 {
-    public int InstructionOffset { get; set; } = BBLang.Generator.CodeGeneratorForMain.InvalidFunctionAddress;
     public bool IsMsilCompatible { get; set; } = true;
 
     public GeneralType Type { get; }

@@ -8,7 +8,6 @@ public class CompiledLambda : CompiledExpression,
     IHaveInstructionOffset,
     ICallableDefinition
 {
-    public int InstructionOffset { get; set; } = BBLang.Generator.CodeGeneratorForMain.InvalidFunctionAddress;
     public bool IsMsilCompatible { get; set; } = true;
     public FunctionFlags Flags { get; set; }
 

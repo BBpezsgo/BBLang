@@ -13,7 +13,6 @@ public class CompiledFunctionDefinition : FunctionDefinition,
     IExternalFunctionDefinition,
     IExposeable
 {
-    public int InstructionOffset { get; set; } = BBLang.Generator.CodeGeneratorForMain.InvalidFunctionAddress;
     public bool IsMsilCompatible { get; set; } = true;
 
     public new GeneralType Type { get; }

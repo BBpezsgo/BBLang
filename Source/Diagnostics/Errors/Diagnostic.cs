@@ -56,7 +56,7 @@ public class Diagnostic :
 #endif
 
 #if TESTING
-        Throw();
+        //Throw();
 #endif
 
         return this;

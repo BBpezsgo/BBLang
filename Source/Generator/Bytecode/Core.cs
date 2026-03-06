@@ -4,38 +4,33 @@ using LanguageCore.Runtime;
 
 namespace LanguageCore.BBLang.Generator;
 
-public struct InstructionLabel : IEquatable<InstructionLabel>
+public class InstructionLabel
 {
     public static readonly InstructionLabel Invalid = new(-2, default);
 
-    public int Index;
-    readonly int Id;
+    public int Address;
+    public bool Keep;
+    public readonly int Id;
 
-    public InstructionLabel(int index, int id)
+    public bool IsMarked => Address >= 0;
+
+    public InstructionLabel(int address, int id)
     {
-        Index = index;
+        Address = address;
         Id = id;
     }
 
-    public override readonly bool Equals(object? obj) => obj is InstructionLabel other && Id == other.Id;
-    public readonly bool Equals(InstructionLabel other) => Id == other.Id;
+    public PreparationInstructionOperand Relative(int additionalOffset = 0) => new(this, false, additionalOffset);
+    public PreparationInstructionOperand Absolute(int additionalOffset = 0) => new(this, true, additionalOffset);
 
-    public static bool operator ==(InstructionLabel left, InstructionLabel right) => left.Id == right.Id;
-    public static bool operator !=(InstructionLabel left, InstructionLabel right) => left.Id != right.Id;
-
-    public override readonly int GetHashCode() => Id;
-
-    public readonly PreparationInstructionOperand Relative(int additionalOffset = 0) => new(this, false, additionalOffset);
-    public readonly PreparationInstructionOperand Absolute(int additionalOffset = 0) => new(this, true, additionalOffset);
-
-    public override readonly string ToString() => Id.ToString();
+    public override string ToString() => Id.ToString();
 }
 
 record struct CompiledScope(ImmutableArray<CompiledCleanup> Variables, bool IsFunction);
 
 class GeneratedInstructionLabel : IHaveInstructionOffset
 {
-    public int InstructionOffset { get; set; }
+
 }
 
 class GeneratedVariable
@@ -128,20 +123,17 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
     readonly struct UndefinedOffset
     {
-        public InstructionLabel Label { get; }
         public Location CallerLocation { get; }
         public IHaveInstructionOffset Called { get; }
 
-        public UndefinedOffset(InstructionLabel label, ILocated caller, IHaveInstructionOffset called)
+        public UndefinedOffset(ILocated caller, IHaveInstructionOffset called)
         {
-            Label = label;
             CallerLocation = caller.Location;
             Called = called;
         }
 
-        public UndefinedOffset(InstructionLabel label, Location callerLocation, IHaveInstructionOffset called)
+        public UndefinedOffset(Location callerLocation, IHaveInstructionOffset called)
         {
-            Label = label;
             CallerLocation = callerLocation;
             Called = called;
         }

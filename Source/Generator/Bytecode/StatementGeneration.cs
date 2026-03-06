@@ -12,7 +12,10 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
     InstructionLabel LabelForDefinition(IHaveInstructionOffset definition)
     {
-        if (DefinitionLabels.TryGetValue(definition, out InstructionLabel label)) return label;
+        if (DefinitionLabels.TryGetValue(definition, out InstructionLabel? label))
+        {
+            return label;
+        }
         return DefinitionLabels[definition] = Code.DefineLabel();
     }
 
@@ -40,8 +43,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         InstructionLabel label = LabelForDefinition(deallocator);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
-        if (deallocator.InstructionOffset == InvalidFunctionAddress)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, cleanup.Location, deallocator)); }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(cleanup.Location, deallocator)); }
 
         if (deallocator.ReturnSomething)
         {
@@ -84,8 +87,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         InstructionLabel label = LabelForDefinition(cleanup.Destructor);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
-        if (cleanup.Destructor.InstructionOffset == InvalidFunctionAddress)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, cleanup.Location, cleanup.Destructor)); }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(cleanup.Location, cleanup.Destructor)); }
 
         if (StatementCompiler.AllowDeallocate(cleanup.TrashType))
         {
@@ -331,12 +334,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (!GeneratedInstructionLabels.TryGetValue(instructionLabel, out GeneratedInstructionLabel? generatedInstructionLabel))
         {
-            generatedInstructionLabel = GeneratedInstructionLabels[instructionLabel] = new()
-            {
-                InstructionOffset = Code.Offset,
-            };
+            generatedInstructionLabel = GeneratedInstructionLabels[instructionLabel] = new();
         }
-        generatedInstructionLabel.InstructionOffset = Code.Offset;
         Code.MarkLabel(LabelForDefinition(generatedInstructionLabel));
     }
     void GenerateCodeForStatement(CompiledReturn keywordCall)
@@ -516,10 +515,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         InstructionLabel label = LabelForDefinition(caller.Declaration);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
-        if (caller.Declaration.InstructionOffset == InvalidFunctionAddress)
-        {
-            UndefinedFunctionOffsets.Add(new(label, caller, caller.Declaration));
-        }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new(caller, caller.Declaration)); }
         Code.Emit(Opcode.HotFuncEnd, InstructionOperand.Immediate(caller.Function.Id));
 
         Code.MarkLabel(skipLabel);
@@ -641,10 +638,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         InstructionLabel label = LabelForDefinition(caller.Function);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
-        if (caller.Function.InstructionOffset == InvalidFunctionAddress)
-        {
-            UndefinedFunctionOffsets.Add(new(label, caller, caller.Function));
-        }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new(caller, caller.Function)); }
 
         GenerateCodeForParameterCleanup(parameterCleanup);
 
@@ -1104,8 +1099,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         InstructionLabel label = LabelForDefinition(compiledLambda);
 
-        if (compiledLambda.InstructionOffset == InvalidFunctionAddress)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, compiledLambda, compiledLambda)); }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(compiledLambda, compiledLambda)); }
 
         if (compiledLambda.CapturedLocals.IsDefaultOrEmpty)
         {
@@ -1188,8 +1183,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         IHaveInstructionOffset compiledFunction = variable.Function;
         InstructionLabel label = LabelForDefinition(compiledFunction);
 
-        if (compiledFunction.InstructionOffset == InvalidFunctionAddress)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, variable, compiledFunction)); }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(variable, compiledFunction)); }
 
         Push(label.Absolute());
     }
@@ -1199,10 +1194,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (!GeneratedInstructionLabels.TryGetValue(variable.InstructionLabel, out GeneratedInstructionLabel? instructionLabel))
         {
-            instructionLabel = GeneratedInstructionLabels[variable.InstructionLabel] = new()
-            {
-                InstructionOffset = InvalidFunctionAddress,
-            };
+            instructionLabel = GeneratedInstructionLabels[variable.InstructionLabel] = new();
             label = LabelForDefinition(instructionLabel);
         }
         else
@@ -1436,8 +1428,8 @@ public partial class CodeGeneratorForMain : CodeGenerator
         InstructionLabel label = LabelForDefinition(compiledFunction);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
-        if (compiledFunction.InstructionOffset == InvalidFunctionAddress)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(label, constructorCall, compiledFunction)); }
+        if (!label.IsMarked)
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(constructorCall, compiledFunction)); }
 
         GenerateCodeForParameterCleanup(parameterCleanup);
 
@@ -2511,15 +2503,12 @@ public partial class CodeGeneratorForMain : CodeGenerator
     void GenerateCodeForFunction(ICompiledFunctionDefinition function, CompiledBlock body)
     {
         if (!GeneratedFunctions.Add(function)) return;
-        Code.MarkLabel(LabelForDefinition(function));
+        InstructionLabel label = LabelForDefinition(function);
+        Code.MarkLabel(label);
 
-        function.InstructionOffset = Code.Offset;
-        for (int i = UndefinedFunctionOffsets.Count - 1; i >= 0; i--)
+        if (function is IExposeable exposeable && exposeable.ExposedFunctionName is not null)
         {
-            UndefinedOffset item = UndefinedFunctionOffsets[i];
-            if (item.Called != function) continue;
-            Code.MarkLabel(item.Label);
-            UndefinedFunctionOffsets.RemoveAt(i);
+            label.Keep = true;
         }
 
         CurrentContext = function;
@@ -2875,30 +2864,16 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 goto failed;
             ok:;
             }
-        }
-    failed:
 
-        Dictionary<string, ExposedFunction> exposedFunctions = new();
-        if (!compilerResult.IsExpression)
-        {
-            foreach (CompiledFunctionDefinition f in compilerResult.FunctionDefinitions)
+            for (int i = 0; i < UndefinedFunctionOffsets.Count; i++)
             {
-                if (f.ExposedFunctionName is null) continue;
-                if (f.InstructionOffset == InvalidFunctionAddress)
+                if (LabelForDefinition(UndefinedFunctionOffsets[i].Called).IsMarked)
                 {
-                    Diagnostics.Add(DiagnosticAt.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Identifier, f.File));
-                    continue;
+                    UndefinedFunctionOffsets.RemoveAt(i--);
                 }
-                CompiledFunction e = Functions.First(v => v.Function == f);
-
-                int returnValueSize = f.ReturnSomething ? FindSize(f.Type, f.TypeToken) : 0;
-                int argumentsSize = 0;
-                foreach (CompiledParameter p in f.Parameters)
-                { argumentsSize += FindSize(p.Type, ((FunctionDefinition)f).Type); }
-
-                exposedFunctions[f.ExposedFunctionName] = new(f.ExposedFunctionName, returnValueSize, f.InstructionOffset, argumentsSize, e.Flags);
             }
         }
+    failed:
 
         List<PreparationInstruction> stringInitializationInstructions = new();
 
@@ -2915,12 +2890,38 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         DebugInfo?.ScopeInformation.Add(topLevelScope);
 
+        ImmutableArray<Instruction> code = Code.Compile(new Dictionary<string, int>()
+        {
+            { "heap_start", Strings.Sum(v => v.Value.Length) }
+        });
+
+        Dictionary<string, ExposedFunction> exposedFunctions = new();
+        if (!compilerResult.IsExpression)
+        {
+            foreach (CompiledFunctionDefinition f in compilerResult.FunctionDefinitions)
+            {
+                if (f.ExposedFunctionName is null) continue;
+                InstructionLabel label = LabelForDefinition(f);
+                if (!label.IsMarked)
+                {
+                    Diagnostics.Add(DiagnosticAt.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Identifier, f.File));
+                    continue;
+                }
+
+                CompiledFunction e = Functions.First(v => v.Function == f);
+
+                int returnValueSize = f.ReturnSomething ? FindSize(f.Type, f.TypeToken) : 0;
+                int argumentsSize = 0;
+                foreach (CompiledParameter p in f.Parameters)
+                { argumentsSize += FindSize(p.Type, ((FunctionDefinition)f).Type); }
+
+                exposedFunctions[f.ExposedFunctionName] = new(f.ExposedFunctionName, returnValueSize, label.Address, argumentsSize, e.Flags);
+            }
+        }
+
         return new BBLangGeneratorResult()
         {
-            Code = Code.Compile(new Dictionary<string, int>()
-            {
-                { "heap_start", Strings.Sum(v => v.Value.Length) }
-            }),
+            Code = code,
             CodeEmitter = Code,
             DebugInfo = DebugInfo,
             CompiledFunctions = compilerResult.FunctionDefinitions,
