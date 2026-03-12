@@ -31,7 +31,9 @@ class OrderedDiagnosticCollection : IEnumerable<OrderedDiagnostic>
         diagnostic.Diagnostic.Position,
         diagnostic.Diagnostic.File,
         false,
-        diagnostic.SubDiagnostics.ToImmutableArray(Compile)
+        diagnostic.SubDiagnostics.ToImmutableArray(Compile),
+        diagnostic.Diagnostic.RelatedInformation,
+        diagnostic.Diagnostic.Tag
     );
 
     public ImmutableArray<DiagnosticAt> Compile()

@@ -198,7 +198,7 @@ public sealed partial class Parser
         if (consumeSemicolon && ExpectOperator(";", out Token? semicolon))
         {
             block.Semicolon = semicolon;
-            Diagnostics.Add(DiagnosticAt.Warning("Unnecessary semicolon", semicolon, File));
+            Diagnostics.Add(DiagnosticAt.Warning("Unnecessary semicolon", semicolon, File).WithTag(DiagnosticTag.Unnecessary));
         }
 
         return true;

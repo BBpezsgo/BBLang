@@ -166,6 +166,8 @@ public class LanguageExceptionAt : LanguageException
             LanguageExceptionAt v => ImmutableArray.Create<Diagnostic>(v.ToDiagnostic()),
             LanguageException v => ImmutableArray.Create<Diagnostic>(v.ToDiagnostic()),
             _ => ImmutableArray<Diagnostic>.Empty,
-        }
+        },
+        ImmutableArray<DiagnosticRelatedInformation>.Empty,
+        DiagnosticTag.None
     );
 }

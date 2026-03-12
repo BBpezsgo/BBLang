@@ -48,6 +48,19 @@ public class RuntimeException : LanguageException
 
         ImmutableArray<FunctionInformation> callStack = DebugInformation.IsEmpty ? ImmutableArray<FunctionInformation>.Empty : DebugInformation.GetFunctionInformation(CallTrace);
 
+        //StackTrace stackTrace = new(this, true);
+        //for (int i = 0; i < stackTrace.FrameCount; i++)
+        //{
+        //    StackFrame? frame = stackTrace.GetFrame(i);
+        //    if (frame is null) continue;
+        //    if (frame.HasMethod() && frame.GetMethod()!.DeclaringType != null && frame.GetMethod()!.DeclaringType!.Assembly.GetName().Name != "BBLangGeneratedAssembly")
+        //    { break; }
+        //    callStack = callStack.Add(new FunctionInformation()
+        //    {
+        //        Function = 
+        //    });
+        //}
+
         file ??= callStack.LastOrDefault().Function?.File;
 
         StringBuilder result = new();
@@ -78,7 +91,7 @@ public class RuntimeException : LanguageException
                     if (v.Length.HasValue)
                     {
                         if (colored) result.SetGraphics(Ansi.ForegroundWhite);
-                        result.Append(v.Length.Value.ToString());
+                        result.Append(v.Length.Value);
                     }
                     else if (v.Length is not null)
                     {

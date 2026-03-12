@@ -742,7 +742,8 @@ public partial class StatementCompiler
 
         if (!callee.CanUse(caller.File))
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function \"{callee.ToReadable()}\" could not be called due to its protection level", caller));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{callee.ToReadable()}\" could not be called due to its protection level", caller)
+                .WithRelatedInfo(new DiagnosticRelatedInformationAt($"Function \"{callee.ToReadable()}\" defined here", callee.Location)));
             return false;
         }
 
@@ -3385,7 +3386,8 @@ public partial class StatementCompiler
 
         if (!compiledFunction.CanUse(constructorCall.File))
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Constructor \"{compiledFunction.ToReadable()}\" could not be called due to its protection level", constructorCall.Type, constructorCall.File));
+            Diagnostics.Add(DiagnosticAt.Error($"Constructor \"{compiledFunction.ToReadable()}\" could not be called due to its protection level", constructorCall.Type, constructorCall.File)
+                .WithRelatedInfo(new DiagnosticRelatedInformationAt($"Constructor \"{compiledFunction.ToReadable()}\" defined here", compiledFunction.Location)));
             return false;
         }
 

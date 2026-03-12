@@ -1,4 +1,6 @@
-﻿namespace LanguageCore;
+﻿using System.IO;
+
+namespace LanguageCore;
 
 public interface IReadOnlyDiagnosticsCollection
 {
@@ -183,6 +185,31 @@ public static class DiagnosticsCollectionExtensions
     }
 
     public static void WriteErrorsTo(this IReadOnlyDiagnosticsCollection diagnosticsCollection, StringBuilder writer)
+    {
+        foreach (Diagnostic diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
+        {
+            if (diagnostic.Level != DiagnosticsLevel.Error) continue;
+            WriteTo(diagnostic, writer, 0);
+        }
+
+        foreach (DiagnosticAt diagnostic in diagnosticsCollection.Diagnostics)
+        {
+            if (diagnostic.Level != DiagnosticsLevel.Error) continue;
+            WriteTo(diagnostic, writer, 0);
+        }
+    }
+
+    static void WriteTo(Diagnostic diagnostic, TextWriter writer, int depth)
+    {
+        writer.Write(new string(' ', depth * 2));
+        writer.WriteLine(diagnostic.ToString());
+        foreach (Diagnostic item in diagnostic.SubErrors)
+        {
+            WriteTo(item, writer, depth + 1);
+        }
+    }
+
+    public static void WriteErrorsTo(this IReadOnlyDiagnosticsCollection diagnosticsCollection, TextWriter writer)
     {
         foreach (Diagnostic diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
         {

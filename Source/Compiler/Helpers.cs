@@ -159,7 +159,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 BinaryOperatorCallExpression or
                 UnaryOperatorCallExpression)
             {
-                Diagnostics.Add(DiagnosticAt.Hint($"Unnecessary explicit temp modifier (\"{statement.Value.GetType().Name}\" statements are implicitly deallocated)", statement.Modifier, statement.File));
+                Diagnostics.Add(DiagnosticAt.Hint($"Unnecessary explicit temp modifier (\"{statement.Value.GetType().Name}\" statements are implicitly deallocated)", statement.Modifier, statement.File).WithTag(DiagnosticTag.Unnecessary));
             }
 
             explicitly = true;

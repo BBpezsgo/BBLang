@@ -40,6 +40,7 @@ public class LanguageException : Exception
             LanguageExceptionAt v => ImmutableArray.Create<Diagnostic>(v.ToDiagnostic()),
             LanguageException v => ImmutableArray.Create<Diagnostic>(v.ToDiagnostic()),
             _ => ImmutableArray<Diagnostic>.Empty,
-        }
+        },
+        ImmutableArray<DiagnosticRelatedInformation>.Empty
     );
 }
