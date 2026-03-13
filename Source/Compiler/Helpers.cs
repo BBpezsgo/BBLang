@@ -61,6 +61,8 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
     CompiledGeneratorStructDefinition? GeneratorStructDefinition;
 
+    readonly ILogger? Logger;
+
     #endregion
 
     enum ConstantPerfectus
@@ -1254,7 +1256,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
                 if (literalValue.Length != destArrayType.Length.Value)
                 {
-                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (length of \"{destArrayType.Length?.ToString() ?? "null"}\")");
+                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (length of \"{destArrayType.Length.ToString() ?? "null"}\")");
                     return false;
                 }
 
@@ -1275,7 +1277,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
                     if (stringLiteral.Value.Length != arrayType.Length.Value)
                     {
-                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length?.ToString() ?? "null"}\")");
+                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length.ToString() ?? "null"}\")");
                         return false;
                     }
                 }

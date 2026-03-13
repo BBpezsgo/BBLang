@@ -60,7 +60,7 @@ public static class HelloWorld
         BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, MainGeneratorSettings.Default, null, diagnostics);
 
         // This will print all the diagnostics to the console, expect for debugging and optimization items.
-        diagnostics.Print();
+        diagnostics.Print(ConsoleLogger.Default);
 
         // If there are fatal errors, make sure not to execute the malformed code.
         diagnostics.Throw();

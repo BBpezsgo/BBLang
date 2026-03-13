@@ -48,7 +48,7 @@ public static class ExecutionManager
         {
             CleanupGlobalVaraibles = false,
         }, null, diagnostics);
-        diagnostics.Print();
+        diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor = new(

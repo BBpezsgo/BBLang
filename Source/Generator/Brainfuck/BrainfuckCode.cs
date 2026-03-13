@@ -228,20 +228,15 @@ public static class BrainfuckCode
         return result;
     }
 
-    public static string RemoveNoncodes(string code, bool showProgress, DebugInformation? debugInformation)
+    public static string RemoveNoncodes(string code, DebugInformation? debugInformation, IProgress<float>? progress = null)
     {
         StringBuilder result = new(code.Length);
 
-        if (showProgress)
+        if (progress is not null)
         {
-            using ConsoleProgressLabel label = new($"Remove comments ...", ConsoleColor.DarkGray, true);
-            label.Print();
-
-            using ConsoleProgressBar progress = new(ConsoleColor.DarkGray, true);
-
             for (int i = 0; i < code.Length; i++)
             {
-                progress.Print(i, code.Length);
+                progress.Report(i, code.Length);
 
                 if (!IsCode(code[i]))
                 {

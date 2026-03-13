@@ -58,7 +58,7 @@ public class SourceProviderTests
         }, diagnostics);
 
         BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, MainGeneratorSettings.Default, null, diagnostics);
-        diagnostics.Print();
+        //diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor interpreter = new(
@@ -106,7 +106,7 @@ public class SourceProviderTests
         }, diagnostics);
 
         BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, MainGeneratorSettings.Default, null, diagnostics);
-        diagnostics.Print();
+        //diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor interpreter = new(
@@ -150,7 +150,7 @@ public class SourceProviderTests
         }, diagnostics);
 
         BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, MainGeneratorSettings.Default, null, diagnostics);
-        diagnostics.Print();
+        //diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor interpreter = new(
@@ -198,7 +198,7 @@ public class SourceProviderTests
         }, diagnostics);
 
         BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, MainGeneratorSettings.Default, null, diagnostics);
-        diagnostics.Print();
+        //diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor interpreter = new(

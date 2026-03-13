@@ -2154,7 +2154,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledBlock block)
     {
-        using ConsoleProgressBar progressBar = new(ConsoleColor.DarkGray, ShowProgress);
+        using IDisposableProgress<float>? progressBar = Logger?.Progress(LogType.Debug);
 
         Runtime.ScopeInformation scopeInformation = new()
         {
@@ -2192,7 +2192,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             if (Breaks.Count > 0 && Breaks.Last.Doings.Last)
             { break; }
 
-            progressBar.Print(i, block.Statements.Length);
+            progressBar?.Report(i, block.Statements.Length);
             VariableCanBeDiscarded = null;
             GenerateCodeForStatement(block.Statements[i]);
             VariableCanBeDiscarded = null;
@@ -2858,9 +2858,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             return;
         }
 
-        using ConsoleProgressLabel progressLabel = new($"Generating function \"{function.ToReadable(typeArguments)}\"", ConsoleColor.DarkGray, ShowProgress);
-
-        progressLabel.Print();
+        using IDisposableProgress<string>? progressLabel = Logger?.Label(LogType.Debug, $"Generating function \"{function.ToReadable(typeArguments)}\"");
 
         BrainfuckVariable? returnVariable = null;
 
@@ -3039,9 +3037,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             return;
         }
 
-        using ConsoleProgressLabel progressLabel = new($"Generating function \"{function.ToReadable(typeArguments)}\"", ConsoleColor.DarkGray, ShowProgress);
-
-        progressLabel.Print();
+        using IDisposableProgress<string>? progressLabel = Logger?.Label(LogType.Debug, $"Generating function \"{function.ToReadable(typeArguments)}\"");
 
         BrainfuckVariable? returnVariable = null;
 
@@ -3273,9 +3269,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             return;
         }
 
-        using ConsoleProgressLabel progressLabel = new($"Generating function \"{function.ToReadable(typeArguments)}\"", ConsoleColor.DarkGray, ShowProgress);
-
-        progressLabel.Print();
+        using IDisposableProgress<string>? progressLabel = Logger?.Label(LogType.Debug, $"Generating function \"{function.ToReadable(typeArguments)}\"");
 
         if (!IxMaxResursiveDepthReached(function, callerPosition))
         { return; }

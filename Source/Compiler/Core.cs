@@ -31,7 +31,7 @@ public partial class StatementCompiler
         { "DL", (Register.DL, BuiltinType.I8) },
     }.ToImmutableDictionary();
 
-    public StatementCompiler(CompilerSettings settings, DiagnosticsCollection diagnostics, PrintCallback? print)
+    public StatementCompiler(CompilerSettings settings, DiagnosticsCollection diagnostics, ILogger? logger)
     {
         Frames = new();
 
@@ -51,5 +51,7 @@ public partial class StatementCompiler
         {
             { "heap_start", BuiltinType.I32 }
         }.ToImmutableDictionary();
+
+        Logger = logger;
     }
 }

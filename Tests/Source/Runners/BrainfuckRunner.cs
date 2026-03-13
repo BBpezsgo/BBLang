@@ -77,7 +77,7 @@ static class BrainfuckRunner
             stdOutput.Clear();
 
             Brainfuck.Interpreter interpreter = new(OutputCallback, InputCallback);
-            interpreter.LoadCode(generated.Code, false, generated.DebugInfo);
+            interpreter.LoadCode(generated.Code, generated.DebugInfo);
             interpreter.DebugInfo = new CompiledDebugInformation(generated.DebugInfo);
             interpreter.Run();
 
@@ -89,7 +89,7 @@ static class BrainfuckRunner
             stdOutput.Clear();
 
             Brainfuck.InterpreterCompact interpreter = new(OutputCallback, InputCallback);
-            interpreter.LoadCode(generated.Code, false, generated.DebugInfo);
+            interpreter.LoadCode(generated.Code, generated.DebugInfo);
             interpreter.DebugInfo = new CompiledDebugInformation(generated.DebugInfo);
             interpreter.Run();
 
@@ -101,7 +101,7 @@ static class BrainfuckRunner
             stdOutput.Clear();
 
             Brainfuck.InterpreterCompact interpreter = new(OutputCallback, InputCallback);
-            interpreter.LoadCode(generatedUnoptimized.Code, false, generatedUnoptimized.DebugInfo);
+            interpreter.LoadCode(generatedUnoptimized.Code, generatedUnoptimized.DebugInfo);
             interpreter.DebugInfo = new CompiledDebugInformation(generatedUnoptimized.DebugInfo);
             interpreter.Run();
 

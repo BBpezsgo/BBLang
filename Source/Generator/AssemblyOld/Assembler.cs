@@ -5,17 +5,17 @@ namespace LanguageCore.Assembly;
 [ExcludeFromCodeCoverage]
 public static class Assembler
 {
-    public static void Assemble(string asmSourceCode, string outputFile)
+    public static void Assemble(string asmSourceCode, string outputFile, ILogger? logger = null)
     {
         string fileAsmTemp = outputFile + ".asm";
         string fileObjTemp = outputFile + ".obj";
         string fileExeFinal = outputFile;
 
         if (File.Exists(fileAsmTemp))
-        { Output.LogWarning($"File \"{fileAsmTemp}\" will be overridden"); }
+        { logger?.LogWarning($"File \"{fileAsmTemp}\" will be overridden"); }
 
         if (File.Exists(fileObjTemp))
-        { Output.LogWarning($"File \"{fileObjTemp}\" will be overridden"); }
+        { logger?.LogWarning($"File \"{fileObjTemp}\" will be overridden"); }
 
         File.WriteAllText(fileAsmTemp, asmSourceCode);
 
@@ -24,7 +24,7 @@ public static class Assembler
         GnuLinker.Link(fileObjTemp, fileExeFinal);
     }
 
-    public static void AssembleRaw(string asmSourceCode, string outputFile, bool saveAsmFile = false, IEnumerable<emu8086.Symbols.Symbol>? symbols = null)
+    public static void AssembleRaw(string asmSourceCode, string outputFile, ILogger? logger = null, bool saveAsmFile = false, IEnumerable<emu8086.Symbols.Symbol>? symbols = null)
     {
         string outputFilename = Path.GetFileName(outputFile);
 
@@ -33,10 +33,10 @@ public static class Assembler
         string fileBinFinal = outputFile + ".bin";
 
         if (File.Exists(fileAsmTemp))
-        { Output.LogWarning($"File \"{fileAsmTemp}\" will be overridden"); }
+        { logger?.LogWarning($"File \"{fileAsmTemp}\" will be overridden"); }
 
         if (File.Exists(fileBinTemp))
-        { Output.LogWarning($"File \"{fileBinTemp}\" will be overridden"); }
+        { logger?.LogWarning($"File \"{fileBinTemp}\" will be overridden"); }
 
         try
         {
@@ -44,7 +44,7 @@ public static class Assembler
 
             if (saveAsmFile && File.Exists(fileAsmTemp))
             {
-                Output.LogWarning($"File \"{fileBinFinal + ".~asm"}\" will be overridden");
+                logger?.LogWarning($"File \"{fileBinFinal + ".~asm"}\" will be overridden");
                 File.Copy(fileAsmTemp, fileBinFinal + ".~asm", true);
             }
 

@@ -58,7 +58,7 @@ public static class Interactive
         }
         finally
         {
-            diagnostics.Print(sourceProviders);
+            diagnostics.Print(ConsoleLogger.Default, sourceProviders);
         }
 
         if (diagnostics.HasErrors) return;

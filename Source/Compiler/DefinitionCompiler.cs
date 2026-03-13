@@ -1064,7 +1064,7 @@ public partial class StatementCompiler
 
     CompilerResult CompileMainFile(string file)
     {
-        SourceCodeManagerResult res = SourceCodeManager.Collect(file, Diagnostics, PreprocessorVariables, Settings.AdditionalImports, Settings.SourceProviders, Settings.TokenizerSettings, Settings.Cache);
+        SourceCodeManagerResult res = SourceCodeManager.Collect(file, Diagnostics, PreprocessorVariables, Settings.AdditionalImports, Settings.SourceProviders, Settings.TokenizerSettings, Settings.Cache, Logger);
 
         foreach (ParsedFile parsedFile in res.ParsedFiles)
         { AddAST(parsedFile, parsedFile.File != res.ResolvedEntry); }
@@ -1086,7 +1086,7 @@ public partial class StatementCompiler
 
     CompilerResult CompileFiles(ReadOnlySpan<string> files)
     {
-        SourceCodeManagerResult res = SourceCodeManager.CollectMultiple(files, Diagnostics, PreprocessorVariables, Settings.AdditionalImports, Settings.SourceProviders, Settings.TokenizerSettings, Settings.Cache);
+        SourceCodeManagerResult res = SourceCodeManager.CollectMultiple(files, Diagnostics, PreprocessorVariables, Settings.AdditionalImports, Settings.SourceProviders, Settings.TokenizerSettings, Settings.Cache, Logger);
 
         foreach (ParsedFile parsedFile in res.ParsedFiles)
         { AddAST(parsedFile, parsedFile.File != res.ResolvedEntry); }
@@ -1190,18 +1190,20 @@ public partial class StatementCompiler
     public static CompilerResult CompileFiles(
         ReadOnlySpan<string> files,
         CompilerSettings settings,
-        DiagnosticsCollection diagnostics)
+        DiagnosticsCollection diagnostics,
+        ILogger? logger = null)
     {
-        StatementCompiler compiler = new(settings, diagnostics, null);
+        StatementCompiler compiler = new(settings, diagnostics, logger);
         return compiler.CompileFiles(files);
     }
 
     public static CompilerResult CompileFile(
         string file,
         CompilerSettings settings,
-        DiagnosticsCollection diagnostics)
+        DiagnosticsCollection diagnostics,
+        ILogger? logger = null)
     {
-        StatementCompiler compiler = new(settings, diagnostics, null);
+        StatementCompiler compiler = new(settings, diagnostics, logger);
         return compiler.CompileMainFile(file);
     }
 
@@ -1209,9 +1211,10 @@ public partial class StatementCompiler
         string expression,
         CompilerSettings settings,
         DiagnosticsCollection diagnostics,
-        CompilerResult previous)
+        CompilerResult previous,
+        ILogger? logger = null)
     {
-        StatementCompiler compiler = new(settings, diagnostics, null);
+        StatementCompiler compiler = new(settings, diagnostics, logger);
         return compiler.CompileExpressionInternal(expression, previous);
     }
 }

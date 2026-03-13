@@ -276,9 +276,11 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
     readonly ImmutableDictionary<ICompiledFunctionDefinition, CompiledStatement> FunctionBodies;
 
+    readonly ILogger? Logger;
+
     #endregion
 
-    public CodeGeneratorForBrainfuck(CompilerResult compilerResult, BrainfuckGeneratorSettings brainfuckSettings, DiagnosticsCollection diagnostics) : base(compilerResult, diagnostics)
+    public CodeGeneratorForBrainfuck(CompilerResult compilerResult, BrainfuckGeneratorSettings brainfuckSettings, DiagnosticsCollection diagnostics, ILogger? logger) : base(compilerResult, diagnostics)
     {
         CompiledVariables = new Stack<BrainfuckVariable>();
         Code = new CodeHelper()
@@ -300,6 +302,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
         Settings = brainfuckSettings;
 
         FunctionBodies = compilerResult.Functions.Select(v => new KeyValuePair<ICompiledFunctionDefinition, CompiledStatement>(v.Function, v.Body)).ToImmutableDictionary();
+        Logger = logger;
     }
 
     GeneratorSnapshot Snapshot() => new(this);
@@ -721,11 +724,11 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
         ControlFlowBlock? returnBlock = BeginReturnBlock(statements[0].Location.Before(), StatementCompiler.FindControlFlowUsage(statements));
 
-        using (ConsoleProgressBar progressBar = new(ConsoleColor.DarkGray, ShowProgress))
+        using (IDisposableProgress<float>? progressBar = Logger?.Progress(LogType.Debug))
         {
             for (int i = 0; i < statements.Length; i++)
             {
-                progressBar.Print(i, statements.Length);
+                progressBar?.Report(i, statements.Length);
                 GenerateCodeForStatement(statements[i]);
             }
         }
@@ -804,8 +807,8 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
     public static BrainfuckGeneratorResult Generate(
         CompilerResult compilerResult,
         BrainfuckGeneratorSettings brainfuckSettings,
-        PrintCallback? printCallback,
+        ILogger? logger,
         DiagnosticsCollection diagnostics)
-        => new CodeGeneratorForBrainfuck(compilerResult, brainfuckSettings, diagnostics)
+        => new CodeGeneratorForBrainfuck(compilerResult, brainfuckSettings, diagnostics, logger)
         .GenerateCode(compilerResult);
 }

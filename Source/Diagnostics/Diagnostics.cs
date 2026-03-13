@@ -149,29 +149,31 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
 
 public static class DiagnosticsCollectionExtensions
 {
-    public static void Print(this IReadOnlyDiagnosticsCollection diagnosticsCollection, IEnumerable<ISourceProvider>? sourceProviders = null)
+    public static void Print(this IReadOnlyDiagnosticsCollection diagnosticsCollection, ILogger logger, IEnumerable<ISourceProvider>? sourceProviders = null)
     {
         foreach (Diagnostic diagnostic in diagnosticsCollection.DiagnosticsWithoutContext)
         {
             switch (diagnostic.Level)
             {
                 case DiagnosticsLevel.Error:
-                    Output.LogError(diagnostic.Message);
+                    logger.Log(LogType.Error, diagnostic.Message);
                     break;
                 case DiagnosticsLevel.Warning:
-                    Output.LogWarning(diagnostic.Message);
+                    logger.Log(LogType.Warning, diagnostic.Message);
                     break;
                 case DiagnosticsLevel.Information:
-                    Output.LogInfo(diagnostic.Message);
+                    logger.Log(LogType.Normal, diagnostic.Message);
                     break;
                 case DiagnosticsLevel.Hint:
-                    Output.LogInfo(diagnostic.Message);
+                    logger.Log(LogType.Normal, diagnostic.Message);
                     break;
             }
         }
 
         foreach (DiagnosticAt diagnostic in diagnosticsCollection.Diagnostics)
-        { Output.LogDiagnostic(diagnostic, sourceProviders); }
+        {
+            logger.LogDiagnostic(diagnostic, sourceProviders);
+        }
     }
 
     static void WriteTo(Diagnostic diagnostic, StringBuilder writer, int depth)

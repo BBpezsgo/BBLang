@@ -5,9 +5,11 @@ public class Interpreter : InterpreterBase<OpCodes>
     public Interpreter(OutputCallback? onOutput = null, InputCallback? onInput = null)
         : base(onOutput, onInput) { }
 
-    protected override ImmutableArray<OpCodes> ParseCode(string code, bool showProgress, Runtime.DebugInformation? debugInformation)
+    protected override ImmutableArray<OpCodes> ParseCode(string code, Runtime.DebugInformation? debugInformation, ILogger? label = null)
     {
-        code = BrainfuckCode.RemoveNoncodes(code, showProgress, debugInformation);
+        IDisposableProgress<float>? progress = label?.Progress(LogType.Debug);
+        code = BrainfuckCode.RemoveNoncodes(code, debugInformation, progress);
+        progress?.Dispose();
         return CompactCode.ToOpCode(code);
     }
 

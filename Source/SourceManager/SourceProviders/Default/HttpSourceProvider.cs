@@ -44,9 +44,6 @@ public class HttpSourceProvider : ISourceProviderAsync, ISourceQueryProvider
             }
             catch (AggregateException ex)
             {
-                foreach (Exception error in ex.InnerExceptions)
-                { Output.LogError(error.Message); }
-
                 return SourceProviderResultAsync.Error(file, ex.InnerException?.Message);
             }
 

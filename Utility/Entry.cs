@@ -33,7 +33,7 @@ public static class Entry
                 }
                 catch (Exception exception)
                 {
-                    Output.LogError($"Unhandled exception: {exception}");
+                    ConsoleLogger.Default.LogError($"Unhandled exception: {exception}");
                     return 1;
                 }
             }
@@ -51,10 +51,13 @@ public static class Entry
 
     public static int Run(CommandLineOptions arguments)
     {
-        Output.LogDebugs = arguments.Verbose;
-        Output.LogInfos = true;
-        Output.LogWarnings = true;
-        ConsoleProgress.IsEnabled = arguments.Verbose;
+        ConsoleLogger logger = new()
+        {
+            LogDebugs = arguments.Verbose,
+            LogInfos = true,
+            LogWarnings = true,
+            EnableProgress = arguments.Verbose,
+        };
 
         if (arguments.Source is null)
         {
@@ -70,7 +73,7 @@ public static class Entry
         {
             case "bytecode":
             {
-                Output.LogDebug($"Executing \"{arguments.Source}\" ...");
+                logger.LogDebug($"Executing \"{arguments.Source}\" ...");
 
                 List<IExternalFunction> externalFunctions = new();
                 IO io = arguments.Debug ? new VirtualIO() : StandardIO.Instance;
@@ -122,8 +125,8 @@ public static class Entry
 
                 try
                 {
-                    CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics);
-                    generatedCode = CodeGeneratorForMain.Generate(compiled, mainGeneratorSettings, Output.Log, diagnostics);
+                    CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics, logger);
+                    generatedCode = CodeGeneratorForMain.Generate(compiled, mainGeneratorSettings, logger, diagnostics);
 
                     if (arguments.IntermediateOutput is not null)
                     {
@@ -137,27 +140,27 @@ public static class Entry
                             }
                         }
                     }
-                    diagnostics.Print();
+                    diagnostics.Print(logger);
                     if (diagnostics.HasErrors) return 1;
                 }
                 catch (LanguageExceptionAt ex)
                 {
-                    diagnostics.Print();
-                    Output.LogError(ex);
+                    diagnostics.Print(logger);
+                    logger.LogError(ex);
                     return 1;
                 }
                 catch (Exception ex)
                 {
-                    diagnostics.Print();
-                    Output.LogError(ex);
+                    diagnostics.Print(logger);
+                    logger.LogError(ex);
                     return 1;
                 }
 
-                Output.LogDebug($"Optimized {generatedCode.Statistics.Optimizations} statements");
-                Output.LogDebug($"Precomputed {generatedCode.Statistics.Precomputations} statements");
-                Output.LogDebug($"Evaluated {generatedCode.Statistics.FunctionEvaluations} functions");
-                Output.LogDebug($"Inlined {generatedCode.Statistics.InlinedFunctions} functions");
-                Output.LogDebug($"Optimized {generatedCode.Statistics.InstructionLevelOptimizations} instructions");
+                logger.LogDebug($"Optimized {generatedCode.Statistics.Optimizations} statements");
+                logger.LogDebug($"Precomputed {generatedCode.Statistics.Precomputations} statements");
+                logger.LogDebug($"Evaluated {generatedCode.Statistics.FunctionEvaluations} functions");
+                logger.LogDebug($"Inlined {generatedCode.Statistics.InlinedFunctions} functions");
+                logger.LogDebug($"Optimized {generatedCode.Statistics.InstructionLevelOptimizations} instructions");
 
                 if (arguments.PrintInstructions)
                 {
@@ -371,7 +374,7 @@ public static class Entry
                         }
                         catch (RuntimeException error)
                         {
-                            Output.LogError(error.ToString(true));
+                            logger.LogError(error.ToString(true));
                             return 1;
                         }
                         finally
@@ -386,7 +389,10 @@ public static class Entry
             }
             case "il":
             {
-                Output.LogDebug($"Executing \"{arguments.Source}\" ...");
+#if TRIMMED
+                return 1;
+#else
+                logger.LogDebug($"Executing \"{arguments.Source}\" ...");
 
                 List<IExternalFunction> externalFunctions = BytecodeProcessor.GetExternalFunctions(VoidIO.Instance);
 
@@ -416,29 +422,30 @@ public static class Entry
 
                 if (externalFunctions.TryGet("stdin", out IExternalFunction? stdinFunction, out _))
                 {
-                    externalFunctions.AddExternalFunction(ExternalFunctionSync.Create<char>(stdinFunction.Id, "stdin", static () => (char)Console.Read()));
+                    externalFunctions.AddExternalFunction(ExternalFunctionSync.Create(stdinFunction.Id, "stdin", static () => (char)Console.Read()));
                 }
 
                 CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, new(compilerSettings)
                 {
                     ExternalFunctions = externalFunctions.ToImmutableArray(),
                     PreprocessorVariables = PreprocessorVariables.IL,
-                }, diagnostics);
+                }, diagnostics, logger);
                 Func<int> res = IL.Generator.CodeGeneratorForIL.Generate(compiled, diagnostics, new()
                 {
                     AllowCrash = true,
                     AllowHeap = true,
                     AllowPointers = true,
                 });
-                diagnostics.Print();
+                diagnostics.Print(logger);
                 if (diagnostics.HasErrors) return 1;
 
                 res.Invoke();
                 return 0;
+#endif
             }
             case "brainfuck":
             {
-                Output.LogDebug($"Executing \"{arguments.Source}\" ...");
+                logger.LogDebug($"Executing \"{arguments.Source}\" ...");
 
                 BrainfuckGeneratorResult generated;
 
@@ -470,24 +477,24 @@ public static class Entry
                 DiagnosticsCollection diagnostics = new();
                 try
                 {
-                    CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics);
-                    generated = CodeGeneratorForBrainfuck.Generate(compiled, brainfuckGeneratorSettings, Output.Log, diagnostics);
-                    diagnostics.Print();
+                    CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics, logger);
+                    generated = CodeGeneratorForBrainfuck.Generate(compiled, brainfuckGeneratorSettings, logger, diagnostics);
+                    diagnostics.Print(logger);
                     if (diagnostics.HasErrors) return 1;
-                    Output.LogDebug($"Optimized {generated.Statistics.Optimizations} statements");
-                    Output.LogDebug($"Precomputed {generated.Statistics.Precomputations} statements");
-                    Output.LogDebug($"Evaluated {generated.Statistics.FunctionEvaluations} functions");
+                    logger.LogDebug($"Optimized {generated.Statistics.Optimizations} statements");
+                    logger.LogDebug($"Precomputed {generated.Statistics.Precomputations} statements");
+                    logger.LogDebug($"Evaluated {generated.Statistics.FunctionEvaluations} functions");
                 }
                 catch (LanguageExceptionAt exception)
                 {
-                    diagnostics.Print();
-                    Output.LogError(exception);
+                    diagnostics.Print(logger);
+                    logger.LogError(exception);
                     return 1;
                 }
                 catch (Exception exception)
                 {
-                    diagnostics.Print();
-                    Output.LogError(exception);
+                    diagnostics.Print(logger);
+                    logger.LogError(exception);
                     return 1;
                 }
 
@@ -503,12 +510,16 @@ public static class Entry
                 //     pauseBeforeRun = true;
                 // }
 
-                generated.Code = BrainfuckCode.RemoveNoncodes(generated.Code, true, generated.DebugInfo);
+                IDisposableProgress<float> p1 = logger.Progress(LogType.Debug);
+                generated.Code = BrainfuckCode.RemoveNoncodes(generated.Code, generated.DebugInfo, p1);
+                p1.Dispose();
 
-                Output.LogDebug($"Minify code ...");
+                logger.LogDebug($"Minify code ...");
                 int prevCodeLength = generated.Code.Length;
-                generated.Code = Minifier.Minify(generated.Code, generated.DebugInfo);
-                Output.LogDebug($"Minification: {prevCodeLength} -> {generated.Code.Length} ({((float)generated.Code.Length - prevCodeLength) / (float)generated.Code.Length * 100f:#}%)");
+                IDisposableProgress<string> p2 = logger.Label(LogType.Debug);
+                generated.Code = Minifier.Minify(generated.Code, generated.DebugInfo, p2);
+                p2.Dispose();
+                logger.LogDebug($"Minification: {prevCodeLength} -> {generated.Code.Length} ({((float)generated.Code.Length - prevCodeLength) / (float)generated.Code.Length * 100f:#}%)");
 
                 if (arguments.PrintInstructions)
                 {
@@ -549,7 +560,7 @@ public static class Entry
                 }
 
                 InterpreterCompact interpreter = new();
-                interpreter.LoadCode(generated.Code, true, generated.DebugInfo);
+                interpreter.LoadCode(generated.Code, generated.DebugInfo, logger);
                 interpreter.DebugInfo = new CompiledDebugInformation(generated.DebugInfo);
 
                 if (pauseBeforeRun)
@@ -710,22 +721,22 @@ public static class Entry
 
                 DiagnosticsCollection diagnostics = new();
 
-                CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics);
-                diagnostics.Print();
+                CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics, logger);
+                diagnostics.Print(logger);
                 if (diagnostics.HasErrors) return 1;
 
                 diagnostics.Clear();
-                BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, mainGeneratorSettings, null, diagnostics);
-                diagnostics.Print();
+                BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, mainGeneratorSettings, logger, diagnostics);
+                diagnostics.Print(logger);
                 if (diagnostics.HasErrors) return 1;
 
                 string asm = Assembly.Generator.ConverterForAsm.Convert(generatedCode.Code.AsSpan(), generatedCode.DebugInfo, (BitWidth)nint.Size);
 
-                Output.LogDebug("Assembling and linking ...");
+                logger.LogDebug("Assembling and linking ...");
 
                 diagnostics.Clear();
                 byte[] code = Assembler.Assemble(asm, diagnostics);
-                diagnostics.Print();
+                diagnostics.Print(logger);
                 if (diagnostics.HasErrors) return 1;
 
                 using NativeFunction f = NativeFunction.Allocate(code);
@@ -737,7 +748,7 @@ public static class Entry
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 { throw new PlatformNotSupportedException($"This is only supported on Linux"); }
 
-                Output.LogDebug($"Executing \"{arguments.Source}\" ...");
+                logger.LogDebug($"Executing \"{arguments.Source}\" ...");
 
                 List<IExternalFunction> externalFunctions = BytecodeProcessor.GetExternalFunctions(VoidIO.Instance);
 
@@ -762,22 +773,22 @@ public static class Entry
 
                 try
                 {
-                    CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics);
+                    CompilerResult compiled = StatementCompiler.CompileFile(arguments.Source, compilerSettings, diagnostics, logger);
                     using NativeFunction f = CodeGeneratorForNative.Generate(compiled, diagnostics);
-                    diagnostics.Print();
+                    diagnostics.Print(logger);
                     if (diagnostics.HasErrors) return 1;
                     return f.AsDelegate<CodeGeneratorForNative.JitFn>()();
                 }
                 catch (LanguageExceptionAt ex)
                 {
-                    diagnostics.Print();
-                    Output.LogError(ex);
+                    diagnostics.Print(logger);
+                    logger.LogError(ex);
                     return 1;
                 }
                 catch (Exception ex)
                 {
-                    diagnostics.Print();
-                    Output.LogError(ex);
+                    diagnostics.Print(logger);
+                    logger.LogError(ex);
                     return 1;
                 }
             }

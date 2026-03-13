@@ -49,7 +49,7 @@ public static class Strings
             ),
         }, diagnostics);
         BBLangGeneratorResult generatedCode = CodeGeneratorForMain.Generate(compiled, MainGeneratorSettings.Default, null, diagnostics);
-        diagnostics.Print();
+        diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor interpreter = new(

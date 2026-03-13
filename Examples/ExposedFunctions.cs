@@ -49,7 +49,7 @@ public static class ExposedFunctions
             // disable the cleanup of the variables.
             CleanupGlobalVaraibles = false,
         }, null, diagnostics);
-        diagnostics.Print();
+        diagnostics.Print(ConsoleLogger.Default);
         diagnostics.Throw();
 
         BytecodeProcessor interpreter = new(

@@ -4,27 +4,24 @@ namespace LanguageCore.Brainfuck;
 
 public static class Minifier
 {
-    public static string Minify(string code, DebugInformation? debugInformation)
+    public static string Minify(string code, DebugInformation? debugInformation, IProgress<string>? progress)
     {
         Span<char> result = code.ToCharArray();
-        Minify(ref result, debugInformation);
+        Minify(ref result, debugInformation, progress);
         return new string(result);
     }
 
-    public static void Minify(ref Span<char> result, DebugInformation? debugInformation)
+    public static void Minify(ref Span<char> result, DebugInformation? debugInformation, IProgress<string>? progress)
     {
         int pass = 1;
         int prevLength = result.Length;
-
-        ConsoleProgressLabel label = new("Minify ...", ConsoleColor.DarkGray, true);
 
         if (debugInformation is null)
         {
             while (true)
             {
-                label.Label = $"Minify ... (pass: {pass++} length: {result.Length} - {prevLength - result.Length})";
+                progress?.Report($"Minify ... (pass: {pass++} length: {result.Length} - {prevLength - result.Length})");
                 prevLength = result.Length;
-                label.Print();
 
                 if (Remove(ref result, "<>"))
                 { continue; }
@@ -60,9 +57,8 @@ public static class Minifier
         {
             while (true)
             {
-                label.Label = $"Minify ... (pass: {pass++} length: {result.Length} - {prevLength - result.Length})";
+                progress?.Report($"Minify ... (pass: {pass++} length: {result.Length} - {prevLength - result.Length})");
                 prevLength = result.Length;
-                label.Print();
 
                 if (Remove(ref result, "<>", debugInformation))
                 { continue; }
@@ -94,8 +90,6 @@ public static class Minifier
                 break;
             }
         }
-
-        label.Dispose();
     }
 
     static bool Remove(ref Span<char> @string, ReadOnlySpan<char> value, DebugInformation debugInformation)

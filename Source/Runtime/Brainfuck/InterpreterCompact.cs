@@ -5,10 +5,15 @@ public class InterpreterCompact : InterpreterBase<CompactCodeSegment>
     public InterpreterCompact(OutputCallback? onOutput = null, InputCallback? onInput = null)
         : base(onOutput, onInput) { }
 
-    protected override ImmutableArray<CompactCodeSegment> ParseCode(string code, bool showProgress, Runtime.DebugInformation? debugInformation)
+    protected override ImmutableArray<CompactCodeSegment> ParseCode(string code, Runtime.DebugInformation? debugInformation, ILogger? logger = null)
     {
-        code = BrainfuckCode.RemoveNoncodes(code, showProgress, debugInformation);
-        return CompactCode.Generate(code, showProgress, debugInformation);
+        IDisposableProgress<float>? progress = logger?.Progress(LogType.Debug);
+        code = BrainfuckCode.RemoveNoncodes(code, debugInformation, progress);
+        progress?.Dispose();
+        progress = logger?.Progress(LogType.Debug);
+        ImmutableArray<CompactCodeSegment> res = CompactCode.Generate(code, debugInformation, progress);
+        progress?.Dispose();
+        return res;
     }
 
     protected override void Evaluate(CompactCodeSegment instruction)

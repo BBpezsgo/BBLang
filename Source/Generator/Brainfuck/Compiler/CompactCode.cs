@@ -194,17 +194,14 @@ public static class CompactCode
         return true;
     }
 
-    public static ImmutableArray<CompactCodeSegment> Generate(ReadOnlySpan<char> code, bool showProgress, DebugInformation? debugInfo)
+    public static ImmutableArray<CompactCodeSegment> Generate(ReadOnlySpan<char> code, DebugInformation? debugInfo, IProgress<float>? progress)
     {
-        using ConsoleProgressLabel progressLabel = new("Compacting code ...", ConsoleColor.DarkGray, showProgress);
-        using ConsoleProgressBar progress = new(ConsoleColor.DarkGray, showProgress);
-
         List<CompactCodeSegment> result = new();
         int removed = 0;
 
         for (int i = 0; i < code.Length; i++)
         {
-            progress.Print(i, code.Length);
+            progress?.Report(i, code.Length);
 
             OpCodesCompact c = (OpCodesCompact)ToOpCode(code[i]);
 
