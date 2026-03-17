@@ -13,6 +13,8 @@ An **interpreted, statically-typed embedded** language for mostly scripting purp
 > [!NOTE]
 > Currently it doesn't support serializing, so you can only execute the script. However, you can save the generated Brainfuck code.
 
+[Read more in the wiki](https://github.com/BBpezsgo/BBLang/wiki)
+
 ## Hello World
 
 ```cs
