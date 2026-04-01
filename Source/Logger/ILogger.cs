@@ -27,7 +27,7 @@ public interface ILogger
     IDisposableProgress<string> Label(LogType level);
 }
 
-class VoidProgress<T> : IDisposableProgress<T>
+public class VoidProgress<T> : IDisposableProgress<T>
 {
     public static VoidProgress<T> Instance = new();
     public void Dispose() { }

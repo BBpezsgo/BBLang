@@ -81,12 +81,14 @@ public sealed class Configuration
                 int argIndex = -1;
                 int i = 0;
 
-                while (value[i] == ' ') i++;
+                while (i < value.Length && value[i] == ' ') i++;
 
                 while (i < value.Length)
                 {
-                    int j = value[i..].IndexOf(' ') + i;
-                    ReadOnlySpan<char> arg = value[..j].Trim();
+                    int j = value[i..].IndexOf(' ');
+                    if (j == -1) j = value.Length;
+                    else j += i;
+                    ReadOnlySpan<char> arg = value[i..j].Trim();
                     argIndex++;
 
                     if (argIndex == 0)
@@ -117,7 +119,7 @@ public sealed class Configuration
                     }
 
                     i = j;
-                    while (value[i] == ' ') i++;
+                    while (i < value.Length && value[i] == ' ') i++;
                 }
 
                 if (name is not null)
@@ -159,10 +161,24 @@ public sealed class Configuration
         }
     }
 
-    static void Parse(Uri uri, string content, Parser parser, DiagnosticsCollection diagnostics)
+    static void Parse(Uri uri, Parser parser, DiagnosticsCollection diagnostics, ILogger? logger)
     {
+        logger?.LogDebug(uri.ToString());
         if (!parser.alreadyParsed.Add(uri)) return;
 
+        if (uri.Scheme != "file")
+        {
+            diagnostics.Add(Diagnostic.Error($"Invalid scheme \"{uri.Scheme}\" for configuration file"));
+            return;
+        }
+
+        if (!File.Exists(uri.LocalPath))
+        {
+            diagnostics.Add(Diagnostic.Error($"Configuration file \"{uri.LocalPath}\" doesn't exists"));
+            return;
+        }
+
+        string content = File.ReadAllText(uri.LocalPath);
         string[] values = content.Split('\n');
         for (int line = 0; line < values.Length; line++)
         {
@@ -192,33 +208,29 @@ public sealed class Configuration
         foreach (string include in includes)
         {
             Uri newUri = new(uri, include);
-            if (newUri.Scheme == "file" && File.Exists(newUri.LocalPath))
-            {
-                Parse(newUri, File.ReadAllText(newUri.LocalPath), parser, diagnostics);
-            }
+            Parse(newUri, parser, diagnostics, logger);
         }
     }
 
-    static void Parse(IEnumerable<(Uri Uri, string Content)> configurations, Parser parser, DiagnosticsCollection diagnostics)
+    static void Parse(IEnumerable<(Uri Uri, string Content)> configurations, Parser parser, DiagnosticsCollection diagnostics, ILogger? logger)
     {
-        foreach ((Uri uri, string content) in configurations)
+        foreach ((Uri uri, _) in configurations)
         {
-            Parse(uri, content, parser, diagnostics);
+            Parse(uri, parser, diagnostics, logger);
         }
     }
 
-    public static Configuration Parse(IEnumerable<(Uri Uri, string Content)> configurations, DiagnosticsCollection diagnostics)
+    public static Configuration Parse(IEnumerable<(Uri Uri, string Content)> configurations, DiagnosticsCollection diagnostics, ILogger? logger = null)
     {
         Parser parser = new(diagnostics);
-        Parse(configurations, parser, diagnostics);
+        Parse(configurations, parser, diagnostics, logger);
         return parser.Compile();
     }
 
-    public static Configuration Parse(Uri uri, string content, DiagnosticsCollection diagnostics)
+    public static Configuration Parse(Uri uri, DiagnosticsCollection diagnostics, ILogger? logger = null)
     {
         Parser parser = new(diagnostics);
-        Parse(uri, content, parser, diagnostics);
+        Parse(uri, parser, diagnostics, logger);
         return parser.Compile();
     }
 }
-
