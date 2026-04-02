@@ -60,5 +60,5 @@ public class VariableDefinition : Statement,
     }
 
     public override string ToString()
-        => $"{string.Join(' ', Modifiers)} {Type} {Identifier}{((InitialValue != null) ? " = ..." : string.Empty)}{Semicolon}".TrimStart();
+        => $"{string.Join(' ', Modifiers)} {Type} {Identifier}{((InitialValue is not null) ? " = ..." : string.Empty)}{Semicolon}".TrimStart();
 }

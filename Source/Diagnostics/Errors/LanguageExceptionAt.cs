@@ -27,7 +27,7 @@ public class LanguageExceptionAt : LanguageException
     {
         StringBuilder result = new(Format(Message, Position, File));
 
-        if (InnerException != null)
+        if (InnerException is not null)
         { result.Append($" {InnerException}"); }
 
         return result.ToString();

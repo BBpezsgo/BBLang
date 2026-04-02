@@ -38,4 +38,8 @@
   <PropertyGroup Condition="'$(ForTesting)' == 'true'">
     <DefineConstants>$(DefineConstants);TESTING</DefineConstants>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Analysis/Analysis.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>

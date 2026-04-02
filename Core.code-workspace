@@ -37,6 +37,7 @@
 		},
 		"search.exclude": {
 			"TestResults/*": true,
+			"Unity/**": true,
 			"**/bin/**": true,
 			"**/obj/**": true,
 		},

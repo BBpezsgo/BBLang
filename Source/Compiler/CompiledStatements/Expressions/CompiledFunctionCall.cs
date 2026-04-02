@@ -2,10 +2,10 @@ namespace LanguageCore.Compiler;
 
 public class CompiledFunctionCall : CompiledExpression
 {
-    public required ICompiledFunctionDefinition Function { get; init; }
+    public required TemplateInstance<ICompiledFunctionDefinition> Function { get; init; }
     public required ImmutableArray<CompiledArgument> Arguments { get; init; }
 
-    public override string Stringify(int depth = 0) => $"{Function switch
+    public override string Stringify(int depth = 0) => $"{Function.Template switch
     {
         CompiledFunctionDefinition v => v.Identifier.Content,
         CompiledOperatorDefinition v => v.Identifier.Content,
@@ -14,7 +14,7 @@ public class CompiledFunctionCall : CompiledExpression
         _ => throw new UnreachableException(),
     }}({string.Join(", ", Arguments.Select(v => v.Stringify(depth + 1)))})";
 
-    public override string ToString() => $"{Function switch
+    public override string ToString() => $"{Function.Template switch
     {
         CompiledFunctionDefinition v => v.Identifier.Content,
         CompiledOperatorDefinition v => v.Identifier.Content,

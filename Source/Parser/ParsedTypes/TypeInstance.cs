@@ -33,7 +33,7 @@ public abstract class TypeInstance :
 
     public override bool Equals(object? obj)
     {
-        if (ReferenceEquals(this, obj)) return true;
+        if (Utils.ReferenceEquals(this, obj)) return true;
         if (obj is null) return false;
         if (obj is not TypeInstance other) return false;
         return Equals(other);

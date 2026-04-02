@@ -128,9 +128,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
         readonly CodeHelper Code;
         readonly DebugInformation? DebugInfo;
         readonly ICompiledFunctionDefinition Function;
-        readonly Dictionary<string, GeneralType>? TypeArguments;
+        readonly ImmutableDictionary<string, GeneralType>? TypeArguments;
 
-        public DebugFunctionBlock(CodeHelper code, DebugInformation? debugInfo, ICompiledFunctionDefinition function, Dictionary<string, GeneralType>? typeArguments)
+        public DebugFunctionBlock(CodeHelper code, DebugInformation? debugInfo, ICompiledFunctionDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments)
         {
             Code = code;
             DebugInfo = debugInfo;
@@ -149,7 +149,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
                 Function = Function,
                 Instructions = (InstructionStart, Code.Length),
                 IsValid = true,
-                TypeArguments = TypeArguments?.ToImmutableDictionary(),
+                TypeArguments = TypeArguments,
             });
         }
     }
@@ -263,8 +263,6 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
     string? VariableCanBeDiscarded;
 
-    bool ShowProgress => Settings.ShowProgress;
-
     readonly int MaxRecursiveDepth;
 
     public override int PointerSize => 1;
@@ -311,11 +309,11 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
     CodeSnapshot SnapshotCode() => new(this);
     void RestoreCode(CodeSnapshot snapshot) => snapshot.Restore(this);
 
-    GeneratorStackFrame PushStackFrame(Dictionary<string, GeneralType>? typeArguments)
+    GeneratorStackFrame PushStackFrame(ImmutableDictionary<string, GeneralType>? typeArguments)
     {
         Dictionary<string, GeneralType>? savedTypeArguments = null;
 
-        if (typeArguments != null)
+        if (typeArguments is not null)
         { SetTypeArguments(typeArguments, out savedTypeArguments); }
 
         ImmutableArray<ControlFlowBlock> savedBreaks = Breaks.ToImmutableArray();
@@ -347,32 +345,32 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
         Breaks.Set(frame.SavedBreaks);
 
-        if (frame.SavedTypeArguments != null)
+        if (frame.SavedTypeArguments is not null)
         { SetTypeArguments(frame.SavedTypeArguments); }
     }
 
     DebugInfoBlock DebugBlock(ILocated location) => new(Code, DebugInfo, location.Location.Position, location.Location.File);
     DebugInfoBlock DebugBlock(IPositioned position, Uri file) => new(Code, DebugInfo, position, file);
 
-    DebugFunctionBlock FunctionBlock(CompiledFunctionDefinition function, Dictionary<string, GeneralType>? typeArguments) => new(
+    DebugFunctionBlock FunctionBlock(CompiledFunctionDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments) => new(
         Code,
         DebugInfo,
         function,
         typeArguments);
 
-    DebugFunctionBlock FunctionBlock(CompiledOperatorDefinition function, Dictionary<string, GeneralType>? typeArguments) => new(
+    DebugFunctionBlock FunctionBlock(CompiledOperatorDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments) => new(
         Code,
         DebugInfo,
         function,
         typeArguments);
 
-    DebugFunctionBlock FunctionBlock(CompiledGeneralFunctionDefinition function, Dictionary<string, GeneralType>? typeArguments) => new(
+    DebugFunctionBlock FunctionBlock(CompiledGeneralFunctionDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments) => new(
         Code,
         DebugInfo,
         function,
         typeArguments);
 
-    DebugFunctionBlock FunctionBlock(CompiledConstructorDefinition function, Dictionary<string, GeneralType>? typeArguments) => new(
+    DebugFunctionBlock FunctionBlock(CompiledConstructorDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments) => new(
         Code,
         DebugInfo,
         function,
@@ -641,7 +639,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
     {
         foreach (BrainfuckVariable v in CompiledVariables)
         {
-            if (v.Declaration == name.Variable)
+            if (Utils.ReferenceEquals(v.Declaration, name.Variable))
             {
                 result = v;
                 error = null;

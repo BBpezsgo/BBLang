@@ -12,7 +12,7 @@ public static partial class StatementWalker
         void TryFunctionCallback(ICompiledFunctionDefinition? function)
         {
             if (function is null) return;
-            CompiledFunction? f = functions.FirstOrDefault(w => w.Function == function);
+            CompiledFunction? f = functions.FirstOrDefault(w => Utils.ReferenceEquals(w.Function, function) && StatementCompiler.TypeArgumentsEquals(w.TypeArguments, null));
             if (f is null) return;
             functionCallback(f);
         }
@@ -22,26 +22,26 @@ public static partial class StatementWalker
             switch (statement)
             {
                 case CompiledCleanup v:
-                    TryFunctionCallback(v.Deallocator);
-                    TryFunctionCallback(v.Destructor);
+                    TryFunctionCallback(v.Deallocator?.Template);
+                    TryFunctionCallback(v.Destructor?.Template);
                     break;
                 case CompiledFunctionCall v:
-                    TryFunctionCallback(v.Function);
+                    TryFunctionCallback(v.Function.Template);
                     break;
                 case CompiledExternalFunctionCall v:
                     TryFunctionCallback(v.Declaration);
                     break;
                 case CompiledHeapAllocation v:
-                    TryFunctionCallback(v.Allocator);
+                    TryFunctionCallback(v.Allocator.Template);
                     break;
                 case CompiledConstructorCall v:
-                    TryFunctionCallback(v.Function);
+                    TryFunctionCallback(v.Function.Template);
                     break;
                 case CompiledDesctructorCall v:
-                    TryFunctionCallback(v.Function);
+                    TryFunctionCallback(v.Function.Template);
                     break;
                 case CompiledFunctionReference v:
-                    TryFunctionCallback((ICompiledFunctionDefinition)v.Function);
+                    TryFunctionCallback(v.Function.Template);
                     break;
             }
             callback(statement);

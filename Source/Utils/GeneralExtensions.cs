@@ -213,4 +213,33 @@ public static class GeneralExtensions
         list[index] = list[^1];
         list.RemoveAt(list.Count - 1);
     }
+
+    public static bool TryGetValue<K, V>(this IEnumerable<ValueTuple<K, V>> list, Predicate<K> predicate, [NotNullWhen(true)] out V? value) where V : notnull
+    {
+        foreach ((K, V) item in list)
+        {
+            if (predicate(item.Item1))
+            {
+                value = item.Item2;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    public static bool Remove<T>(this IList<T> list, Predicate<T> predicate)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (predicate(list[i]))
+            {
+                list.RemoveAt(i);
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

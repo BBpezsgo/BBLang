@@ -14,12 +14,12 @@ public class FunctionCallExpression : Expression, IReferenceableTo<CompiledFunct
     public ArgumentListExpression Arguments { get; }
     public ArgumentExpression? Object { get; }
 
-    public bool IsMethodCall => Object != null;
+    public bool IsMethodCall => Object is not null;
     public ImmutableArray<ArgumentExpression> MethodArguments
     {
         get
         {
-            if (Object == null) return Arguments.Arguments;
+            if (Object is null) return Arguments.Arguments;
             return Arguments.Arguments.Insert(0, Object);
         }
     }
@@ -42,7 +42,7 @@ public class FunctionCallExpression : Expression, IReferenceableTo<CompiledFunct
 
         result.Append(SurroundingBrackets?.Start);
 
-        if (Object != null)
+        if (Object is not null)
         {
             result.Append(Object);
             result.Append('.');

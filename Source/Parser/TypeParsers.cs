@@ -136,7 +136,7 @@ public sealed partial class Parser
                     if (ExpectOperator(">>", out Token? doubleEnd))
                     {
                         (Token? newA, Token? newB) = doubleEnd.Slice(1);
-                        if (newA == null || newB == null)
+                        if (newA is null || newB is null)
                         { throw new UnreachableException($"I failed at token splitting :("); }
                         CurrentTokenIndex--;
                         angleBracketEnd = newA;

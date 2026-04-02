@@ -58,13 +58,9 @@ public partial class CodeGeneratorForIL : CodeGenerator
         HashSet<string> definedFields = new();
 
         string targetsFieldName = Utils.MakeUnique("targets", v => !definedFields.Contains(v));
-        string memoryFieldName = Utils.MakeUnique("memory", v => !definedFields.Contains(v));
 
         globalContextType.DefineField(targetsFieldName, typeof(object[]), FieldAttributes.Public | FieldAttributes.Static);
         definedFields.Add(targetsFieldName);
-
-        //globalContextType.DefineField(memoryFieldName, typeof(byte), FieldAttributes.Public);
-        //definedFields.Add(memoryFieldName);
 
         Dictionary<CompiledVariableDefinition, string> variableFieldMap = new();
 
@@ -86,7 +82,6 @@ public partial class CodeGeneratorForIL : CodeGenerator
         GlobalContextType = globalContextType.CreateType();
 
         GlobalContextType_Targets = GlobalContextType.GetField(targetsFieldName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static) ?? throw new NullReferenceException();
-        GlobalContextType_Targets.SetValue(null, Array.Empty<object>());
 
         foreach (KeyValuePair<CompiledVariableDefinition, string> item in variableFieldMap)
         {

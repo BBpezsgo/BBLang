@@ -127,7 +127,7 @@ public static class Nasm
             string errorLine = errorLines[i].Trim();
             if (string.IsNullOrWhiteSpace(errorLine)) continue;
             NasmException? nasmException = NasmException.Parse(errorLine);
-            if (nasmException != null) throw nasmException;
+            if (nasmException is not null) throw nasmException;
             else throw new NotImplementedException();
         }
 
@@ -162,7 +162,7 @@ public static class Nasm
             string errorLine = errorLines[i].Trim();
             if (string.IsNullOrWhiteSpace(errorLine)) continue;
             NasmException? nasmException = NasmException.Parse(errorLine);
-            if (nasmException != null) throw nasmException;
+            if (nasmException is not null) throw nasmException;
             else throw new NotImplementedException();
         }
 

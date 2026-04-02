@@ -29,7 +29,7 @@ public class ShortOperatorCall : AssignmentStatement, IReferenceableTo<CompiledO
     {
         StringBuilder result = new();
 
-        if (Expression != null)
+        if (Expression is not null)
         {
             if (Expression.ToString().Length <= Stringify.CozyLength)
             { result.Append(Expression); }

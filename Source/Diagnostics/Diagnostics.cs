@@ -41,7 +41,7 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
         public void Dispose()
         {
             Override r = Base._overrides.Pop();
-            if (r.Collection != Collection) throw new UnreachableException();
+            if (!Utils.ReferenceEquals(r.Collection, Collection)) throw new UnreachableException();
         }
     }
 
@@ -130,7 +130,7 @@ public class DiagnosticsCollection : IReadOnlyDiagnosticsCollection
 
         for (int i = 0; i < _diagnostics.Count; i++)
         {
-            if (_diagnostics[i] == old)
+            if (Utils.ReferenceEquals(_diagnostics[i], old))
             {
                 _diagnostics[i] = diagnostic;
                 return true;

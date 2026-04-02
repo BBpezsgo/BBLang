@@ -19,7 +19,7 @@ public class MissingTypeInstance : TypeInstance
         Position = position;
     }
 
-    public override bool Equals(TypeInstance? other) => ReferenceEquals(this, other);
-    public override int GetHashCode() => ((object)this).GetHashCode();
+    public override bool Equals(TypeInstance? other) => Utils.ReferenceEquals(this, other);
+    public override int GetHashCode() => (this as object).GetHashCode();
     public override string ToString() => "<missing type>";
 }

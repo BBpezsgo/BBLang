@@ -1,5 +1,6 @@
 ﻿#pragma warning disable IDE0060 // Remove unused parameter
 
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using LanguageCore.Compiler;
@@ -14,8 +15,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 {
     readonly Dictionary<CompiledVariableDefinition, LocalBuilder> LocalBuilders = new();
     readonly Stack<Label> LoopLabels = new();
-    readonly Dictionary<ICompiledFunctionDefinition, DynamicMethod> FunctionBuilders = new();
-    readonly HashSet<ICompiledFunctionDefinition> EmittedFunctions = new();
+    readonly List<(TemplateInstance<ICompiledFunctionDefinition> Function, DynamicMethod Builder)> FunctionBuilders = new();
     readonly Dictionary<CompiledLabelDeclaration, Label> EmittedLabels = new();
     readonly ModuleBuilder Module;
 
@@ -76,7 +76,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             { return; }
         }
 
-        if (!EmitFunction(cleanup.Destructor, out DynamicMethod? function))
+        if (!EmitFunction(cleanup.Destructor.Template, cleanup.Destructor.TypeArguments, out DynamicMethod? function))
         {
             Diagnostics.Add(DiagnosticAt.Internal($"Failed to emit function \"{cleanup.Destructor}\"", cleanup));
             successful = false;
@@ -552,21 +552,46 @@ public partial class CodeGeneratorForIL : CodeGenerator
     }
     void EmitStatement(CompiledFunctionCall statement, ILProxy il, ref bool successful)
     {
-        if (statement.Function is CompiledFunctionDefinition compiledFunction &&
+        if (statement.Function.Template is CompiledFunctionDefinition compiledFunction &&
             compiledFunction.BuiltinFunctionName == "free")
         {
             return;
         }
 
-        if (!EmitFunction(statement.Function, out DynamicMethod? function))
+        if (!EmitFunction(statement.Function.Template, statement.Function.TypeArguments, out DynamicMethod? function))
         {
             Diagnostics.Add(DiagnosticAt.Internal($"Failed to emit function \"{statement.Function}\"", statement, false));
             successful = false;
             return;
         }
 
+        ParameterInfo[] parameters = function.GetParameters();
+
+        if (parameters.Length != statement.Arguments.Length)
+        {
+            Diagnostics.Add(
+                DiagnosticAt.Internal($"Invalid DynamicMethod signature generated", statement)
+                .WithSuberrors(DiagnosticAt.Internal($"Generated {parameters.Length} parameters instead of {statement.Arguments.Length}", statement))
+            );
+            successful = false;
+            return;
+        }
+
         for (int i = 0; i < statement.Arguments.Length; i++)
         {
+            if (!ToType(statement.Arguments[i].Type, out var argumentType, out var argumentTypeError))
+            {
+                Diagnostics.Add(argumentTypeError.ToError(statement.Arguments[i]));
+                successful = false;
+            }
+            else if (!argumentType.IsAssignableTo(parameters[i].ParameterType))
+            {
+                Diagnostics.Add(
+                    DiagnosticAt.Internal($"Invalid DynamicMethod signature generated", statement)
+                    .WithSuberrors(DiagnosticAt.Internal($"Generated {parameters[i].ParameterType} but it's passing {argumentType}", statement.Arguments[i]))
+                );
+                successful = false;
+            }
             EmitStatement(statement.Arguments[i].Value, il, ref successful);
         }
 
@@ -595,14 +620,17 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 }
 
                 // fixme test 70 & 71
-                if (false && f.UnmarshaledCallback.Target is not null)
+                if (f.UnmarshaledCallback.Target is not null)
                 {
+                    Diagnostics.Add(DiagnosticAt.Error($"Non-static external functions not supported", statement, false));
+                    successful = false;
+                    return;
+
                     int i = DelegateTargets.IndexOf(f.UnmarshaledCallback.Target);
                     if (i == -1)
                     {
                         i = DelegateTargets.Count;
                         DelegateTargets.Add(f.UnmarshaledCallback.Target);
-                        GlobalContextType_Targets.SetValue(null, DelegateTargets.ToArray());
                     }
 
                     il.Emit(OpCodes.Ldsflda, GlobalContextType_Targets);
@@ -618,7 +646,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     return;
                 }
 
-                Diagnostics.Add(DiagnosticAt.Error($"Non-static external functions not supported", statement, false));
+                Diagnostics.Add(DiagnosticAt.Internal($"Invalid external function", statement));
                 successful = false;
                 return;
             }
@@ -1227,7 +1255,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     {
         if (statement.TypeExpression.Is(out CompiledPointerTypeExpression? resultPointerType) &&
             statement.Value is CompiledFunctionCall allocatorCaller &&
-            allocatorCaller.Function is CompiledFunctionDefinition allocatorCallee &&
+            allocatorCaller.Function.Template is CompiledFunctionDefinition allocatorCallee &&
             allocatorCallee.BuiltinFunctionName == "alloc" &&
             allocatorCaller.Arguments.Length == 1)
         {
@@ -1245,7 +1273,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                     EmitStatement(new CompiledHeapAllocation()
                     {
-                        Allocator = allocatorCallee,
+                        Allocator = allocatorCaller.Function.UnsafeTo<CompiledFunctionDefinition>(),
                         Location = statement.Location,
                         SaveValue = statement.SaveValue,
                         Type = statement.Type,
@@ -1263,7 +1291,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                     EmitStatement(new CompiledHeapAllocation()
                     {
-                        Allocator = allocatorCallee,
+                        Allocator = allocatorCaller.Function.UnsafeTo<CompiledFunctionDefinition>(),
                         Location = statement.Location,
                         SaveValue = statement.SaveValue,
                         Type = statement.Type,
@@ -1297,7 +1325,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
                 EmitStatement(new CompiledHeapAllocation()
                 {
-                    Allocator = allocatorCallee,
+                    Allocator = allocatorCaller.Function.UnsafeTo<CompiledFunctionDefinition>(),
                     Location = statement.Location,
                     SaveValue = statement.SaveValue,
                     Type = statement.Type,
@@ -1491,7 +1519,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     }
     void EmitStatement(CompiledConstructorCall statement, ILProxy il, ref bool successful, LocalBuilder? destination = null)
     {
-        if (!EmitFunction(statement.Function, out DynamicMethod? function))
+        if (!EmitFunction(statement.Function.Template, statement.Function.TypeArguments, out DynamicMethod? function))
         {
             Diagnostics.Add(DiagnosticAt.Internal($"Failed to emit function {statement.Function}", statement));
             successful = false;
@@ -1770,6 +1798,11 @@ public partial class CodeGeneratorForIL : CodeGenerator
         successful = false;
         Diagnostics.Add(DiagnosticAt.Error($"Arrays on stack isn't supported in MSIL", statement, false));
     }
+    void EmitStatement(CompiledStackString statement, ILProxy il, ref bool successful)
+    {
+        successful = false;
+        Diagnostics.Add(DiagnosticAt.Error($"Strings on stack isn't supported in MSIL", statement, false));
+    }
     void EmitStatement(CompiledLambda statement, ILProxy il, ref bool successful)
     {
         successful = false;
@@ -1820,6 +1853,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             case CompiledRegisterAccess v: EmitStatement(v, il, ref successful); break;
             case CompiledLabelReference v: EmitStatement(v, il, ref successful); break;
             case CompiledList v: EmitStatement(v, il, ref successful); break;
+            case CompiledStackString v: EmitStatement(v, il, ref successful); break;
             case CompiledLambda v: EmitStatement(v, il, ref successful); break;
             case CompiledCompilerVariableAccess v: EmitStatement(v, il, ref successful); break;
             default: throw new NotImplementedException(statement.GetType().Name);
@@ -2181,25 +2215,18 @@ public partial class CodeGeneratorForIL : CodeGenerator
     }
 
     readonly Stack<ICompiledFunctionDefinition> EmittingFunctionsStack = new();
-    bool EmitFunction(ICompiledFunctionDefinition function, [NotNullWhen(true)] out DynamicMethod? dynamicMethod)
+    bool EmitFunction(ICompiledFunctionDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments, [NotNullWhen(true)] out DynamicMethod? dynamicMethod)
     {
         dynamicMethod = null;
 
-        if (FunctionBuilders.TryGetValue(function, out dynamicMethod))
+        // FIXME
+        if (FunctionBuilders.TryGetValue(v => Utils.ReferenceEquals(v.Template, function) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, typeArguments), out dynamicMethod))
         {
-            if (!EmittedFunctions.Contains(function))
-            {
-                // Recursive call
-            }
+            // Recursive call
             return true;
         }
 
-        if (EmittedFunctions.Contains(function) && !FunctionBuilders.ContainsKey(function))
-        {
-            throw new UnreachableException();
-        }
-
-        if (EmittingFunctionsStack.Any(v => v == function))
+        if (EmittingFunctionsStack.Any(v => Utils.ReferenceEquals(v, function)))
         {
             return false;
         }
@@ -2210,21 +2237,19 @@ public partial class CodeGeneratorForIL : CodeGenerator
             throw new StackOverflowException();
         }
 
-        CompiledBlock? body = Functions.FirstOrDefault(v => v.Function == function)?.Body;
+        CompiledBlock? body = Functions.FirstOrDefault(v => Utils.ReferenceEquals(v.Function, function) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, typeArguments))?.Body;
 
         if (body is null)
         {
             return false;
         }
 
-        if (!EmitFunctionSignature(function, out dynamicMethod))
+        if (!EmitFunctionSignature(function, typeArguments, out dynamicMethod))
         {
             return false;
         }
 
-        FunctionBuilders.Add(function, dynamicMethod);
-
-        if (EmittedFunctions.Contains(function)) return true;
+        FunctionBuilders.Add((new TemplateInstance<ICompiledFunctionDefinition>(function, typeArguments), dynamicMethod));
 
         ImmutableArray<CompiledParameter> savedCompiledParameters = CompiledParameters.ToImmutableArray();
         CompiledParameters.Set(function.Parameters);
@@ -2234,7 +2259,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         bool successful = true;
         EmitFunctionBody(body.Statements, il, ref successful);
 
-        if (!EmitDefaultValue(function is CompiledConstructorDefinition ? BuiltinType.Void : function.Type, il, out PossibleDiagnostic? defaultValueError))
+        if (!EmitDefaultValue(function is CompiledConstructorDefinition ? BuiltinType.Void : GeneralType.TryInsertTypeParameters(function.Type, typeArguments), il, out PossibleDiagnostic? defaultValueError))
         {
             Diagnostics.Add(defaultValueError.ToError(body.Location.After(), false));
             successful = false;
@@ -2247,7 +2272,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!successful)
         {
-            FunctionBuilders.Remove(function);
+            FunctionBuilders.Remove(v => StatementCompiler.TypeArgumentsEquals(v.Function.TypeArguments, typeArguments));
             return false;
         }
 
@@ -2261,22 +2286,25 @@ public partial class CodeGeneratorForIL : CodeGenerator
             Builders.Add(stringBuilder.ToString());
         }
 
-        EmittedFunctions.Add(function);
         return true;
     }
 
-    bool EmitFunctionSignature(ICompiledFunctionDefinition function, [NotNullWhen(true)] out DynamicMethod? dynamicMethod)
+    bool EmitFunctionSignature(ICompiledFunctionDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments, [NotNullWhen(true)] out DynamicMethod? dynamicMethod)
     {
         dynamicMethod = null;
-        if (!ToType(function is CompiledConstructorDefinition ? BuiltinType.Void : function.Type, out Type? returnType, out PossibleDiagnostic? returnTypeError))
+        if (!ToType(function is CompiledConstructorDefinition ? BuiltinType.Void : GeneralType.TryInsertTypeParameters(function.Type, typeArguments), out Type? returnType, out PossibleDiagnostic? returnTypeError))
         {
             Diagnostics.Add(returnTypeError.ToError());
             return false;
         }
-        if (!ToType(function.Parameters, out Type[]? parameterTypes, out PossibleDiagnostic? parameterTypesError))
+        Type[] parameterTypes = new Type[function.Parameters.Length];
+        for (int i = 0; i < function.Parameters.Length; i++)
         {
-            Diagnostics.Add(parameterTypesError.ToError());
-            return false;
+            if (!ToType(GeneralType.TryInsertTypeParameters(function.Parameters[i].Type, typeArguments), out parameterTypes[i]!, out PossibleDiagnostic? parameterTypesError))
+            {
+                Diagnostics.Add(parameterTypesError.ToError());
+                return false;
+            }
         }
 
         string identifier = function switch
@@ -2295,7 +2323,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             CompiledGeneralFunctionDefinition v => $"genr_{v.Identifier.Content}",
             _ => throw new UnreachableException(),
         };
-        identifier = Utils.MakeUnique(identifier, v => !FunctionBuilders.Any(w => w.Value.Name == v));
+        identifier = Utils.MakeUnique(identifier, v => !FunctionBuilders.Any(w => w.Builder.Name == v));
 
         dynamicMethod = new DynamicMethod(
             identifier,
@@ -2383,7 +2411,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             return false;
         }
 
-        if (!EmitFunction(function.Function, out DynamicMethod? builder)) return false;
+        if (!EmitFunction(function.Function, function.TypeArguments, out DynamicMethod? builder)) return false;
         if (!WrapWithMarshaling(builder, out DynamicMethod? marshaledBuilder)) return false;
 
         for (int i = 0; i < function.Function.Parameters.Length; i++)
@@ -2399,6 +2427,8 @@ public partial class CodeGeneratorForIL : CodeGenerator
             Diagnostics.Add(safetyError2.ToWarning(function.Function is FunctionDefinition v ? v.Type.Location : new Location(((FunctionThingDefinition)function.Function).Identifier.Position, function.Function.File)));
             return false;
         }
+
+        GlobalContextType_Targets.SetValue(null, DelegateTargets.ToArray());
 
         marshaled = (ExternalFunctionScopedSyncCallback)marshaledBuilder.CreateDelegate(typeof(ExternalFunctionScopedSyncCallback));
         raw = builder;
@@ -2635,9 +2665,14 @@ public partial class CodeGeneratorForIL : CodeGenerator
             Diagnostics.Add(Diagnostic.Internal($"Failed to generate valid MSIL"));
         }
 
+        GlobalContextType_Targets.SetValue(null, DelegateTargets.ToArray());
+
         StringBuilder builder = new();
         foreach (Type type in Module.GetTypes()) Stringify(builder, 0, type);
-        foreach (DynamicMethod method in FunctionBuilders.Values.Append(result)) Stringify(builder, 0, method);
+        foreach (MethodInfo method in Module.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Where(v => !FunctionBuilders.Any(w => v.Equals(w.Builder)))) Stringify(builder, 0, method);
+        foreach (FieldInfo field in Module.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Where(v => !FunctionBuilders.Any(w => v.Equals(w.Builder)))) Stringify(builder, 0, field);
+        foreach (DynamicMethod method in FunctionBuilders.Select(v => v.Builder)) Stringify(builder, 0, method);
+        Stringify(builder, 0, result);
 
         return (Func<int>)result.CreateDelegate(typeof(Func<int>));
     }

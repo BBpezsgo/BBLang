@@ -14,7 +14,7 @@ public partial class StatementCompiler
             FunctionQueryArgumentConverter<GeneralType>? converter = null,
             Uri? relevantFile = null,
             GeneralType? returnType = null,
-            Action<CompliableTemplate<TFunction>>? addCompilable = null)
+            Action<TemplateInstance<TFunction>>? addCompilable = null)
             where TFunction : ITemplateable<TFunction>
             => new()
             {
@@ -34,7 +34,7 @@ public partial class StatementCompiler
             FunctionQueryArgumentConverter<ArgumentExpression> converter,
             Uri? relevantFile = null,
             GeneralType? returnType = null,
-            Action<CompliableTemplate<TFunction>>? addCompilable = null)
+            Action<TemplateInstance<TFunction>>? addCompilable = null)
             where TFunction : ITemplateable<TFunction>
             => new()
             {
@@ -53,7 +53,7 @@ public partial class StatementCompiler
             ImmutableArray<GeneralType> arguments,
             Uri? relevantFile = null,
             GeneralType? returnType = null,
-            Action<CompliableTemplate<TFunction>>? addCompilable = null,
+            Action<TemplateInstance<TFunction>>? addCompilable = null,
             FunctionQueryIdentifierMatcher<TIdentifier, TDefinedIdentifier>? identifierMatcher = null)
             where TFunction : ITemplateable<TFunction>
             => new()
@@ -77,7 +77,7 @@ public partial class StatementCompiler
         public ImmutableArray<TArgument>? Arguments { get; init; }
         public int? ArgumentCount { get; init; }
         public GeneralType? ReturnType { get; init; }
-        public Action<CompliableTemplate<TFunction>>? AddCompilable { get; init; }
+        public Action<TemplateInstance<TFunction>>? AddCompilable { get; init; }
         public FunctionQueryArgumentConverter<TArgument> Converter { get; init; }
         public FunctionQueryIdentifierMatcher<TIdentifier, TDefinedIdentifier>? IdentifierMatcher { get; init; }
 
@@ -94,7 +94,6 @@ public partial class StatementCompiler
     public class FunctionQueryResult<TFunction> where TFunction : notnull
     {
         public required TFunction Function { get; init; }
-        public required TFunction OriginalFunction { get; init; }
         public required ImmutableArray<ArgumentExpression?> Arguments { get; init; }
         public ImmutableDictionary<string, GeneralType>? TypeArguments { get; init; }
         public bool Success { get; init; }
@@ -137,7 +136,6 @@ public partial class StatementCompiler
         where TFunction : notnull
     {
         public required TFunction Function { get; init; }
-        public required TFunction OriginalFunction { get; init; }
         public required List<PossibleDiagnostic> Errors { get; init; }
 
         public bool IsIdentifierMatched { get; set; }
@@ -268,7 +266,7 @@ public partial class StatementCompiler
 
         [NotNullWhen(true)] out FunctionQueryResult<TFunction>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error)
-        where TFunction : ICompiledFunctionDefinition, ITemplateable<TFunction>, IIdentifiable<TDefinedIdentifier>
+        where TFunction : class, ICompiledFunctionDefinition, ITemplateable<TFunction>, IIdentifiable<TDefinedIdentifier>
         where TDefinedIdentifier : notnull, IEquatable<TPassedIdentifier>
         where TArgument : notnull
     {
@@ -293,7 +291,6 @@ public partial class StatementCompiler
             result = new FunctionQueryResult<TFunction>()
             {
                 Function = best.Function,
-                OriginalFunction = best.OriginalFunction,
                 Success = true,
                 TypeArguments = best.TypeArguments,
                 Arguments = best.Arguments,
@@ -375,14 +372,12 @@ public partial class StatementCompiler
                 }
 
                 bool templateAlreadyAdded = false;
-                foreach (CompliableTemplate<TFunction> item in functions.Compilable)
+                foreach (TemplateInstance<TFunction> item in functions.Compilable)
                 {
-                    if (!ReferenceEquals(item.OriginalFunction, best.Function)) continue;
-                    if (!Utils.SequenceEquals(item.TypeArguments, best.TypeArguments, (a, b) => a.Equals(b))) continue;
+                    if (!FunctionEquals(item, best)) continue;
                     result = new FunctionQueryResult<TFunction>()
                     {
-                        Function = item.Function,
-                        OriginalFunction = item.OriginalFunction,
+                        Function = item.Template,
                         Success = true,
                         TypeArguments = best.TypeArguments,
                         Arguments = best.Arguments,
@@ -393,12 +388,11 @@ public partial class StatementCompiler
 
                 if (!templateAlreadyAdded)
                 {
-                    CompliableTemplate<TFunction> template = new(best.Function, best.TypeArguments);
+                    TemplateInstance<TFunction> template = new(best.Function, best.TypeArguments);
                     query.AddCompilable?.Invoke(template);
                     result = new FunctionQueryResult<TFunction>()
                     {
-                        Function = template.Function,
-                        OriginalFunction = template.OriginalFunction,
+                        Function = template.Template,
                         Success = true,
                         TypeArguments = best.TypeArguments,
                         Arguments = best.Arguments,
@@ -427,7 +421,6 @@ public partial class StatementCompiler
         FunctionMatch<TFunction> result = new()
         {
             Function = function,
-            OriginalFunction = function,
             Errors = new(),
         };
 

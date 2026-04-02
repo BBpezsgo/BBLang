@@ -72,14 +72,14 @@ public abstract class CodeGenerator : IRuntimeInfoProvider
         if (arguments is not null) TypeArguments.AddRange(arguments);
     }
 
-    protected void SetTypeArguments(Dictionary<string, GeneralType>? arguments, out Dictionary<string, GeneralType> old)
+    protected void SetTypeArguments(ImmutableDictionary<string, GeneralType>? arguments, out Dictionary<string, GeneralType> old)
     {
         old = new Dictionary<string, GeneralType>(TypeArguments);
         TypeArguments.Clear();
         if (arguments is not null) TypeArguments.AddRange(arguments);
     }
 
-    protected TypeArgumentsScope SetTypeArgumentsScope(Dictionary<string, GeneralType>? arguments)
+    protected TypeArgumentsScope SetTypeArgumentsScope(ImmutableDictionary<string, GeneralType>? arguments)
     {
         TypeArgumentsScope scope = new(this, TypeArguments);
         TypeArguments.Clear();
@@ -294,7 +294,7 @@ public abstract class CodeGenerator : IRuntimeInfoProvider
     {
         for (int i = 0; i < CompiledParameters.Count; i++)
         {
-            if (CompiledParameters[i] != parameter) continue;
+            if (!Utils.ReferenceEquals(CompiledParameters[i], parameter)) continue;
             return i;
         }
         throw new LanguageExceptionAt($"Parameter {parameter.Identifier.Content} not found", parameter.Position, parameter.File);

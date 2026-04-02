@@ -121,4 +121,7 @@ public static class Utils
         Scheme = Uri.UriSchemeFile,
         Path = path,
     }.Uri;
+
+    [SuppressMessage("Quality", "MY002")]
+    public static bool ReferenceEquals<T>(T? a, T? b) where T : class => object.ReferenceEquals(a, b);
 }

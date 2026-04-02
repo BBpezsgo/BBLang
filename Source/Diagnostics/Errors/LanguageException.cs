@@ -26,7 +26,7 @@ public class LanguageException : Exception
     {
         StringBuilder result = new(Message);
 
-        if (InnerException != null)
+        if (InnerException is not null)
         { result.Append($" {InnerException}"); }
 
         return result.ToString();

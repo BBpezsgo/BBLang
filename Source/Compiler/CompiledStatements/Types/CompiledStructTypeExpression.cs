@@ -89,7 +89,7 @@ public class CompiledStructTypeExpression : CompiledTypeExpression,
     public bool Equals(CompiledStructTypeExpression? other)
     {
         if (other is null) return false;
-        if (!ReferenceEquals(Struct, other.Struct)) return false;
+        if (!Utils.ReferenceEquals(Struct, other.Struct)) return false;
         return true;
     }
     public override bool Equals(TypeInstance? other)

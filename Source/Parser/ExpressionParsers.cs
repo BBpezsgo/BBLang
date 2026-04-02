@@ -110,7 +110,7 @@ public sealed partial class Parser
 
         SkipCrapTokens();
 
-        if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralFloat)
+        if (CurrentToken is not null && CurrentToken.TokenType == TokenType.LiteralFloat)
         {
             string v = CurrentToken.Content;
             v = v.Replace("_", null, StringComparison.Ordinal);
@@ -130,7 +130,7 @@ public sealed partial class Parser
             statement = literal;
             return true;
         }
-        else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralNumber)
+        else if (CurrentToken is not null && CurrentToken.TokenType == TokenType.LiteralNumber)
         {
             string v = CurrentToken.Content;
             v = v.Replace("_", null, StringComparison.Ordinal);
@@ -149,7 +149,7 @@ public sealed partial class Parser
             statement = literal;
             return true;
         }
-        else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralHex)
+        else if (CurrentToken is not null && CurrentToken.TokenType == TokenType.LiteralHex)
         {
             string v = CurrentToken.Content;
 
@@ -172,7 +172,7 @@ public sealed partial class Parser
             statement = literal;
             return true;
         }
-        else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralBinary)
+        else if (CurrentToken is not null && CurrentToken.TokenType == TokenType.LiteralBinary)
         {
             string v = CurrentToken.Content;
 
@@ -195,7 +195,7 @@ public sealed partial class Parser
             statement = literal;
             return true;
         }
-        else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralString)
+        else if (CurrentToken is not null && CurrentToken.TokenType == TokenType.LiteralString)
         {
             LiteralExpression literal = new StringLiteralExpression(CurrentToken.Content, CurrentToken, File);
             CurrentToken.AnalyzedType = TokenAnalyzedType.None;
@@ -205,7 +205,7 @@ public sealed partial class Parser
             statement = literal;
             return true;
         }
-        else if (CurrentToken != null && CurrentToken.TokenType == TokenType.LiteralCharacter)
+        else if (CurrentToken is not null && CurrentToken.TokenType == TokenType.LiteralCharacter)
         {
             char value;
             if (CurrentToken.Content.Length != 1)
@@ -461,7 +461,7 @@ public sealed partial class Parser
             statementWithValue = identifierExpression;
         }
 
-        if (statementWithValue == null)
+        if (statementWithValue is null)
         { return false; }
 
         while (true)
@@ -489,7 +489,7 @@ public sealed partial class Parser
             statementWithValue = basicTypeCast;
         }
 
-        return statementWithValue != null;
+        return statementWithValue is not null;
     }
 
     bool ExpectTypeCast([NotNullWhen(true)] out ManagedTypeCastExpression? typeCast)
@@ -666,7 +666,7 @@ public sealed partial class Parser
             int rightSidePrecedence = OperatorPrecedence(binaryOperator.Content);
 
             BinaryOperatorCallExpression? rightmostStatement = FindRightmostStatement(leftStatement, rightSidePrecedence);
-            if (rightmostStatement != null)
+            if (rightmostStatement is not null)
             {
                 rightmostStatement.Right = new BinaryOperatorCallExpression(binaryOperator, rightmostStatement.Right, rightStatement, File);
             }
@@ -714,7 +714,7 @@ public sealed partial class Parser
 
         BinaryOperatorCallExpression? right = FindRightmostStatement(leftSide.Right, rightSidePrecedence);
 
-        if (right == null) return leftSide;
+        if (right is null) return leftSide;
         return right;
     }
 

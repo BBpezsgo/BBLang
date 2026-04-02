@@ -367,9 +367,10 @@ public static class Entry
 
                 if (arguments.Output is not null)
                 {
-                    Console.WriteLine($"Writing to \"{arguments.Output}\" ...");
-                    File.WriteAllBytes(arguments.Output, ReadOnlySpan<byte>.Empty);
-                    using FileStream stream = File.OpenWrite(arguments.Output);
+                    string output = Path.GetFullPath(arguments.Output, Environment.CurrentDirectory);
+                    Console.WriteLine($"Writing to \"{output}\" ...");
+                    File.WriteAllBytes(output, ReadOnlySpan<byte>.Empty);
+                    using FileStream stream = File.OpenWrite(output);
                     using StreamWriter writer = new(stream);
                     generatedCode.CodeEmitter.WriteTo(writer, false);
                 }
@@ -683,8 +684,9 @@ public static class Entry
 
                 if (arguments.Output is not null)
                 {
-                    Console.WriteLine($"Writing to \"{arguments.Output}\" ...");
-                    File.WriteAllText(arguments.Output, generated.Code);
+                    string output = Path.GetFullPath(arguments.Output, Environment.CurrentDirectory);
+                    Console.WriteLine($"Writing to \"{output}\" ...");
+                    File.WriteAllText(output, generated.Code);
                 }
 
                 InterpreterCompact interpreter = new();

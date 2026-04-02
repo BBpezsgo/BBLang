@@ -262,7 +262,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             {
                 if (capturedLocal.Variable is not null)
                 {
-                    if (capturedLocal.Variable == variable)
+                    if (Utils.ReferenceEquals(capturedLocal.Variable, variable))
                     {
                         return new AddressOffset(new AddressPointer(GetParameterAddress(0)), offset);
                     }
@@ -289,7 +289,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             {
                 if (capturedLocal.Parameter is not null)
                 {
-                    if (capturedLocal.Parameter == parameter)
+                    if (Utils.ReferenceEquals(capturedLocal.Parameter, parameter))
                     {
                         return new AddressOffset(new AddressPointer(GetParameterAddress(0)), _offset + offset);
                     }
@@ -309,7 +309,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         {
             if (i <= beforeThis) continue;
             CompiledParameter parameter = CompiledParameters[i];
-            sum += parameter.IsRef ? PointerSize : FindSize(parameter.Type, parameter);
+            sum += parameter.IsRef ? PointerSize : FindSize(GeneralType.TryInsertTypeParameters(parameter.Type, TypeArguments), parameter);
         }
 
         return sum;
@@ -1034,7 +1034,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             foreach (CompiledParameter parameter in CompiledParameters)
             {
-                sum += parameter.IsRef ? PointerSize : FindSize(parameter.Type, parameter);
+                sum += parameter.IsRef ? PointerSize : FindSize(GeneralType.TryInsertTypeParameters(parameter.Type, TypeArguments), parameter);
             }
 
             return sum;

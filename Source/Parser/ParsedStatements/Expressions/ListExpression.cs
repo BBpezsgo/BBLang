@@ -39,7 +39,7 @@ public class ListExpression : Expression
         result.Append(Brackets.End);
         result.Append(SurroundingBrackets?.End);
 
-        if (Semicolon != null) result.Append(Semicolon);
+        if (Semicolon is not null) result.Append(Semicolon);
 
         return result.ToString();
     }

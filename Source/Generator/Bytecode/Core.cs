@@ -124,15 +124,15 @@ public partial class CodeGeneratorForMain : CodeGenerator
     readonly struct UndefinedOffset
     {
         public Location CallerLocation { get; }
-        public IHaveInstructionOffset Called { get; }
+        public TemplateInstance<IHaveInstructionOffset> Called { get; }
 
-        public UndefinedOffset(ILocated caller, IHaveInstructionOffset called)
+        public UndefinedOffset(ILocated caller, TemplateInstance<IHaveInstructionOffset> called)
         {
             CallerLocation = caller.Location;
             Called = called;
         }
 
-        public UndefinedOffset(Location callerLocation, IHaveInstructionOffset called)
+        public UndefinedOffset(Location callerLocation, TemplateInstance<IHaveInstructionOffset> called)
         {
             CallerLocation = callerLocation;
             Called = called;
@@ -185,7 +185,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     readonly List<(ExternalFunctionScopedSync Function, ExternalFunctionScopedSyncCallback Reference)> GeneratedUnmanagedFunctions = new();
     readonly Dictionary<CompiledLabelDeclaration, GeneratedInstructionLabel> GeneratedInstructionLabels = new();
     readonly Dictionary<CompiledVariableDefinition, GeneratedVariable> GeneratedVariables = new();
-    readonly HashSet<ICompiledFunctionDefinition> GeneratedFunctions = new();
+    readonly List<TemplateInstance<ICompiledFunctionDefinition>> GeneratedFunctions = new();
 
     readonly Stack<CompiledScope> CleanupStack2;
     ICompiledFunctionDefinition? CurrentContext;

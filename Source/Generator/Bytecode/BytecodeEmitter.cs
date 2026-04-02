@@ -36,16 +36,24 @@ public class BytecodeEmitter
     {
         if (!comments)
         {
+            int marginLeft = (int)Math.Log10(Code.Count);
             for (int i = 0; i < Code.Count; i++)
             {
+                FunctionInformation f1 = DebugInfo.FunctionInformation.FirstOrDefault(v => v.Instructions.Start == i);
+                if (f1.IsValid) writer.WriteLine(f1.ReadableIdentifier() + ":");
                 foreach (InstructionLabel label in Labels)
                 {
                     if (label.Address != i) continue;
-                    writer.WriteLine($"     {label}:");
+                    writer.Write('L');
+                    writer.Write(label);
+                    writer.Write(':');
+                    writer.WriteLine();
                 }
-                writer.Write($"{i,4}:");
+                writer.Write(i.ToString().PadLeft(marginLeft, ' '));
+                writer.Write(':');
                 writer.Write("  ");
-                writer.WriteLine(Code[i].ToString());
+                writer.Write(Code[i].ToString());
+                writer.WriteLine();
             }
 
             return;
@@ -238,7 +246,7 @@ public class BytecodeEmitter
             RemoveAt(i--);
             Code[i] = new PreparationInstruction(
                 Opcode.Push,
-                new InstructionOperand((prev0.Operand1.Value.Value) | (prev1.Operand1.Value.Value << 16), InstructionOperandType.Immediate32)
+                new InstructionOperand(prev0.Operand1.Value.Value | (prev1.Operand1.Value.Value << 16), InstructionOperandType.Immediate32)
             );
             return true;
         }
@@ -519,7 +527,7 @@ public class BytecodeEmitter
     InstructionLabel DefineLabelImpl(int offset)
     {
         int id = Labels.Count;
-        while (Labels.Any(v => v == new InstructionLabel(default, id)))
+        while (Labels.Any(v => v.Id == id))
         {
             id++;
         }
@@ -536,7 +544,7 @@ public class BytecodeEmitter
         for (int i = 0; i < Labels.Count; i++)
         {
             InstructionLabel v = Labels[i];
-            if (v != label) continue;
+            if (!Utils.ReferenceEquals(v, label)) continue;
             v.Address = Offset;
             Labels[i] = v;
         }
@@ -546,7 +554,7 @@ public class BytecodeEmitter
     {
         foreach (InstructionLabel _label in Labels)
         {
-            if (_label != label) continue;
+            if (!Utils.ReferenceEquals(_label, label)) continue;
             return _label.Address;
         }
         throw new KeyNotFoundException($"Label {label} not found");
@@ -595,7 +603,7 @@ public class BytecodeEmitter
         for (int i = Labels.Count - 1; i >= 0; i--)
         {
             InstructionLabel label = Labels[i];
-            if (Code.Any(v => (v.Operand1.Kind == PreparationInstructionOperandKind.Label && v.Operand1.LabelValue.Label == label) || (v.Operand2.Kind == PreparationInstructionOperandKind.Label && v.Operand2.LabelValue.Label == label)))
+            if (Code.Any(v => (v.Operand1.Kind == PreparationInstructionOperandKind.Label && v.Operand1.LabelValue.Label.Id == label.Id) || (v.Operand2.Kind == PreparationInstructionOperandKind.Label && Utils.ReferenceEquals(v.Operand2.LabelValue.Label, label))))
             { continue; }
             if (label.Keep) continue;
             Labels.RemoveSwapBack(i);

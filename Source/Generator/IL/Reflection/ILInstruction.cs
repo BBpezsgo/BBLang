@@ -98,7 +98,7 @@ public class InlineSwitchInstruction : ILInstruction
     {
         get
         {
-            if (m_targetOffsets != null) return m_targetOffsets;
+            if (m_targetOffsets is not null) return m_targetOffsets;
 
             int cases = m_deltas.Length;
             int itself = 1 + 4 + (4 * cases);

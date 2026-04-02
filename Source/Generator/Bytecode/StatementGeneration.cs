@@ -8,16 +8,21 @@ namespace LanguageCore.BBLang.Generator;
 public partial class CodeGeneratorForMain : CodeGenerator
 {
     GeneratorStatistics _statistics;
-    readonly Dictionary<IHaveInstructionOffset, InstructionLabel> DefinitionLabels = new();
+    readonly List<(TemplateInstance<IHaveInstructionOffset> Definition, InstructionLabel Label)> DefinitionLabels = new();
 
-    InstructionLabel LabelForDefinition(IHaveInstructionOffset definition)
+    InstructionLabel LabelForDefinition(TemplateInstance<IHaveInstructionOffset> definition)
     {
-        if (DefinitionLabels.TryGetValue(definition, out InstructionLabel? label))
+        if (DefinitionLabels.TryGetValue(v => Utils.ReferenceEquals(v.Template, definition.Template) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, definition.TypeArguments), out InstructionLabel? label))
         {
             return label;
         }
-        return DefinitionLabels[definition] = Code.DefineLabel();
+        label = Code.DefineLabel();
+        DefinitionLabels.Add((definition, label));
+        return label;
     }
+
+    InstructionLabel LabelForDefinition<T>(TemplateInstance<T> definition) where T : IHaveInstructionOffset
+        => LabelForDefinition(TemplateInstance.New<IHaveInstructionOffset>(definition.Template, definition.TypeArguments));
 
     void GenerateDeallocator(CompiledCleanup cleanup)
     {
@@ -25,28 +30,27 @@ public partial class CodeGeneratorForMain : CodeGenerator
         {
             return;
         }
-        CompiledFunctionDefinition? deallocator = cleanup.Deallocator;
-        CompiledFunction f = Functions.First(v => v.Function == deallocator);
+        CompiledFunction f = Functions.First(v => Utils.ReferenceEquals(v.Function, cleanup.Deallocator.Template) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, cleanup.Deallocator.TypeArguments));
 
-        if (deallocator.ExternalFunctionName is not null)
+        if (cleanup.Deallocator.Template.ExternalFunctionName is not null)
         {
             throw new NotImplementedException();
         }
 
-        AddComment($"Call \"{deallocator.ToReadable()}\" {{");
+        AddComment($"Call \"{cleanup.Deallocator.Template.ToReadable()}\" {{");
 
-        if (deallocator.ReturnSomething)
+        if (cleanup.Deallocator.Template.ReturnSomething)
         { throw new NotImplementedException(); }
 
         AddComment(" .:");
 
-        InstructionLabel label = LabelForDefinition(deallocator);
+        InstructionLabel label = LabelForDefinition(cleanup.Deallocator);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(cleanup.Location, deallocator)); }
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(cleanup.Location, cleanup.Deallocator.UnsafeTo<IHaveInstructionOffset>())); }
 
-        if (deallocator.ReturnSomething)
+        if (cleanup.Deallocator.Template.ReturnSomething)
         {
             AddComment($" Clear return value:");
 
@@ -78,7 +82,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
         }
 
-        CompiledFunction f = Functions.First(v => v.Function == cleanup.Destructor);
+        CompiledFunction f = Functions.First(v => Utils.ReferenceEquals(v.Function, cleanup.Destructor.Template) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, cleanup.Destructor.TypeArguments));
 
         AddComment(" Param0 should be already there");
 
@@ -88,7 +92,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(cleanup.Location, cleanup.Destructor)); }
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(cleanup.Location, cleanup.Destructor.UnsafeTo<IHaveInstructionOffset>())); }
 
         if (StatementCompiler.AllowDeallocate(cleanup.TrashType))
         {
@@ -278,7 +282,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         //     return;
         // }
 
-        if (newVariable.InitialValue == null) return;
+        if (newVariable.InitialValue is null) return;
 
         AddComment($"New Variable \"{newVariable.Identifier}\" {{");
 
@@ -336,7 +340,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         {
             generatedInstructionLabel = GeneratedInstructionLabels[instructionLabel] = new();
         }
-        Code.MarkLabel(LabelForDefinition(generatedInstructionLabel));
+        Code.MarkLabel(LabelForDefinition(TemplateInstance.New(generatedInstructionLabel, null)));
     }
     void GenerateCodeForStatement(CompiledReturn keywordCall)
     {
@@ -443,7 +447,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             Code.Emit(Opcode.Jump, reg.Register);
         }
     }
-    Stack<CompiledCleanup> GenerateCodeForArguments(IReadOnlyList<CompiledArgument> arguments, ICompiledFunctionDefinition compiledFunction, int alreadyPassed = 0)
+    Stack<CompiledCleanup> GenerateCodeForArguments(IReadOnlyList<CompiledArgument> arguments, ICompiledFunctionDefinition compiledFunction, ImmutableDictionary<string, GeneralType>? typeArguments, int alreadyPassed = 0)
     {
         Stack<CompiledCleanup> argumentCleanup = new();
 
@@ -452,13 +456,14 @@ public partial class CodeGeneratorForMain : CodeGenerator
             CompiledArgument argument = arguments[i];
             GeneralType argumentType = argument.Value.Type;
             CompiledParameter parameter = compiledFunction.Parameters[i + alreadyPassed];
+            GeneralType parameterType = GeneralType.TryInsertTypeParameters(parameter.Type, typeArguments);
 
-            if (FindSize(argumentType, argument) != FindSize(parameter.Type, parameter))
-            { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameter.Type}\" passed \"{argumentType}\"", argument.Value)); }
+            if (FindSize(argumentType, argument) != FindSize(parameterType, parameter))
+            { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameterType}\" passed \"{argumentType}\"", argument.Value)); }
 
             AddComment($" Pass {parameter}:");
 
-            GenerateCodeForStatement(argument.Value, parameter.Type);
+            GenerateCodeForStatement(argument.Value, parameterType);
 
             argumentCleanup.Push(argument.Cleanup);
         }
@@ -488,7 +493,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForFunctionCall_MSIL(CompiledExternalFunctionCall caller)
     {
-        CompiledFunction f = Functions.First(v => v.Function == caller.Declaration);
+        CompiledFunction f = Functions.First(v => Utils.ReferenceEquals(v.Function, caller.Declaration) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, null));
 
         AddComment($"Call \"{caller.Declaration.ToReadable()}\" {{");
 
@@ -499,7 +504,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             AddComment($"}}");
         }
 
-        Stack<CompiledCleanup> parameterCleanup = GenerateCodeForArguments(caller.Arguments, caller.Declaration);
+        Stack<CompiledCleanup> parameterCleanup = GenerateCodeForArguments(caller.Arguments, caller.Declaration, null);
 
         AddComment(" .:");
 
@@ -512,11 +517,11 @@ public partial class CodeGeneratorForMain : CodeGenerator
             Code.Emit(Opcode.JumpIfNotEqual, skipLabel.Relative());
         }
 
-        InstructionLabel label = LabelForDefinition(caller.Declaration);
+        InstructionLabel label = LabelForDefinition(TemplateInstance.New(caller.Declaration, null));
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new(caller, caller.Declaration)); }
+        { UndefinedFunctionOffsets.Add(new(caller, TemplateInstance.New<IHaveInstructionOffset>(caller.Declaration, null))); }
         Code.Emit(Opcode.HotFuncEnd, InstructionOperand.Immediate(caller.Function.Id));
 
         Code.MarkLabel(skipLabel);
@@ -542,7 +547,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             AddComment($"}}");
         }
 
-        Stack<CompiledCleanup> parameterCleanup = GenerateCodeForArguments(caller.Arguments, caller.Declaration);
+        Stack<CompiledCleanup> parameterCleanup = GenerateCodeForArguments(caller.Arguments, caller.Declaration, null);
 
         AddComment(" .:");
         Code.Emit(Opcode.CallExternal, InstructionOperand.Immediate(caller.Function.Id));
@@ -559,7 +564,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForFunctionCall(CompiledFunctionCall caller)
     {
-        CompiledFunction f = Functions.First(v => v.Function == caller.Function);
+        CompiledFunction f = Functions.First(v => Utils.ReferenceEquals(v.Function, caller.Function.Template) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, caller.Function.TypeArguments));
         if (ILGenerator is not null)
         {
             ILGenerator.Diagnostics.Clear();
@@ -622,16 +627,16 @@ public partial class CodeGeneratorForMain : CodeGenerator
             ILGenerator.Diagnostics.Clear();
         }
 
-        AddComment($"Call {caller.Function.ToReadable()} {{");
+        AddComment($"Call {caller.Function.Template.ToReadable()} {{");
 
-        if (caller.Function.ReturnSomething)
+        if (caller.Function.Template.ReturnSomething)
         {
             AddComment($"Initial return value {{");
-            StackAlloc(FindSize(caller.Function.Type, caller), false);
+            StackAlloc(FindSize(GeneralType.TryInsertTypeParameters(caller.Function.Template.Type, caller.Function.TypeArguments), caller), false);
             AddComment($"}}");
         }
 
-        Stack<CompiledCleanup> parameterCleanup = GenerateCodeForArguments(caller.Arguments, caller.Function);
+        Stack<CompiledCleanup> parameterCleanup = GenerateCodeForArguments(caller.Arguments, caller.Function.Template, caller.Function.TypeArguments);
 
         AddComment(" .:");
 
@@ -639,14 +644,14 @@ public partial class CodeGeneratorForMain : CodeGenerator
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new(caller, caller.Function)); }
+        { UndefinedFunctionOffsets.Add(new(caller, caller.Function.UnsafeTo<IHaveInstructionOffset>())); }
 
         GenerateCodeForParameterCleanup(parameterCleanup);
 
-        if (caller.Function.ReturnSomething && !caller.SaveValue)
+        if (caller.Function.Template.ReturnSomething && !caller.SaveValue)
         {
             AddComment(" Clear Return Value:");
-            Pop(FindSize(caller.Function.Type, caller));
+            Pop(FindSize(GeneralType.TryInsertTypeParameters(caller.Function.Template.Type, caller.Function.TypeArguments), caller));
         }
 
         AddComment("}");
@@ -1097,10 +1102,10 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledLambda compiledLambda)
     {
-        InstructionLabel label = LabelForDefinition(compiledLambda);
+        InstructionLabel label = LabelForDefinition(TemplateInstance.New(compiledLambda, null));
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(compiledLambda, compiledLambda)); }
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(compiledLambda, TemplateInstance.New<IHaveInstructionOffset>(compiledLambda, null))); }
 
         if (compiledLambda.CapturedLocals.IsDefaultOrEmpty)
         {
@@ -1157,49 +1162,48 @@ public partial class CodeGeneratorForMain : CodeGenerator
             }
         }
     }
-    void GenerateCodeForStatement(CompiledRegisterAccess variable, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledRegisterAccess register, GeneralType? expectedType = null, bool resolveReference = true)
     {
-        Code.Emit(Opcode.Push, variable.Register);
+        Code.Emit(Opcode.Push, register.Register);
     }
-    void GenerateCodeForStatement(CompiledParameterAccess variable, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledParameterAccess parameterRef, GeneralType? expectedType = null, bool resolveReference = true)
     {
-        Address address = GetParameterAddress(variable.Parameter);
+        Address address = GetParameterAddress(parameterRef.Parameter);
 
-        if (variable.Parameter.IsRef && resolveReference)
+        if (parameterRef.Parameter.IsRef && resolveReference)
         { address = new AddressPointer(address); }
 
-        PushFrom(address, FindSize(variable.Parameter.Type, variable.Parameter));
+        PushFrom(address, FindSize(parameterRef.Type, parameterRef.Parameter));
     }
-    void GenerateCodeForStatement(CompiledVariableAccess variable, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledVariableAccess variableRef, GeneralType? expectedType = null, bool resolveReference = true)
     {
-        PushFrom(GetVariableAddress(variable.Variable), FindSize(variable.Type, variable));
+        PushFrom(GetVariableAddress(variableRef.Variable), FindSize(variableRef.Type, variableRef));
     }
-    void GenerateCodeForStatement(CompiledExpressionVariableAccess variable, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledExpressionVariableAccess expressionVariableRef, GeneralType? expectedType = null, bool resolveReference = true)
     {
-        PushFrom(new AddressAbsolute(variable.Variable.Address), FindSize(variable.Type, variable));
+        PushFrom(new AddressAbsolute(expressionVariableRef.Variable.Address), FindSize(expressionVariableRef.Type, expressionVariableRef));
     }
-    void GenerateCodeForStatement(CompiledFunctionReference variable, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledFunctionReference functionRef, GeneralType? expectedType = null, bool resolveReference = true)
     {
-        IHaveInstructionOffset compiledFunction = variable.Function;
-        InstructionLabel label = LabelForDefinition(compiledFunction);
+        InstructionLabel label = LabelForDefinition(functionRef.Function);
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(variable, compiledFunction)); }
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(functionRef, functionRef.Function.UnsafeTo<IHaveInstructionOffset>())); }
 
         Push(label.Absolute());
     }
-    void GenerateCodeForStatement(CompiledLabelReference variable, GeneralType? expectedType = null, bool resolveReference = true)
+    void GenerateCodeForStatement(CompiledLabelReference labelRef, GeneralType? expectedType = null, bool resolveReference = true)
     {
         InstructionLabel label;
 
-        if (!GeneratedInstructionLabels.TryGetValue(variable.InstructionLabel, out GeneratedInstructionLabel? instructionLabel))
+        if (!GeneratedInstructionLabels.TryGetValue(labelRef.InstructionLabel, out GeneratedInstructionLabel? instructionLabel))
         {
-            instructionLabel = GeneratedInstructionLabels[variable.InstructionLabel] = new();
-            label = LabelForDefinition(instructionLabel);
+            instructionLabel = GeneratedInstructionLabels[labelRef.InstructionLabel] = new();
+            label = LabelForDefinition(TemplateInstance.New(instructionLabel, null));
         }
         else
         {
-            label = LabelForDefinition(instructionLabel);
+            label = LabelForDefinition(TemplateInstance.New(instructionLabel, null));
         }
 
         Push(label.Absolute());
@@ -1384,10 +1388,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledConstructorCall constructorCall)
     {
-        CompiledConstructorDefinition compiledFunction = constructorCall.Function;
-        CompiledFunction f = Functions.First(v => v.Function == compiledFunction);
+        CompiledFunction f = Functions.First(v => Utils.ReferenceEquals(v.Function, constructorCall.Function.Template) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, constructorCall.Function.TypeArguments));
 
-        AddComment($"Call \"{compiledFunction.ToReadable()}\" {{");
+        AddComment($"Call \"{constructorCall.Function.Template.ToReadable()}\" {{");
 
         GenerateCodeForStatement(constructorCall.Object);
 
@@ -1411,11 +1414,11 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 TrashType = new PointerType(constructorCall.Object.Type),
             });
 
-            parameterCleanup.AddRange(GenerateCodeForArguments(constructorCall.Arguments, compiledFunction, 1));
+            parameterCleanup.AddRange(GenerateCodeForArguments(constructorCall.Arguments, constructorCall.Function.Template, constructorCall.Function.TypeArguments, 1));
         }
         else if (constructorCall.Object.Type.Is<PointerType>())
         {
-            parameterCleanup.AddRange(GenerateCodeForArguments(constructorCall.Arguments, compiledFunction, 1));
+            parameterCleanup.AddRange(GenerateCodeForArguments(constructorCall.Arguments, constructorCall.Function.Template, constructorCall.Function.TypeArguments, 1));
         }
         else
         {
@@ -1425,11 +1428,11 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         AddComment(" .:");
 
-        InstructionLabel label = LabelForDefinition(compiledFunction);
+        InstructionLabel label = LabelForDefinition(constructorCall.Function);
         Call(label, f.Flags.HasFlag(FunctionFlags.CapturesGlobalVariables));
 
         if (!label.IsMarked)
-        { UndefinedFunctionOffsets.Add(new UndefinedOffset(constructorCall, compiledFunction)); }
+        { UndefinedFunctionOffsets.Add(new UndefinedOffset(constructorCall, constructorCall.Function.UnsafeTo<IHaveInstructionOffset>())); }
 
         GenerateCodeForParameterCleanup(parameterCleanup);
 
@@ -2500,10 +2503,12 @@ public partial class CodeGeneratorForMain : CodeGenerator
         }
     }
 
-    void GenerateCodeForFunction(ICompiledFunctionDefinition function, CompiledBlock body)
+    void GenerateCodeForFunction(ICompiledFunctionDefinition function, ImmutableDictionary<string, GeneralType>? typeArguments, CompiledBlock body)
     {
-        if (!GeneratedFunctions.Add(function)) return;
-        InstructionLabel label = LabelForDefinition(function);
+        if (GeneratedFunctions.Any(v => Utils.ReferenceEquals(v.Template, function) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, typeArguments))) return;
+        GeneratedFunctions.Add(TemplateInstance.New(function, typeArguments));
+
+        InstructionLabel label = LabelForDefinition(TemplateInstance.New(function, typeArguments));
         Code.MarkLabel(label);
 
         if (function is IExposeable exposeable && exposeable.ExposedFunctionName is not null)
@@ -2513,8 +2518,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         CurrentContext = function;
         InFunction = true;
-        FunctionFlags f = function is CompiledLambda l ? l.Flags : Functions.First(v => v.Function == function).Flags;
+        FunctionFlags f = function is CompiledLambda l ? l.Flags : Functions.First(v => Utils.ReferenceEquals(v.Function, function) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, typeArguments)).Flags;
 
+        TypeArguments.Clear();
         CompiledParameters.Clear();
         CompiledLocalVariables.Clear();
         ReturnInstructions.Clear();
@@ -2522,6 +2528,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         HasCapturedGlobalVariables = f.HasFlag(FunctionFlags.CapturesGlobalVariables);
         int savedInstructionLabelCount = CompiledInstructionLabels.Count;
 
+        if (typeArguments is not null) TypeArguments.AddRange(typeArguments);
         CompiledParameters.AddRange(function.Parameters);
 
         int instructionStart = Code.Offset;
@@ -2546,9 +2553,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 Address = ReturnValueAddress.Offset,
                 BasePointerRelative = true,
                 Kind = StackElementKind.Internal,
-                Size = FindSize(returnType.Type, (ILocated)function),
+                Size = FindSize(GeneralType.TryInsertTypeParameters(returnType.Type, typeArguments), (ILocated)function),
                 Identifier = "Return Value",
-                Type = returnType.Type,
+                Type = GeneralType.TryInsertTypeParameters(returnType.Type, typeArguments),
             });
         }
 
@@ -2585,15 +2592,16 @@ public partial class CodeGeneratorForMain : CodeGenerator
         for (int i = 0; i < CompiledParameters.Count; i++)
         {
             CompiledParameter p = CompiledParameters[i];
+            GeneralType pType = GeneralType.TryInsertTypeParameters(p.Type, typeArguments);
 
             StackElementInformation debugInfo = new()
             {
                 Address = GetParameterAddress(p).Offset,
                 Kind = StackElementKind.Parameter,
                 BasePointerRelative = true,
-                Size = p.IsRef ? PointerSize : FindSize(p.Type, p),
+                Size = p.IsRef ? PointerSize : FindSize(pType, p),
                 Identifier = p.Identifier.Content,
-                Type = p.IsRef ? new PointerType(p.Type) : p.Type,
+                Type = p.IsRef ? new PointerType(pType) : pType,
             };
             CurrentScopeDebug.Last.Stack.Add(debugInfo);
         }
@@ -2613,7 +2621,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         AddComment("Return");
         Return();
 
-        if (body != null) AddComment("}");
+        if (body is not null) AddComment("}");
 
         DebugInfo?.FunctionInformation.Add(new FunctionInformation()
         {
@@ -2628,6 +2636,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             CompiledInstructionLabels.Pop();
         }
 
+        TypeArguments.Clear();
         CompiledParameters.Clear();
         CompiledLocalVariables.Clear();
         ReturnInstructions.Clear();
@@ -2837,26 +2846,28 @@ public partial class CodeGeneratorForMain : CodeGenerator
         ScopeInformation topLevelScope = CurrentScopeDebug.Pop();
         topLevelScope.Location.Instructions.End = Code.Offset - 1;
 
-        foreach ((ICompiledFunctionDefinition function, CompiledBlock body) in compilerResult.Functions)
+        foreach (CompiledFunction function in compilerResult.Functions)
         {
-            if (function is IExposeable exposeable && exposeable.ExposedFunctionName is not null)
-            { GenerateCodeForFunction(function, body); }
+            if (function.Function is IExposeable exposeable && exposeable.ExposedFunctionName is not null)
+            { GenerateCodeForFunction(function.Function, function.TypeArguments, function.Body); }
         }
 
         while (UndefinedFunctionOffsets.Count > 0)
         {
             foreach (UndefinedOffset undefinedOffset in UndefinedFunctionOffsets.ToArray())
             {
-                if (undefinedOffset.Called is CompiledLambda compiledLambda)
+                if (undefinedOffset.Called.Template is CompiledLambda compiledLambda)
                 {
-                    GenerateCodeForFunction(compiledLambda, compiledLambda.Block);
+                    GenerateCodeForFunction(compiledLambda, null, compiledLambda.Block);
                     goto ok;
                 }
 
-                foreach ((ICompiledFunctionDefinition function, CompiledBlock body) in compilerResult.Functions)
+                foreach (CompiledFunction function in compilerResult.Functions)
                 {
-                    if (undefinedOffset.Called != function) continue;
-                    GenerateCodeForFunction(function, body);
+                    if (!Utils.ReferenceEquals(undefinedOffset.Called.Template, function.Function)
+                        || !StatementCompiler.TypeArgumentsEquals(undefinedOffset.Called.TypeArguments, function.TypeArguments))
+                    { continue; }
+                    GenerateCodeForFunction(function.Function, function.TypeArguments, function.Body);
                     goto ok;
                 }
 
@@ -2901,14 +2912,14 @@ public partial class CodeGeneratorForMain : CodeGenerator
             foreach (CompiledFunctionDefinition f in compilerResult.FunctionDefinitions)
             {
                 if (f.ExposedFunctionName is null) continue;
-                InstructionLabel label = LabelForDefinition(f);
+                InstructionLabel label = LabelForDefinition(TemplateInstance.New(f, null));
                 if (!label.IsMarked)
                 {
                     Diagnostics.Add(DiagnosticAt.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Identifier, f.File));
                     continue;
                 }
 
-                CompiledFunction e = Functions.First(v => v.Function == f);
+                CompiledFunction e = Functions.First(v => Utils.ReferenceEquals(v.Function, f) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, null));
 
                 int returnValueSize = f.ReturnSomething ? FindSize(f.Type, f.TypeToken) : 0;
                 int argumentsSize = 0;

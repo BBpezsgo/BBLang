@@ -1,0 +1,54 @@
+#!/bin/sh
+
+set -e
+
+echo ''
+echo ' === Building === '
+echo ''
+
+echo ''
+echo 'Building "Utility"'
+echo ''
+
+cd Utility
+./publish
+cd ..
+
+cd ..
+
+echo ''
+echo 'Building "LanguageServer"'
+echo ''
+
+cd LanguageServer
+./publish
+cd ..
+
+echo ''
+echo 'Building "VSCodeExtension"'
+echo ''
+
+cd VSCodeExtension
+dotnet run --norestore --project ./syntax_generator/SyntaxGenerator.csproj
+npm run compile
+npm run package
+cd ..
+
+echo ''
+echo 'Building "DebugServer"'
+echo ''
+
+cd DebugServer
+./publish
+cd ..
+
+echo ''
+echo ' === Publishing === '
+echo ''
+
+cd Core
+cd Github
+dotnet run -- --repository BBLang ../Utility/out
+dotnet run -- --repository BBLang-LanguageServer ../../LanguageServer/out/
+dotnet run -- --repository BBLang-DebugHost ../../DebugServer/out
+dotnet run -- --repository InterpreterVSCodeExtension ../../VSCodeExtension/BBLangExtension.vsix

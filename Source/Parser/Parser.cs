@@ -179,7 +179,7 @@ public sealed partial class Parser
         SkipCrapTokens();
 
         EndlessCheck endlessSafe = new();
-        while (CurrentToken != null && ParseCodeBlock())
+        while (CurrentToken is not null && ParseCodeBlock())
         {
             SkipCrapTokens();
             endlessSafe.Step();
@@ -187,7 +187,7 @@ public sealed partial class Parser
 
         SkipCrapTokens();
 
-        if (CurrentToken != null)
+        if (CurrentToken is not null)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Unexpected token `{CurrentToken}`", CurrentToken, File, false));
         }
@@ -320,7 +320,7 @@ public sealed partial class Parser
     {
         result = null;
         SkipCrapTokens();
-        if (CurrentToken == null) return false;
+        if (CurrentToken is null) return false;
         if (CurrentToken.TokenType != TokenType.Identifier) return false;
         if (name.Length > 0 && CurrentToken.Content != name) return false;
         CurrentToken.AnalyzedType = TokenAnalyzedType.None;
@@ -346,7 +346,7 @@ public sealed partial class Parser
     {
         result = null;
         SkipCrapTokens();
-        if (CurrentToken == null) return false;
+        if (CurrentToken is null) return false;
         if (CurrentToken.TokenType != TokenType.Operator) return false;
         if (!name.Contains(CurrentToken.Content)) return false;
         CurrentToken.AnalyzedType = TokenAnalyzedType.None;
@@ -360,7 +360,7 @@ public sealed partial class Parser
     {
         result = null;
         SkipCrapTokens();
-        if (CurrentToken == null) return false;
+        if (CurrentToken is null) return false;
         if (CurrentToken.TokenType != TokenType.Operator) return false;
         if (name.Length > 0 && CurrentToken.Content != name) return false;
         CurrentToken.AnalyzedType = TokenAnalyzedType.None;

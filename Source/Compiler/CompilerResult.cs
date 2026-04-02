@@ -77,19 +77,19 @@ public readonly struct CompilerResult
         foreach (CompiledFunctionDefinition function in FunctionDefinitions)
         {
             if (file != function.File) continue;
-            if (function.Block != null) yield return function.Block;
+            if (function.Block is not null) yield return function.Block;
         }
 
         foreach (CompiledGeneralFunctionDefinition function in GeneralFunctionDefinitions)
         {
             if (file != function.File) continue;
-            if (function.Block != null) yield return function.Block;
+            if (function.Block is not null) yield return function.Block;
         }
 
         foreach (CompiledOperatorDefinition @operator in OperatorDefinitions)
         {
             if (file != @operator.File) continue;
-            if (@operator.Block != null) yield return @operator.Block;
+            if (@operator.Block is not null) yield return @operator.Block;
         }
     }
 

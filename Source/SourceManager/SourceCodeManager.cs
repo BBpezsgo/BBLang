@@ -456,7 +456,7 @@ public class SourceCodeManager
             ParsedFile? found = default;
             foreach (ParsedFile parsedFile in ParsedFiles)
             {
-                if (parsedFile.Index != importIndex) continue;
+                if (!Utils.ReferenceEquals(parsedFile.Index, importIndex)) continue;
                 found = parsedFile;
                 break;
             }

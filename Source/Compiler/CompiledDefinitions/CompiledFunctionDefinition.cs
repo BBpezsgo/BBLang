@@ -70,7 +70,7 @@ public class CompiledFunctionDefinition : FunctionDefinition,
         }
         result.Append(')');
 
-        if (Block != null)
+        if (Block is not null)
         {
             result.Append(' ');
             result.Append(Block.ToString());

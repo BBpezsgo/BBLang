@@ -16,9 +16,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     {
         if (cleanup.Destructor is not null)
         {
-            GenerateCodeForFunction(cleanup.Destructor, ImmutableArray.Create(CompiledArgument.Wrap(value)), null, value);
+            GenerateCodeForFunction(cleanup.Destructor.Template, ImmutableArray.Create(CompiledArgument.Wrap(value)), cleanup.Destructor.TypeArguments, value);
 
-            if (cleanup.Destructor.ReturnSomething)
+            if (cleanup.Destructor.Template.ReturnSomething)
             { Stack.Pop(); }
         }
 
@@ -26,7 +26,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         {
             if (cleanup.Deallocator is not null)
             {
-                GenerateCodeForFunction(cleanup.Deallocator, ImmutableArray.Create(CompiledArgument.Wrap(value)), null, value);
+                GenerateCodeForFunction(cleanup.Deallocator.Template, ImmutableArray.Create(CompiledArgument.Wrap(value)), cleanup.Deallocator.TypeArguments, value);
             }
         }
     }
@@ -51,7 +51,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     { return PrecompileVariables(block.Statements, ignoreRedefinition, debugInfo); }
     int PrecompileVariables(IEnumerable<CompiledStatement>? statements, bool ignoreRedefinition, List<Runtime.StackElementInformation>? debugInfo = null)
     {
-        if (statements == null) return 0;
+        if (statements is null) return 0;
 
         int result = 0;
         foreach (CompiledStatement statement in statements)
@@ -82,7 +82,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             type = variableDeclaration.Type;
         }
 
-        if (variableDeclaration.InitialValue != null)
+        if (variableDeclaration.InitialValue is not null)
         {
             GeneralType initialValueType = variableDeclaration.InitialValue.Type;
 
@@ -1242,7 +1242,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
             Code.CommentLine($"Pointer: {Code.Pointer}");
 
-            if (@if.Next == null)
+            if (@if.Next is null)
             {
                 // using (this.DebugBlock(@if.Block.BracketEnd))
                 // {
@@ -1557,7 +1557,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     }
     void GenerateCodeForStatement(CompiledVariableDefinition statement)
     {
-        if (statement.InitialValue == null) return;
+        if (statement.InitialValue is null) return;
 
         if (!GetVariable(statement.Identifier, statement.Location.File, out BrainfuckVariable? variable, out PossibleDiagnostic? notFoundError))
         {
@@ -1594,9 +1594,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     {
         using DebugInfoBlock debugBlock = DebugBlock(functionCall);
 
-        GenerateCodeForFunction(functionCall.Function, functionCall.Arguments, null, functionCall);
+        GenerateCodeForFunction(functionCall.Function.Template, functionCall.Arguments, functionCall.Function.TypeArguments, functionCall);
 
-        if (!functionCall.SaveValue && functionCall.Function.ReturnSomething)
+        if (!functionCall.SaveValue && functionCall.Function.Template.ReturnSomething)
         { Stack.Pop(); }
     }
     void GenerateCodeForStatement(CompiledExternalFunctionCall functionCall)
@@ -1652,7 +1652,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     void GenerateCodeForStatement(CompiledConstructorCall constructorCall)
     {
         using DebugInfoBlock debugBlock = DebugBlock(constructorCall);
-        GenerateCodeForFunction(constructorCall.Function, constructorCall.Arguments, null, constructorCall);
+        GenerateCodeForFunction(constructorCall.Function.Template, constructorCall.Arguments, constructorCall.Function.TypeArguments, constructorCall);
     }
     void GenerateCodeForStatement(CompiledString statement, GeneralType? expectedType = null)
     {
@@ -2610,7 +2610,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         return true;
     }
 
-    void GenerateCodeForFunction(CompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, Dictionary<string, GeneralType>? typeArguments, ILocated caller)
+    void GenerateCodeForFunction(CompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, ILocated caller)
     {
         if (!AllowFunctionInlining ||
             !IsFunctionInlineable(function, parameters))
@@ -2622,7 +2622,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         GenerateCodeForFunction_(function, parameters, typeArguments, caller);
     }
 
-    void GenerateCodeForFunction(ICompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, Dictionary<string, GeneralType>? typeArguments, ILocated caller)
+    void GenerateCodeForFunction(ICompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, ILocated caller)
     {
         switch (function)
         {
@@ -2633,14 +2633,14 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         }
     }
 
-    void GenerateCodeForParameterPassing(ICompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, Stack<BrainfuckVariable> compiledParameters, Dictionary<string, GeneralType>? typeArguments)
+    void GenerateCodeForParameterPassing(ICompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, Stack<BrainfuckVariable> compiledParameters, ImmutableDictionary<string, GeneralType>? typeArguments)
     {
         for (int i = 0; i < parameters.Length; i++)
         {
             CompiledArgument passed = parameters[i];
             CompiledParameter defined = function.Parameters[i];
 
-            GeneralType definedType = defined.Type;
+            GeneralType definedType = GeneralType.TryInsertTypeParameters(defined.Type, typeArguments);
             GeneralType passedType = passed.Type;
 
             if (FindSize(passedType, passed) != FindSize(definedType, defined))
@@ -2799,7 +2799,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         }
     }
 
-    void GenerateCodeForFunction_(CompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, Dictionary<string, GeneralType>? typeArguments, ILocated callerPosition)
+    void GenerateCodeForFunction_(CompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, ILocated callerPosition)
     {
         using DebugFunctionBlock debugFunction = FunctionBlock(function, typeArguments);
 
@@ -2828,14 +2828,14 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         {
             int address = Stack.PushVirtual(1, callerPosition);
             Code.SetPointer(address);
-            if (function.Type.SameAs(BasicType.Void))
+            if (GeneralType.TryInsertTypeParameters(function.Type, typeArguments).SameAs(BasicType.Void))
             {
                 Code += ',';
                 Code.ClearValue(address);
             }
             else
             {
-                if (FindSize(function.Type, function) != 1)
+                if (FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function) != 1)
                 {
                     Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"[{AttributeConstants.ExternalIdentifier}(\"{ExternalFunctionNames.StdIn}\")]\" must have a return type with size of 1", ((FunctionDefinition)function).Type, function.File));
                     return;
@@ -2870,15 +2870,15 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 InitialValue = null,
                 IsGlobal = false,
                 Location = function.Location,
-                Type = function.Type,
-                TypeExpression = CompiledTypeExpression.CreateAnonymous(function.Type, function),
+                Type = GeneralType.TryInsertTypeParameters(function.Type, typeArguments),
+                TypeExpression = CompiledTypeExpression.CreateAnonymous(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function),
                 Cleanup = new CompiledCleanup()
                 {
-                    TrashType = function.Type,
+                    TrashType = GeneralType.TryInsertTypeParameters(function.Type, typeArguments),
                     Location = function.Location,
                 },
             };
-            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(function.Type, function), callerPosition), false, false, null, FindSize(function.Type, function), variableDeclaration);
+            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function), callerPosition), false, false, null, FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function), variableDeclaration);
         }
 
         if (!IxMaxResursiveDepthReached(function, callerPosition))
@@ -2978,7 +2978,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         CurrentMacro.Pop();
     }
 
-    void GenerateCodeForFunction(CompiledOperatorDefinition function, ImmutableArray<CompiledArgument> parameters, Dictionary<string, GeneralType>? typeArguments, ILocated callerPosition)
+    void GenerateCodeForFunction(CompiledOperatorDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, ILocated callerPosition)
     {
         using DebugFunctionBlock debugFunction = FunctionBlock(function, typeArguments);
 
@@ -3157,7 +3157,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         CurrentMacro.Pop();
     }
 
-    void GenerateCodeForFunction(CompiledGeneralFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, Dictionary<string, GeneralType>? typeArguments, ILocated callerPosition)
+    void GenerateCodeForFunction(CompiledGeneralFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, ILocated callerPosition)
     {
         using DebugFunctionBlock debugFunction = FunctionBlock(function, typeArguments);
 
@@ -3253,7 +3253,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         CurrentMacro.Pop();
     }
 
-    void GenerateCodeForFunction(CompiledConstructorDefinition function, ImmutableArray<CompiledArgument> parameters, Dictionary<string, GeneralType>? typeArguments, CompiledConstructorCall callerPosition)
+    void GenerateCodeForFunction(CompiledConstructorDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, CompiledConstructorCall callerPosition)
     {
         using DebugFunctionBlock debugFunction = FunctionBlock(function, typeArguments);
 
@@ -3333,7 +3333,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             CompiledArgument passed = parameters[i - 1];
             CompiledParameter defined = function.Parameters[i];
 
-            GeneralType definedType = defined.Type;
+            GeneralType definedType = GeneralType.TryInsertTypeParameters(defined.Type, typeArguments);
             GeneralType passedType = passed.Type;
 
             if (!passedType.SameAs(definedType))
@@ -3462,7 +3462,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         int depth = 0;
         for (int i = 0; i < CurrentMacro.Count; i++)
         {
-            if (!ReferenceEquals(CurrentMacro[i], function))
+            if (!Utils.ReferenceEquals(CurrentMacro[i], (ICompiledFunctionDefinition)function))
             { continue; }
             depth++;
 

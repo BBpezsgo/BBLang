@@ -31,6 +31,7 @@ public readonly struct LabelInstructionOperand : IEquatable<LabelInstructionOper
         StringBuilder result = new();
         if (IsAbsoluteLabelAddress) result.Append('<');
         result.Append('<');
+        result.Append('L');
         result.Append(Label.ToString());
         if (AdditionalLabelOffset > 0)
         {

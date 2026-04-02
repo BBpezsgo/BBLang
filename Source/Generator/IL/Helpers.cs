@@ -266,8 +266,42 @@ public partial class CodeGeneratorForIL : CodeGenerator
         }
     }
 
+    static void StringifyValue(StringBuilder builder, object? value)
+    {
+        switch (value)
+        {
+            case null:
+                builder.Append("null");
+                break;
+            case Array array:
+                Type type = array.GetType();
+                Type elementType = type.GetElementType()!;
+                int length = array.GetLength(0);
+                builder.Append($"new {elementType}[{length}]");
+                if (length > 0)
+                {
+                    builder.Append(" { ");
+                    for (int i = 0; i < length; i++)
+                    {
+                        if (i > 0) builder.Append(", ");
+                        StringifyValue(builder, array.GetValue(i));
+                    }
+                    builder.Append(" }");
+                }
+                break;
+            default:
+                builder.Append(value);
+                break;
+        }
+    }
+
     static void Stringify(StringBuilder builder, int indentation, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type type)
     {
+        foreach (CustomAttributeData item in type.GetCustomAttributesData())
+        {
+            Stringify(builder, indentation, item);
+        }
+
         builder.Indent(indentation);
         builder.Append($"{type.Attributes & TypeAttributes.VisibilityMask} ");
 
@@ -289,19 +323,61 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         foreach (MemberInfo member in type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance))
         {
-            if (member is FieldInfo field)
+            switch (member)
             {
-                Stringify(builder, indentation + 1, field);
+                case FieldInfo field:
+                    Stringify(builder, indentation + 1, field);
+                    break;
+                case MethodInfo method:
+                    Stringify(builder, indentation + 1, method);
+                    break;
+                case ConstructorInfo constructor:
+                    Stringify(builder, indentation + 1, constructor);
+                    break;
+                default:
+                    throw new NotImplementedException(member.GetType().ToString());
             }
         }
 
         builder.Indent(indentation);
         builder.Append('}');
         builder.AppendLine();
+        builder.AppendLine();
+    }
+
+    static void Stringify(StringBuilder builder, int indentation, CustomAttributeData attribute)
+    {
+        builder.Indent(indentation);
+        builder.Append('[');
+        builder.Append(attribute.AttributeType.ToString());
+        builder.Append('(');
+        bool w = false;
+        foreach (CustomAttributeTypedArgument argument in attribute.ConstructorArguments)
+        {
+            if (w) builder.Append(", ");
+            else w = true;
+            StringifyValue(builder, argument.Value);
+        }
+        foreach (CustomAttributeNamedArgument argument in attribute.NamedArguments)
+        {
+            if (w) builder.Append(", ");
+            else w = true;
+            builder.Append(argument.MemberName);
+            builder.Append(": ");
+            StringifyValue(builder, argument.TypedValue.Value);
+        }
+        builder.Append(')');
+        builder.Append(']');
+        builder.AppendLine();
     }
 
     static void Stringify(StringBuilder builder, int indentation, FieldInfo field)
     {
+        foreach (CustomAttributeData item in field.GetCustomAttributesData())
+        {
+            Stringify(builder, indentation, item);
+        }
+
         builder.Indent(indentation);
         builder.Append($"{field.Attributes & FieldAttributes.FieldAccessMask} ");
 
@@ -317,12 +393,25 @@ public partial class CodeGeneratorForIL : CodeGenerator
         builder.Append(field.FieldType.ToString());
         builder.Append(' ');
         builder.Append(field.Name);
+
+        object? value = field.IsStatic ? field.GetValue(null) : null;
+        if (value is not null)
+        {
+            builder.Append(" = ");
+            StringifyValue(builder, value);
+        }
+
         builder.Append(';');
         builder.AppendLine();
     }
 
-    static void Stringify(StringBuilder builder, int indentation, DynamicMethod method)
+    static void Stringify(StringBuilder builder, int indentation, MethodInfo method)
     {
+        foreach (CustomAttributeData item in method.GetCustomAttributesData())
+        {
+            Stringify(builder, indentation, item);
+        }
+
         builder.Indent(indentation);
         builder.Append($"{method.Attributes & MethodAttributes.MemberAccessMask} ");
 
@@ -353,7 +442,102 @@ public partial class CodeGeneratorForIL : CodeGenerator
             }
             builder.Append(parameter.ParameterType.ToString());
             builder.Append(' ');
-            builder.Append(parameter.Name);
+            builder.Append(parameter.Name ?? $"p{i}");
+        }
+        builder.Append(')');
+        builder.Append(';');
+        builder.AppendLine();
+        builder.AppendLine();
+    }
+
+    static void Stringify(StringBuilder builder, int indentation, ConstructorInfo constructor)
+    {
+        foreach (CustomAttributeData item in constructor.GetCustomAttributesData())
+        {
+            Stringify(builder, indentation, item);
+        }
+
+        builder.Indent(indentation);
+        builder.Append($"{constructor.Attributes & MethodAttributes.MemberAccessMask} ");
+
+        foreach (MethodAttributes attribute in CompatibilityUtils.GetEnumValues<MethodAttributes>()
+            .Where(v => (v & MethodAttributes.MemberAccessMask) == 0 && v != 0))
+        {
+            if (constructor.Attributes.HasFlag(attribute))
+            {
+                builder.Append($"{attribute} ");
+            }
+        }
+
+        builder.Append(constructor.Name);
+        builder.Append('(');
+        ParameterInfo[] parameters = constructor.GetParameters();
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            if (i > 0) builder.Append(", ");
+            ParameterInfo parameter = parameters[i];
+            foreach (ParameterAttributes attribute in CompatibilityUtils.GetEnumValues<ParameterAttributes>().Where(v => v is not ParameterAttributes.None))
+            {
+                if (parameter.Attributes.HasFlag(attribute))
+                {
+                    builder.Append($"{attribute} ");
+                }
+            }
+            builder.Append(parameter.ParameterType.ToString());
+            builder.Append(' ');
+            builder.Append(parameter.Name ?? $"p{i}");
+        }
+        builder.Append(')');
+        builder.Append(';');
+        builder.AppendLine();
+        builder.AppendLine();
+    }
+
+    static void Stringify(StringBuilder builder, int indentation, DynamicMethod method)
+    {
+        try
+        {
+            foreach (CustomAttributeData item in method.GetCustomAttributesData())
+            {
+                Stringify(builder, indentation, item);
+            }
+        }
+        catch
+        {
+
+        }
+
+        builder.Indent(indentation);
+        builder.Append($"{method.Attributes & MethodAttributes.MemberAccessMask} ");
+
+        foreach (MethodAttributes attribute in CompatibilityUtils.GetEnumValues<MethodAttributes>()
+            .Where(v => (v & MethodAttributes.MemberAccessMask) == 0 && v != 0))
+        {
+            if (method.Attributes.HasFlag(attribute))
+            {
+                builder.Append($"{attribute} ");
+            }
+        }
+
+        builder.Append(method.ReturnType.ToString());
+        builder.Append(' ');
+        builder.Append(method.Name);
+        builder.Append('(');
+        ParameterInfo[] parameters = method.GetParameters();
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            if (i > 0) builder.Append(", ");
+            ParameterInfo parameter = parameters[i];
+            foreach (ParameterAttributes attribute in CompatibilityUtils.GetEnumValues<ParameterAttributes>().Where(v => v is not ParameterAttributes.None))
+            {
+                if (parameter.Attributes.HasFlag(attribute))
+                {
+                    builder.Append($"{attribute} ");
+                }
+            }
+            builder.Append(parameter.ParameterType.ToString());
+            builder.Append(' ');
+            builder.Append(parameter.Name ?? $"p{i}");
         }
         builder.Append(')');
         builder.AppendLine();

@@ -14,13 +14,15 @@ public class CompiledFunction : IReadable
     public CompiledBlock Body;
     public FunctionFlags Flags;
     public ImmutableArray<CapturedLocal> CapturedLocals;
+    public ImmutableDictionary<string, GeneralType>? TypeArguments;
 
-    public CompiledFunction(ICompiledFunctionDefinition function, CompiledBlock body, ImmutableArray<CapturedLocal> capturedLocals)
+    public CompiledFunction(ICompiledFunctionDefinition function, CompiledBlock body, ImmutableArray<CapturedLocal> capturedLocals, ImmutableDictionary<string, GeneralType>? typeArguments)
     {
         Function = function;
         Body = body;
         CapturedLocals = capturedLocals;
         Flags = FunctionFlags.CapturesGlobalVariables;
+        TypeArguments = typeArguments;
     }
 
     public void Deconstruct(out ICompiledFunctionDefinition function, out CompiledBlock body)
