@@ -48,6 +48,11 @@ class DynamicScopeTokenResolver : ITokenResolver
         m_scope = _scopeFi?.GetValue(dm.GetILGenerator());
     }
 
+    public DynamicScopeTokenResolver(ConstructorBuilder dm)
+    {
+        m_scope = _scopeFi?.GetValue(dm.GetILGenerator());
+    }
+
     public string? AsString(int token)
     {
         return this[token] as string;

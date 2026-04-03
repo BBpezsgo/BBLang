@@ -38,7 +38,7 @@ export int random(int state)
 	int result = s - t;
 
 	if (result < 0)
-    { result += M; };
+    { result += M; }
     
 	return result;
 }
@@ -114,7 +114,7 @@ export int pow(int base, int exp)
  */
 export int abs(int v)
 {
-    if (v < 0) { return v * -1; };
+    if (v < 0) { return v * -1; }
     return v;
 }
 
@@ -123,31 +123,31 @@ export int abs(int v)
  */
 export f32 abs(f32 v)
 {
-    if (v < 0f) { return v * -1f; };
+    if (v < 0f) { return v * -1f; }
     return v;
 }
 
 export int min(int a, int b)
 {
-    if (a < b) { return a; };
+    if (a < b) { return a; }
     return b;
 }
 
 export f32 min(f32 a, f32 b)
 {
-    if (a < b) { return a; };
+    if (a < b) { return a; }
     return b;
 }
 
 export int max(int a, int b)
 {
-    if (a > b) { return a; };
+    if (a > b) { return a; }
     return b;
 }
 
 export f32 max(f32 a, f32 b)
 {
-    if (a > b) { return a; };
+    if (a > b) { return a; }
     return b;
 }
 

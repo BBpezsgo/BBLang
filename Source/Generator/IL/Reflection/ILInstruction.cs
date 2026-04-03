@@ -442,7 +442,21 @@ public class InlineVarInstruction : ILInstruction
         Ordinal = ordinal;
     }
 
-    public override string ToString() => ToString($"V_{Ordinal}");
+    public override string ToString()
+    {
+        if (OpCode == OpCodes.Ldarg || OpCode == OpCodes.Ldarga || OpCode == OpCodes.Starg)
+        {
+            return ToString($"p{Ordinal}");
+        }
+        else if (OpCode == OpCodes.Ldloc || OpCode == OpCodes.Ldloca || OpCode == OpCodes.Stloc)
+        {
+            return ToString($"l{Ordinal}");
+        }
+        else
+        {
+            return ToString($"v{Ordinal}");
+        }
+    }
 }
 
 public class ShortInlineVarInstruction : ILInstruction
@@ -455,5 +469,19 @@ public class ShortInlineVarInstruction : ILInstruction
         Ordinal = ordinal;
     }
 
-    public override string ToString() => ToString($"V_{Ordinal}");
+    public override string ToString()
+    {
+        if (OpCode == OpCodes.Ldarga_S || OpCode == OpCodes.Ldarg_S || OpCode == OpCodes.Starg_S)
+        {
+            return ToString($"p{Ordinal}");
+        }
+        else if (OpCode == OpCodes.Ldloca_S || OpCode == OpCodes.Stloc_S)
+        {
+            return ToString($"l{Ordinal}");
+        }
+        else
+        {
+            return ToString($"v{Ordinal}");
+        }
+    }
 }

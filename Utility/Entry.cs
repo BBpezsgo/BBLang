@@ -559,16 +559,26 @@ public static class Entry
                     ExternalFunctions = externalFunctions.ToImmutableArray(),
                     PreprocessorVariables = PreprocessorVariables.IL,
                 }, diagnostics, logger);
-                Func<int> res = IL.Generator.CodeGeneratorForIL.Generate(compiled, diagnostics, new()
+                IL.Generator.ILGeneratorResult res = IL.Generator.CodeGeneratorForIL.Generate(compiled, diagnostics, new()
                 {
                     AllowCrash = true,
                     AllowHeap = true,
                     AllowPointers = true,
                 });
+
+                if (arguments.Output is not null)
+                {
+                    string output = Path.GetFullPath(arguments.Output, Environment.CurrentDirectory);
+                    Console.WriteLine($"Writing to \"{output}\" ...");
+                    StringBuilder builder = new();
+                    res.Stringify(builder);
+                    File.WriteAllText(output, builder.ToString());
+                }
+
                 diagnostics.Print(logger);
                 if (diagnostics.HasErrors) return 1;
 
-                res.Invoke();
+                res.EntryPointDelegate.Invoke();
                 return 0;
 #endif
             }

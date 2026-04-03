@@ -208,3 +208,21 @@ export string reverse(temp this string v)
     newV[length] = '\0';
     return newV;
 }
+
+export int indexof(temp this string v, char c)
+{
+    for (int i = 0; v[i]; i++)
+    {
+        if (v[i] == c) return i;
+    }
+    return -1;
+}
+
+export int indexof(temp this string v, char c, int start)
+{
+    for (int i = start; v[i]; i++)
+    {
+        if (v[i] == c) return i;
+    }
+    return -1;
+}

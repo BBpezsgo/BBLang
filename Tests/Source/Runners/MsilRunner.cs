@@ -45,7 +45,7 @@ static class MsilRunner
             AllowCrash = true,
             AllowHeap = true,
             AllowPointers = true,
-        });
+        }).EntryPointDelegate;
 
         diagnostics.Throw();
 

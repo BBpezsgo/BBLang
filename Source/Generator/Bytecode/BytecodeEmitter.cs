@@ -36,7 +36,7 @@ public class BytecodeEmitter
     {
         if (!comments)
         {
-            int marginLeft = (int)Math.Log10(Code.Count);
+            int marginLeft = (int)Math.Log10(Code.Count) + 1;
             for (int i = 0; i < Code.Count; i++)
             {
                 FunctionInformation f1 = DebugInfo.FunctionInformation.FirstOrDefault(v => v.Instructions.Start == i);

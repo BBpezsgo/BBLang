@@ -179,12 +179,14 @@ public class PreparationInstruction
         Operand2 = operand2;
     }
 
+    static readonly int MaxOpCodeLength = CompatibilityUtils.GetEnumValues<Opcode>().Max(v => v.ToString().Length);
+
     [ExcludeFromCodeCoverage]
     public override string ToString()
     {
         StringBuilder result = new();
 
-        result.Append(Opcode.ToString());
+        result.Append(Opcode.ToString().PadRight(MaxOpCodeLength, ' '));
 
         int parameterCount = Opcode.ParameterCount();
 

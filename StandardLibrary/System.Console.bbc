@@ -440,7 +440,7 @@ export inline void printline<T>(T[]* array, int length)
 }
 
 [External("stdin")]
-char stdin();
+export char stdin();
 
 export char readkey()
 {
@@ -451,16 +451,34 @@ export char readkey()
 
 export string readline()
 {
-    string result = "";
+    List<char> buffer = new List<char>();
     while (1)
     {
-        char inpChar = readkey();
-        if (inpChar == '\n') { break; }
-        if (inpChar == '\r') { break; }
-
-        result = (temp result) + inpChar;
+        char inpChar = stdin();
+        if (inpChar == '\n') break;
+        else if (inpChar == '\r') break;
+        else if (inpChar == (8 as char))
+        {
+            if (buffer.length())
+            {
+                print(inpChar);
+                buffer.remove(buffer.length() - 1);
+            }
+        }
+        else
+        {
+            print(inpChar);
+            buffer.add(inpChar);
+        }
     }
-
     print('\n');
+
+    char[]* result = new char[buffer.length() + 1]*;
+    for (int i; i < buffer.length(); i++)
+    {
+        result[i] = buffer[i];
+    }
+    result[buffer.length()] = '\0';
+    delete buffer;
     return result;
 }

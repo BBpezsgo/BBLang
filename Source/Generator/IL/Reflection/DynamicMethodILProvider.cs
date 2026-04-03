@@ -17,6 +17,17 @@ public static class DynamicMethodILProvider
     }
 
     [RequiresUnreferencedCode("Complex")]
+    public static byte[]? GetByteArray(ConstructorBuilder method)
+    {
+        object? resolver = typeof(ConstructorBuilder).GetField("_resolver", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(method);
+        if (resolver is null)
+        {
+            return GetByteArray(method.GetILGenerator());
+        }
+        return resolver.GetType().GetField("m_code", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(resolver) as byte[] ?? Array.Empty<byte>();
+    }
+
+    [RequiresUnreferencedCode("Complex")]
     public static byte[]? GetByteArray(ILGenerator ilgen)
     {
         Type? type = ilgen.GetType();

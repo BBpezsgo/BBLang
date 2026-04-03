@@ -1,6 +1,5 @@
 ﻿#pragma warning disable IDE0060 // Remove unused parameter
 
-using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using LanguageCore.Compiler;
@@ -579,12 +578,12 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         for (int i = 0; i < statement.Arguments.Length; i++)
         {
-            if (!ToType(statement.Arguments[i].Type, out var argumentType, out var argumentTypeError))
+            if (!ToType(statement.Arguments[i].Type, out Type? argumentType, out PossibleDiagnostic? argumentTypeError))
             {
                 Diagnostics.Add(argumentTypeError.ToError(statement.Arguments[i]));
                 successful = false;
             }
-            else if (!argumentType.IsAssignableTo(parameters[i].ParameterType))
+            else if (!parameters[i].ParameterType.IsAssignableFrom(argumentType))
             {
                 Diagnostics.Add(
                     DiagnosticAt.Internal($"Invalid DynamicMethod signature generated", statement)
@@ -2654,7 +2653,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         return true;
     }
 
-    Func<int> GenerateImpl()
+    ILGeneratorResult GenerateImpl()
     {
         bool successful = true;
 
@@ -2667,17 +2666,16 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         GlobalContextType_Targets.SetValue(null, DelegateTargets.ToArray());
 
-        StringBuilder builder = new();
-        foreach (Type type in Module.GetTypes()) Stringify(builder, 0, type);
-        foreach (MethodInfo method in Module.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Where(v => !FunctionBuilders.Any(w => v.Equals(w.Builder)))) Stringify(builder, 0, method);
-        foreach (FieldInfo field in Module.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance).Where(v => !FunctionBuilders.Any(w => v.Equals(w.Builder)))) Stringify(builder, 0, field);
-        foreach (DynamicMethod method in FunctionBuilders.Select(v => v.Builder)) Stringify(builder, 0, method);
-        Stringify(builder, 0, result);
-
-        return (Func<int>)result.CreateDelegate(typeof(Func<int>));
+        return new ILGeneratorResult()
+        {
+            Module = Module,
+            Methods = FunctionBuilders.Select(v => v.Builder).ToImmutableArray(),
+            EntryPoint = result,
+            EntryPointDelegate = (Func<int>)result.CreateDelegate(typeof(Func<int>)),
+        };
     }
 
-    public static Func<int> Generate(CompilerResult compilerResult, DiagnosticsCollection diagnostics, ILGeneratorSettings settings, ModuleBuilder? module = null)
+    public static ILGeneratorResult Generate(CompilerResult compilerResult, DiagnosticsCollection diagnostics, ILGeneratorSettings settings, ModuleBuilder? module = null)
         => new CodeGeneratorForIL(compilerResult, diagnostics, settings, module)
         .GenerateImpl();
 }
