@@ -502,41 +502,33 @@ public class RuntimeException : LanguageException
 
         result.AppendLine();
         result.AppendLine("Call Stack (from oldest to recent):");
-        if (CallTrace.Length == 0)
+        if (!callStack.IsDefaultOrEmpty)
         {
-            result.Append(' ', CallStackIndent);
-            result.AppendLine("<empty>");
-        }
-        else
-        {
-            if (!callStack.IsDefaultOrEmpty)
+            if (callStack.Length != CallTrace.Length)
             {
-                if (callStack.Length != CallTrace.Length)
+                result.Append(' ', CallStackIndent);
+                result.Append($"Invalid stack trace");
+                result.AppendLine();
+            }
+            else
+            {
+                for (int i = 0; i < callStack.Length; i++)
                 {
                     result.Append(' ', CallStackIndent);
-                    result.Append($"Invalid stack trace");
-                    result.AppendLine();
-                }
-                else
-                {
-                    for (int i = 0; i < callStack.Length; i++)
+
+                    if (!AppendFrame(callStack[i], CallTrace[i]))
                     {
-                        result.Append(' ', CallStackIndent);
-
-                        if (!AppendFrame(callStack[i], CallTrace[i]))
+                        result.Append($"<unknown> {CallTrace[i].InstructionPointer}");
+                        if (DebugInformation.TryGetSourceLocation(CallTrace[i].InstructionPointer, out SourceCodeLocation sourceLocation))
                         {
-                            result.Append($"<unknown> {CallTrace[i].InstructionPointer}");
-                            if (DebugInformation.TryGetSourceLocation(CallTrace[i].InstructionPointer, out SourceCodeLocation sourceLocation))
-                            {
-                                result.Append(' ');
-                                result.Append(sourceLocation.Location.ToString());
-                            }
+                            result.Append(' ');
+                            result.Append(sourceLocation.Location.ToString());
                         }
-
-                        result.AppendLine();
-
-                        AppendScope(CallTrace[i]);
                     }
+
+                    result.AppendLine();
+
+                    AppendScope(CallTrace[i]);
                 }
             }
         }

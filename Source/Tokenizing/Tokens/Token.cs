@@ -47,8 +47,8 @@ public class Token :
     public override string ToString() => Content;
     public string ToOriginalString() => TokenType switch
     {
-        TokenType.LiteralString => $"\"{Content}\"",
-        TokenType.LiteralCharacter => $"\'{Content}\'",
+        TokenType.LiteralString => $"\"{Content.Escape()}\"",
+        TokenType.LiteralCharacter => $"\'{Content.Escape()}\'",
         TokenType.Comment => $"//{Content}",
         TokenType.CommentMultiline => $"/*{Content}*/",
         _ => Content,

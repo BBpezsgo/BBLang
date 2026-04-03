@@ -176,8 +176,6 @@ export bool resize(any* ptr, int size)
         }
 
         set_header_used(headerPointer, size);
-
-        return true;
     }
     else if (size < blockSize)
     {
@@ -189,15 +187,9 @@ export bool resize(any* ptr, int size)
         }
 
         set_header_used(headerPointer, size);
-
-        return true;
-    }
-    else
-    {
-        return true;
     }
 
-    return false;
+    return true;
 }
 
 [Builtin("free")]

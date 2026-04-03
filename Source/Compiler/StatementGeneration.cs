@@ -1319,9 +1319,9 @@ public partial class StatementCompiler
             {
                 if (!CompileExpression(keywordCall.Arguments[0], out CompiledExpression? yieldValue, Frames.Last.CompiledGeneratorContext.ResultType)) return false;
 
-                if (!CanCastImplicitly(yieldValue.Type, Frames.Last.CompiledGeneratorContext.ResultType, keywordCall.Arguments[0], out PossibleDiagnostic? castError))
+                if (!CanCastImplicitly(yieldValue, Frames.Last.CompiledGeneratorContext.ResultType, out yieldValue, out PossibleDiagnostic? castError))
                 {
-                    Diagnostics.Add(castError.ToError(keywordCall.Arguments[0]));
+                    Diagnostics.Add(castError.ToError(yieldValue));
                 }
 
                 statements.Add(new CompiledSetter()
@@ -3597,28 +3597,28 @@ public partial class StatementCompiler
         };
         return true;
     }
-    bool CompileExpression(ReinterpretExpression typeCast, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
+    bool CompileExpression(ReinterpretExpression reinterpret, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
     {
         compiledStatement = null;
 
-        if (!CompileType(typeCast.Type, out GeneralType? targetType, Diagnostics))
+        if (!CompileType(reinterpret.Type, out GeneralType? targetType, Diagnostics))
         {
             return false;
         }
 
-        if (!CompileExpression(typeCast.PrevStatement, out CompiledExpression? prev)) return false;
+        if (!CompileExpression(reinterpret.PrevStatement, out CompiledExpression? value)) return false;
 
-        GeneralType statementType = prev.Type;
-
-        if (statementType.Equals(targetType))
+        if (value.Type.Equals(targetType))
         {
-            Diagnostics.Add(DiagnosticAt.Hint($"Redundant type conversion", typeCast.Keyword, typeCast.File));
-            compiledStatement = prev;
-            SetStatementType(typeCast, targetType);
+            Diagnostics.Add(DiagnosticAt.Hint($"Redundant type conversion", reinterpret.Keyword, reinterpret.File));
+            compiledStatement = value;
+            SetStatementType(reinterpret, targetType);
             return true;
         }
 
-        if (statementType is PointerType statementPointerType
+        if (!CompileExpression(reinterpret.PrevStatement, out value, targetType)) return false;
+
+        if (value.Type is PointerType statementPointerType
             && targetType is PointerType targetPointerType
             && targetPointerType.To is ArrayType targetArrayPointerType
             && !targetArrayPointerType.Length.HasValue
@@ -3629,16 +3629,29 @@ public partial class StatementCompiler
             targetType = new PointerType(new ArrayType(targetArrayPointerType.Of, size1 / size2));
         }
 
-        SetStatementType(typeCast, targetType);
-        SetStatementType(typeCast.Type, targetType);
+        SetStatementType(reinterpret, targetType);
+        SetStatementType(reinterpret.Type, targetType);
+
+        if (!FindSize(targetType, out int targetSize, out PossibleDiagnostic? sizeError, this))
+        {
+            Diagnostics.Add(sizeError.ToError(reinterpret.Type));
+        }
+        else if (!FindSize(value.Type, out int valueSize, out sizeError, this))
+        {
+            Diagnostics.Add(sizeError.ToError(value));
+        }
+        else if (targetSize != valueSize)
+        {
+            Diagnostics.Add(DiagnosticAt.Error($"Cannot reinterpret type {value.Type} ({valueSize} bytes) as {targetType} ({targetSize} bytes)", reinterpret));
+        }
 
         compiledStatement = new CompiledReinterpretation()
         {
-            Value = prev,
-            TypeExpression = CompiledTypeExpression.CreateAnonymous(targetType, typeCast.Type),
+            Value = value,
+            TypeExpression = CompiledTypeExpression.CreateAnonymous(targetType, reinterpret.Type),
             Type = targetType,
-            Location = typeCast.Location,
-            SaveValue = typeCast.SaveValue,
+            Location = reinterpret.Location,
+            SaveValue = reinterpret.SaveValue,
         };
         return true;
     }
@@ -3787,9 +3800,7 @@ public partial class StatementCompiler
         {
             if (!CompileExpression(value, out CompiledExpression? _value, registerKeyword.Type)) return false;
 
-            GeneralType valueType = _value.Type;
-
-            if (!CanCastImplicitly(valueType, registerKeyword.Type, value, out PossibleDiagnostic? castError))
+            if (!CanCastImplicitly(_value, registerKeyword.Type, out _value, out PossibleDiagnostic? castError))
             { Diagnostics.Add(castError.ToError(value)); }
 
             compiledStatement = new CompiledSetter()
@@ -3829,9 +3840,7 @@ public partial class StatementCompiler
 
             if (!CompileExpression(value, out CompiledExpression? _value, parameter.Type)) return false;
 
-            GeneralType valueType = _value.Type;
-
-            if (!CanCastImplicitly(valueType, parameter.Type, value, out PossibleDiagnostic? castError))
+            if (!CanCastImplicitly(_value, parameter.Type, out _value, out PossibleDiagnostic? castError))
             {
                 Diagnostics.Add(castError.ToError(value));
             }
@@ -4019,7 +4028,7 @@ public partial class StatementCompiler
             GeneralType type = GeneralType.InsertTypeParameters(compiledField.Type, structPointerType.TypeArguments);
             if (!CompileExpression(value, out CompiledExpression? _value, type)) return false;
 
-            if (!CanCastImplicitly(_value.Type, type, value, out PossibleDiagnostic? castError2))
+            if (!CanCastImplicitly(_value, type, out _value, out PossibleDiagnostic? castError2))
             {
                 Diagnostics.Add(castError2.ToError(value));
             }
@@ -4055,7 +4064,7 @@ public partial class StatementCompiler
             GeneralType type = GeneralType.TryInsertTypeParameters(compiledField.Type, structType.TypeArguments);
             if (!CompileExpression(value, out CompiledExpression? _value, type)) return false;
 
-            if (!CanCastImplicitly(_value.Type, type, value, out PossibleDiagnostic? castError2))
+            if (!CanCastImplicitly(_value, type, out _value, out PossibleDiagnostic? castError2))
             {
                 Diagnostics.Add(castError2.ToError(value));
             }
@@ -4123,7 +4132,7 @@ public partial class StatementCompiler
             return false;
         }
 
-        if (!CanCastImplicitly(_value.Type, itemType, value, out PossibleDiagnostic? castError))
+        if (!CanCastImplicitly(_value, itemType, out _value, out PossibleDiagnostic? castError))
         {
             Diagnostics.Add(castError.ToError(value));
         }
@@ -4158,7 +4167,7 @@ public partial class StatementCompiler
 
         if (!CompileExpression(value, out CompiledExpression? _value, targetType)) return false;
 
-        if (!CanCastImplicitly(_value.Type, targetType, value, out PossibleDiagnostic? castError))
+        if (!CanCastImplicitly(_value, targetType, out _value, out PossibleDiagnostic? castError))
         {
             Diagnostics.Add(castError.ToError(value));
         }

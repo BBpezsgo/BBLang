@@ -13,7 +13,7 @@ struct List<T>
 
     export inline T[]* raw() { return this._ptr; }
 
-    export T indexer_get(int index)
+    export T& indexer_get(int index)
     {
         if (index < 0 || index >= this._length)
         { crash "Index out of range exception"; }
@@ -118,7 +118,6 @@ struct List<T>
             {
                 T[]* old = this._ptr;
                 this._ptr = new T[capacity]*;
-                this._capacity = capacity;
 
                 if (old)
                 {
@@ -131,6 +130,7 @@ struct List<T>
                     delete old;
                 }
             }
+            this._capacity = capacity;
         }
     }
 }

@@ -1314,10 +1314,9 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
     public bool CanCastImplicitly(CompiledExpression value, GeneralType destination, out CompiledExpression assignedValue, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
-        GeneralType source = value.Type;
         assignedValue = value;
 
-        if (CanCastImplicitly(source, destination, out error)) return true;
+        if (CanCastImplicitly(value.Type, destination, out error)) return true;
 
         if (destination.Is(out ReferenceType? returnRefType))
         {
@@ -1416,7 +1415,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         }
 
         {
-            if (source.Is(out FunctionType? sourceFunctionType)
+            if (value.Type.Is(out FunctionType? sourceFunctionType)
                 && destination.Is(out FunctionType? targetFunctionType))
             {
                 if (sourceFunctionType.HasClosure && targetFunctionType.HasClosure) return true;
@@ -1446,7 +1445,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
         }
 
-        error = new($"Can't cast `{source.FinalValue}` to `{destination.FinalValue}` implicitly");
+        error = new($"Can't cast `{value.Type.FinalValue}` to `{destination.FinalValue}` implicitly");
         return false;
     }
 
