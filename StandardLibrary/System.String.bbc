@@ -35,17 +35,17 @@ export void split(this string string, char separator, List<string>* result)
 /*
  * Checks if the string `text` is null or its length is zero
  */
-export int empty(this string text)
+export bool empty(this string text)
 {
     if (text)
     {
         if (text[0])
-        { return 0; }
+        { return false; }
         else
-        { return 1; }
+        { return true; }
     }
     else
-    { return 1; }
+    { return true; }
 }
 
 /*
