@@ -458,7 +458,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             CompiledParameter parameter = compiledFunction.Parameters[i + alreadyPassed];
             GeneralType parameterType = GeneralType.TryInsertTypeParameters(parameter.Type, typeArguments);
 
-            if (FindSize(argumentType, argument) != FindSize(parameterType, parameter))
+            if (FindSize(argumentType, argument) != FindSize(parameterType, parameter.Definition))
             { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameterType}\" passed \"{argumentType}\"", argument.Value)); }
 
             AddComment($" Pass {parameter}:");
@@ -581,9 +581,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
                 if (existing == -1)
                 {
-                    int returnValueSize = f.Function.ReturnSomething ? FindSize(f.Function.Type, (ILocated)f.Function) : 0;
-                    int parametersSize = f.Function.Parameters.Aggregate(0, (a, b) => a + FindSize(b.Type, b));
-                    int id = ExternalFunctions.Concat(GeneratedUnmanagedFunctions.Select(v => (IExternalFunction)v.Function).AsEnumerable()).GenerateId();
+                    int returnValueSize = f.Function.ReturnSomething ? FindSize(f.Function.Type, f.Function) : 0;
+                    int parametersSize = f.Function.Parameters.Aggregate(0, (a, b) => a + FindSize(b.Type, b.Definition));
+                    int id = ExternalFunctions.Concat(GeneratedUnmanagedFunctions.Select(v => v.Function as IExternalFunction).AsEnumerable()).GenerateId();
 
 #if UNITY_BURST
                     IntPtr ptr = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(method);
@@ -1142,7 +1142,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                     }
                     else if (capturedLocal.Parameter is not null)
                     {
-                        int size = FindSize(capturedLocal.Parameter.Type, capturedLocal.Parameter);
+                        int size = FindSize(capturedLocal.Parameter.Type, capturedLocal.Parameter.Definition);
                         AddComment($"Capture variable `{capturedLocal.Parameter.Identifier}`:");
                         GenerateCodeForStatement(new CompiledParameterAccess()
                         {
@@ -1170,10 +1170,10 @@ public partial class CodeGeneratorForMain : CodeGenerator
     {
         Address address = GetParameterAddress(parameterRef.Parameter);
 
-        if (parameterRef.Parameter.IsRef && resolveReference)
+        if (parameterRef.Parameter.Definition.IsRef && resolveReference)
         { address = new AddressPointer(address); }
 
-        PushFrom(address, FindSize(parameterRef.Type, parameterRef.Parameter));
+        PushFrom(address, FindSize(parameterRef.Type, parameterRef.Parameter.Definition));
     }
     void GenerateCodeForStatement(CompiledVariableAccess variableRef, GeneralType? expectedType = null, bool resolveReference = true)
     {
@@ -1468,7 +1468,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 return;
             }
 
-            if (!GetFieldOffset(structPointerType, field.Field.Identifier.Content, out CompiledField? fieldDefinition, out int fieldOffset, out PossibleDiagnostic? error1))
+            if (!GetFieldOffset(structPointerType, field.Field.Identifier, out CompiledField? fieldDefinition, out int fieldOffset, out PossibleDiagnostic? error1))
             {
                 Diagnostics.Add(error1.ToError(field));
                 return;
@@ -1480,7 +1480,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 PushFrom(new AddressOffset(
                     new AddressRegisterPointer(reg.Register),
                     fieldOffset
-                    ), FindSize(GeneralType.TryInsertTypeParameters(fieldDefinition.Type, structPointerType.TypeArguments), fieldDefinition));
+                    ), FindSize(GeneralType.TryInsertTypeParameters(fieldDefinition.Type, structPointerType.TypeArguments), fieldDefinition.Definition));
             }
             return;
         }
@@ -1489,7 +1489,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         GeneralType type = field.Type;
 
-        if (!GetFieldOffset(structType, field.Field.Identifier.Content, out _, out _, out PossibleDiagnostic? error2))
+        if (!GetFieldOffset(structType, field.Field.Identifier, out _, out _, out PossibleDiagnostic? error2))
         {
             Diagnostics.Add(error2.ToError(field));
             return;
@@ -2253,7 +2253,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         Address address = GetParameterAddress(parameterSetter.Parameter);
 
-        if (parameterSetter.Parameter.IsRef)
+        if (parameterSetter.Parameter.Definition.IsRef)
         { address = new AddressPointer(address); }
 
         PopTo(address, FindSize(parameterSetter.Parameter.Type, parameterSetter));
@@ -2540,7 +2540,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
         if (body is null)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", (ILocated)function));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", function));
             return;
         }
 
@@ -2553,7 +2553,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 Address = ReturnValueAddress.Offset,
                 BasePointerRelative = true,
                 Kind = StackElementKind.Internal,
-                Size = FindSize(GeneralType.TryInsertTypeParameters(returnType.Type, typeArguments), (ILocated)function),
+                Size = FindSize(GeneralType.TryInsertTypeParameters(returnType.Type, typeArguments), function),
                 Identifier = "Return Value",
                 Type = GeneralType.TryInsertTypeParameters(returnType.Type, typeArguments),
             });
@@ -2599,9 +2599,9 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 Address = GetParameterAddress(p).Offset,
                 Kind = StackElementKind.Parameter,
                 BasePointerRelative = true,
-                Size = p.IsRef ? PointerSize : FindSize(pType, p),
-                Identifier = p.Identifier.Content,
-                Type = p.IsRef ? new PointerType(pType) : pType,
+                Size = p.Definition.IsRef ? PointerSize : FindSize(pType, p.Definition),
+                Identifier = p.Identifier,
+                Type = p.Definition.IsRef ? new PointerType(pType) : pType,
             };
             CurrentScopeDebug.Last.Stack.Add(debugInfo);
         }
@@ -2915,16 +2915,16 @@ public partial class CodeGeneratorForMain : CodeGenerator
                 InstructionLabel label = LabelForDefinition(TemplateInstance.New(f, null));
                 if (!label.IsMarked)
                 {
-                    Diagnostics.Add(DiagnosticAt.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Identifier, f.File));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Exposed function \"{f.ToReadable()}\" was not compiled", f.Definition.Identifier, f.File));
                     continue;
                 }
 
                 CompiledFunction e = Functions.First(v => Utils.ReferenceEquals(v.Function, f) && StatementCompiler.TypeArgumentsEquals(v.TypeArguments, null));
 
-                int returnValueSize = f.ReturnSomething ? FindSize(f.Type, f.TypeToken) : 0;
+                int returnValueSize = f.ReturnSomething ? FindSize(f.Type, f.Definition.Type) : 0;
                 int argumentsSize = 0;
                 foreach (CompiledParameter p in f.Parameters)
-                { argumentsSize += FindSize(p.Type, ((FunctionDefinition)f).Type); }
+                { argumentsSize += FindSize(p.Type, f.Definition.Type); }
 
                 exposedFunctions[f.ExposedFunctionName] = new(f.ExposedFunctionName, returnValueSize, label.Address, argumentsSize, e.Flags);
             }

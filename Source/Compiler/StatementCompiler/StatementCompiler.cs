@@ -40,11 +40,11 @@ public partial class StatementCompiler
         CompiledFunctionDefinition allocator = result.Function;
         if (!allocator.ReturnSomething)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.Definition.Type));
             return false;
         }
 
-        if (!allocator.CanUse(type.Location.File))
+        if (!allocator.Definition.CanUse(type.Location.File))
         {
             Diagnostics.Add(DiagnosticAt.Error($"Function \"{allocator.ToReadable()}\" cannot be called due to its protection level", type));
             return false;
@@ -62,7 +62,7 @@ public partial class StatementCompiler
         {
             if (!ExternalFunctions.TryGet(allocator.ExternalFunctionName, out IExternalFunction? externalFunction, out PossibleDiagnostic? exception))
             {
-                Diagnostics.Add(exception.ToError(allocator));
+                Diagnostics.Add(exception.ToError(allocator.Definition));
                 return false;
             }
 
@@ -103,11 +103,11 @@ public partial class StatementCompiler
         CompiledFunctionDefinition allocator = result.Function;
         if (!allocator.ReturnSomething)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.TypeToken));
+            Diagnostics.Add(DiagnosticAt.Error($"Function with attribute [{AttributeConstants.BuiltinIdentifier}(\"{BuiltinFunctions.Allocate}\")] should return something", allocator.Definition.Type));
             return false;
         }
 
-        if (!allocator.CanUse(sizeLocation.File))
+        if (!allocator.Definition.CanUse(sizeLocation.File))
         {
             Diagnostics.Add(DiagnosticAt.Error($"Function \"{allocator.ToReadable()}\" cannot be called due to its protection level", sizeLocation));
             return false;
@@ -125,7 +125,7 @@ public partial class StatementCompiler
         {
             if (!ExternalFunctions.TryGet(allocator.ExternalFunctionName, out IExternalFunction? externalFunction, out PossibleDiagnostic? exception))
             {
-                Diagnostics.Add(exception.ToError(allocator));
+                Diagnostics.Add(exception.ToError(allocator.Definition));
                 return false;
             }
 
@@ -159,7 +159,7 @@ public partial class StatementCompiler
 
         deallocator = result.Function;
 
-        if (!deallocator.CanUse(location.File))
+        if (!deallocator.Definition.CanUse(location.File))
         {
             Diagnostics.Add(DiagnosticAt.Error($"Function \"{deallocator.ToReadable()}\" cannot be called due to its protection level", location));
             return false;
@@ -223,7 +223,7 @@ public partial class StatementCompiler
         }
 
         if (destructor is not null
-            && !destructor.Function.CanUse(location.File))
+            && !destructor.Function.Definition.CanUse(location.File))
         {
             Diagnostics.Add(DiagnosticAt.Error($"Destructor for type \"{deallocateableType}\" cannot be called due to its protection level", location));
             return false;
@@ -305,7 +305,7 @@ public partial class StatementCompiler
         };
 
         if (result.Is(out CompiledStructTypeExpression? resultStructType) &&
-            resultStructType.Struct.Template is not null)
+            resultStructType.Struct.Definition.Template is not null)
         {
             if (type.TypeArguments.HasValue)
             {
@@ -1074,6 +1074,19 @@ public partial class StatementCompiler
     }
     bool CompileStatement(Block block, [NotNullWhen(true)] out CompiledStatement? compiledStatement, bool ignoreScope = false)
     {
+        if (CompileStatement(block, out CompiledBlock? compiledBlock, ignoreScope))
+        {
+            compiledStatement = compiledBlock;
+            return true;
+        }
+        else
+        {
+            compiledStatement = null;
+            return false;
+        }
+    }
+    bool CompileStatement(Block block, [NotNullWhen(true)] out CompiledBlock? compiledStatement, bool ignoreScope = false)
+    {
         compiledStatement = null;
 
         ImmutableArray<CompiledStatement>.Builder res = ImmutableArray.CreateBuilder<CompiledStatement>(block.Statements.Length);
@@ -1629,11 +1642,11 @@ public partial class StatementCompiler
     static readonly Unity.Profiling.ProfilerMarker _m2 = new("LanguageCore.Compiler.Function");
 #endif
     bool CompileFunction<TFunction>(TFunction function, ImmutableDictionary<string, GeneralType>? typeArguments)
-        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition
+        where TFunction : ICompiledFunctionDefinition, ICompiledDefinition<FunctionThingDefinition>
     {
         foreach (TemplateInstance<FunctionThingDefinition> item in _generatedFunctions)
         {
-            if (Utils.ReferenceEquals(item.Template, function) && TypeArgumentsEquals(item.TypeArguments, typeArguments))
+            if (Utils.ReferenceEquals(item.Template, function.Definition) && TypeArgumentsEquals(item.TypeArguments, typeArguments))
             {
                 if (GeneratedFunctions.Any(v => Utils.ReferenceEquals(v.Function, function) && TypeArgumentsEquals(v.TypeArguments, typeArguments)))
                 {
@@ -1642,33 +1655,32 @@ public partial class StatementCompiler
                 return false;
             }
         }
-        _generatedFunctions.Add(new TemplateInstance<FunctionThingDefinition>(function, typeArguments));
+        _generatedFunctions.Add(new TemplateInstance<FunctionThingDefinition>(function.Definition, typeArguments));
 
 #if UNITY
         using var _1 = _m2.Auto();
 #endif
 
-        if (function.Identifier is not null &&
-            LanguageConstants.KeywordList.Contains(function.Identifier.ToString()))
+        if (LanguageConstants.KeywordList.Contains(function.Definition.Identifier.Content))
         {
-            Diagnostics.Add(DiagnosticAt.Error($"The identifier \"{function.Identifier}\" is reserved as a keyword. Do not use it as a function name", function.Identifier, function.File));
+            Diagnostics.Add(DiagnosticAt.Error($"The identifier \"{function.Definition.Identifier}\" is reserved as a keyword. Do not use it as a function name", function.Definition.Identifier, function.File));
             goto end;
         }
 
-        if (function.Identifier is not null)
-        { function.Identifier.AnalyzedType = TokenAnalyzedType.FunctionName; }
+        if (function.Definition.Identifier is not null)
+        { function.Definition.Identifier.AnalyzedType = TokenAnalyzedType.FunctionName; }
 
         if (function is IExternalFunctionDefinition externalFunctionDefinition &&
             externalFunctionDefinition.ExternalFunctionName is not null &&
-            (ExternalFunctions.Any(v => v.Name == externalFunctionDefinition.ExternalFunctionName) || function.Block is null))
+            (ExternalFunctions.Any(v => v.Name == externalFunctionDefinition.ExternalFunctionName) || function.Definition.Block is null))
         {
             // fixme: hmmm
             return false;
         }
 
-        if (function.Block is null)
+        if (function.Definition.Block is null)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", function));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", function.Definition));
             goto end;
         }
 
@@ -1688,7 +1700,7 @@ public partial class StatementCompiler
         {
             GeneralType resultType = _v.TypeArguments.First().Value;
 
-            CompiledGeneratorState generatorState = GetGeneratorState(function);
+            CompiledGeneratorState generatorState = GetGeneratorState(function.Definition);
 
             CompiledParameter thisParmater;
             CompiledParameter resultParameter;
@@ -1698,7 +1710,7 @@ public partial class StatementCompiler
                 new PointerType(new StructType(generatorState.Struct, function.File)),
                 new ParameterDefinition(
                     ImmutableArray.Create<Token>(Token.CreateAnonymous(ModifierKeywords.This)),
-                    new TypeInstancePointer(new TypeInstanceSimple(Token.CreateAnonymous(GetGeneratorState(function).Struct.Identifier.Content), function.File), Token.CreateAnonymous("*"), function.File),
+                    new TypeInstancePointer(new TypeInstanceSimple(Token.CreateAnonymous(GetGeneratorState(function.Definition).Struct.Identifier), function.File), Token.CreateAnonymous("*"), function.File),
                     Token.CreateAnonymous("this"),
                     null,
                     function.File
@@ -1709,13 +1721,13 @@ public partial class StatementCompiler
             compiledParameters.Add(resultParameter = new CompiledParameter(
                 //paramIndex,
                 GeneralType.InsertTypeParameters(GeneratorStructDefinition.NextFunction.Parameters[1].Type, _v.TypeArguments),
-                GeneratorStructDefinition.NextFunction.Parameters[1]
+                GeneratorStructDefinition.NextFunction.Parameters[1].Definition
             ));
             paramIndex++;
 
             returnType = BuiltinType.U8;
 
-            Location l = function.Block.Location.Before();
+            Location l = function.Definition.Block.Location.Before();
             prefixStatement = new CompiledIf()
             {
                 Location = l,
@@ -1754,7 +1766,7 @@ public partial class StatementCompiler
                 Next = null,
             };
 
-            l = function.Block.Location.After();
+            l = function.Definition.Block.Location.After();
             suffixStatement = new CompiledReturn()
             {
                 Location = l,
@@ -1777,15 +1789,15 @@ public partial class StatementCompiler
         }
         else
         {
-            for (int i = 0; i < function.Parameters.Count; i++)
+            for (int i = 0; i < function.Definition.Parameters.Length; i++)
             {
-                compiledParameters.Add(((ICompiledFunctionDefinition)function).Parameters[i]);
+                compiledParameters.Add(function.Parameters[i]);
             }
         }
 
         ImmutableArray<CompiledLabelDeclaration>.Builder localInstructionLabels = ImmutableArray.CreateBuilder<CompiledLabelDeclaration>();
 
-        foreach (Statement item in StatementWalker.Visit(function.Block, StatementWalkerFilter.FrameOnlyFilter))
+        foreach (Statement item in StatementWalker.Visit(function.Definition.Block, StatementWalkerFilter.FrameOnlyFilter))
         {
             if (item is InstructionLabelDeclaration instructionLabel)
             {
@@ -1801,8 +1813,8 @@ public partial class StatementCompiler
         {
             TypeArguments = typeArguments ?? ImmutableDictionary<string, GeneralType>.Empty,
             IsTemplateInstance = typeArguments is not null,
-            IsTemplate = function.IsTemplate,
-            TypeParameters = function.Template?.Parameters ?? ImmutableArray<Token>.Empty,
+            IsTemplate = function.Definition.IsTemplate,
+            TypeParameters = function.Definition.Template?.Parameters ?? ImmutableArray<Token>.Empty,
             CompiledParameters = compiledParameters.ToImmutable(),
             InstructionLabels = localInstructionLabels.ToImmutable(),
             Scopes = new(),
@@ -1811,14 +1823,14 @@ public partial class StatementCompiler
             IsTopLevel = false,
         }))
         {
-            CompiledStatement? body;
+            CompiledBlock? body;
             using (frame.Value.Scopes.PushAuto(new Scope(ImmutableArray<CompiledVariableConstant>.Empty)))
             {
-                if (!CompileStatement(function.Block, out body)) return false;
+                if (!CompileStatement(function.Definition.Block, out body)) return false;
 
                 if (prefixStatement is not null || suffixStatement is not null)
                 {
-                    ImmutableArray<CompiledStatement> bodyStatements = ((CompiledBlock)body).Statements;
+                    ImmutableArray<CompiledStatement> bodyStatements = body.Statements;
 
                     ImmutableArray<CompiledStatement>.Builder v = ImmutableArray.CreateBuilder<CompiledStatement>(bodyStatements.Length + (prefixStatement is null ? 0 : 1) + (suffixStatement is null ? 0 : 1));
                     if (prefixStatement is not null) v.Add(prefixStatement);
@@ -1857,7 +1869,7 @@ public partial class StatementCompiler
 
             function.IsMsilCompatible = function.IsMsilCompatible && frame.Value.IsMsilCompatible;
 
-            GeneratedFunctions.Add(new(function, (CompiledBlock)body, closure, typeArguments));
+            GeneratedFunctions.Add(new(function, body, closure, typeArguments));
 
             if (!closure.IsEmpty) throw new NotImplementedException();
 
@@ -1869,15 +1881,15 @@ public partial class StatementCompiler
     }
 
     bool CompileFunctions<TFunction>(IEnumerable<TFunction> functions)
-        where TFunction : FunctionThingDefinition, IHaveInstructionOffset, IReferenceable, ICompiledFunctionDefinition
+        where TFunction : IHaveInstructionOffset, IReferenceable, ICompiledFunctionDefinition, ICompiledDefinition<FunctionThingDefinition>
     {
         bool compiledAnything = false;
         foreach (TFunction function in functions)
         {
-            if (function.IsTemplate) continue;
+            if (function.Definition.IsTemplate) continue;
             if (!Settings.CompileEverything)
             {
-                if (!function.References.Any() && (function is not IExposeable exposeable || exposeable.ExposedFunctionName is null) && !function.Attributes.TryGetAttribute(AttributeConstants.BuiltinIdentifier, out _))
+                if (!function.References.Any() && (function is not IExposeable exposeable || exposeable.ExposedFunctionName is null) && !function.Definition.Attributes.TryGetAttribute(AttributeConstants.BuiltinIdentifier, out _))
                 { continue; }
             }
 
@@ -1887,7 +1899,7 @@ public partial class StatementCompiler
         return compiledAnything;
     }
     bool CompileFunctionTemplates<T>(IReadOnlyList<TemplateInstance<T>> functions)
-        where T : FunctionThingDefinition, ITemplateable<T>, IHaveInstructionOffset, ICompiledFunctionDefinition
+        where T : IHaveInstructionOffset, ICompiledFunctionDefinition, ICompiledDefinition<FunctionThingDefinition>
     {
         bool compiledAnything = false;
         int i = 0;
@@ -2116,7 +2128,7 @@ public partial class StatementCompiler
             {
                 if (CompileFunctionCall(new FunctionCallExpression(
                     null,
-                    Token.CreateAnonymous(result.Function.Identifier.Content, TokenType.Identifier, firstHeapUsageLocation.Location.Position),
+                    Token.CreateAnonymous(result.Function.Identifier, TokenType.Identifier, firstHeapUsageLocation.Location.Position),
                     ArgumentListExpression.CreateAnonymous(TokenPair.CreateAnonymous(firstHeapUsageLocation.Location.Position, "(", ")"), entryFile),
                     entryFile
                 ), ImmutableArray<ArgumentExpression>.Empty, result, out CompiledExpression? call))

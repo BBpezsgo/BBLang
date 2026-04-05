@@ -2,22 +2,32 @@
 
 namespace LanguageCore.Compiler;
 
-public class CompiledStruct : StructDefinition,
-    IReferenceable<TypeInstance>
+public class CompiledStruct :
+    IReferenceable<TypeInstance>,
+    IIdentifiable<string>,
+    IInFile,
+    ILocated
 {
-    public new ImmutableArray<CompiledField> Fields { get; private set; }
+    public StructDefinition Definition { get; }
+    public ImmutableArray<CompiledField> Fields { get; private set; }
     public List<Reference<TypeInstance>> References { get; }
 
-    public CompiledStruct(ImmutableArray<CompiledField> fields, StructDefinition definition) : base(definition)
+    public string Identifier => Definition.Identifier.Content;
+    public Uri File => Definition.File;
+    public Location Location => Definition.Location;
+
+    public CompiledStruct(ImmutableArray<CompiledField> fields, StructDefinition definition)
     {
+        Definition = definition;
         Fields = fields;
         foreach (CompiledField field in fields) field.Context = this;
 
         References = new List<Reference<TypeInstance>>();
     }
 
-    public CompiledStruct(ImmutableArray<CompiledField> fields, CompiledStruct other) : base(other)
+    public CompiledStruct(ImmutableArray<CompiledField> fields, CompiledStruct other)
     {
+        Definition = other.Definition;
         Fields = fields;
         foreach (CompiledField field in fields) field.Context = this;
 
@@ -30,33 +40,18 @@ public class CompiledStruct : StructDefinition,
         foreach (CompiledField field in fields) field.Context = this;
     }
 
-    public bool TryGetTypeArgumentIndex(string typeArgumentName, out int index)
-    {
-        index = 0;
-        if (Template is null) return false;
-        for (int i = 0; i < Template.Parameters.Length; i++)
-        {
-            if (Template.Parameters[i].Content == typeArgumentName)
-            {
-                index = i;
-                return true;
-            }
-        }
-        return false;
-    }
-
     public override string ToString()
     {
         StringBuilder result = new();
         result.Append("struct ");
 
-        result.Append(Identifier.Content);
+        result.Append(Identifier);
 
-        if (Template is null)
+        if (Definition.Template is null)
         { return result.ToString(); }
 
         result.Append('<');
-        result.AppendJoin(", ", Template.Parameters);
+        result.AppendJoin(", ", Definition.Template.Parameters);
         result.Append('>');
         return result.ToString();
     }

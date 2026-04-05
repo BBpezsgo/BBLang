@@ -267,7 +267,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                         return new AddressOffset(new AddressPointer(GetParameterAddress(0)), offset);
                     }
                 }
-                offset += FindSize((capturedLocal.Variable?.Type ?? capturedLocal.Parameter?.Type)!, ((ILocated?)capturedLocal.Variable ?? (ILocated?)capturedLocal.Parameter)!);
+                offset += FindSize((capturedLocal.Variable?.Type ?? capturedLocal.Parameter?.Type)!, (capturedLocal.Variable?.Location ?? capturedLocal.Parameter?.Location)!);
             }
         }
 
@@ -294,7 +294,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
                         return new AddressOffset(new AddressPointer(GetParameterAddress(0)), _offset + offset);
                     }
                 }
-                _offset += FindSize((capturedLocal.Variable?.Type ?? capturedLocal.Parameter?.Type)!, ((ILocated?)capturedLocal.Variable ?? (ILocated?)capturedLocal.Parameter)!);
+                _offset += FindSize((capturedLocal.Variable?.Type ?? capturedLocal.Parameter?.Type)!, (capturedLocal.Variable?.Location ?? capturedLocal.Parameter?.Location)!);
             }
         }
 
@@ -309,7 +309,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
         {
             if (i <= beforeThis) continue;
             CompiledParameter parameter = CompiledParameters[i];
-            sum += parameter.IsRef ? PointerSize : FindSize(GeneralType.TryInsertTypeParameters(parameter.Type, TypeArguments), parameter);
+            sum += parameter.Definition.IsRef ? PointerSize : FindSize(GeneralType.TryInsertTypeParameters(parameter.Type, TypeArguments), parameter.Definition);
         }
 
         return sum;
@@ -934,7 +934,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
             return false;
         }
 
-        if (!GetFieldOffset(@struct, value.Field.Identifier.Content, out _, out int fieldOffset, out error))
+        if (!GetFieldOffset(@struct, value.Field.Identifier, out _, out int fieldOffset, out error))
         {
             return false;
         }
@@ -1034,7 +1034,7 @@ public partial class CodeGeneratorForMain : CodeGenerator
 
             foreach (CompiledParameter parameter in CompiledParameters)
             {
-                sum += parameter.IsRef ? PointerSize : FindSize(GeneralType.TryInsertTypeParameters(parameter.Type, TypeArguments), parameter);
+                sum += parameter.Definition.IsRef ? PointerSize : FindSize(GeneralType.TryInsertTypeParameters(parameter.Type, TypeArguments), parameter.Definition);
             }
 
             return sum;

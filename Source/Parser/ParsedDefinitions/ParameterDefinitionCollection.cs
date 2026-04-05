@@ -10,7 +10,7 @@ public class ParameterDefinitionCollection :
     public TokenPair Brackets { get; }
     public Uri File { get; }
 
-    public int Count => Parameters.Length;
+    public int Length => Parameters.Length;
     public Position Position =>
         new Position(Brackets)
         .Union(Parameters);

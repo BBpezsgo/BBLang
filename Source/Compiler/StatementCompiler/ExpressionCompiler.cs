@@ -38,7 +38,7 @@ public partial class StatementCompiler
             if (!CompileExpression(argument, out CompiledExpression? compiledArgument, parameterType)) return false;
 
             if (parameterType.Is<PointerType>() &&
-                parameter.Modifiers.Any(v => v.Content == ModifierKeywords.This) &&
+                parameter.Definition.Modifiers.Any(v => v.Content == ModifierKeywords.This) &&
                 !compiledArgument.Type.Is<PointerType>())
             {
                 if (!CompileExpression(new GetReferenceExpression(
@@ -56,13 +56,13 @@ public partial class StatementCompiler
             if (!FindSize(compiledArgument.Type, out int argumentSize, out PossibleDiagnostic? argumentSizeError, this))
             { Diagnostics.Add(argumentSizeError.ToError(compiledArgument)); }
             else if (!FindSize(parameterType, out int parameterSize, out PossibleDiagnostic? parameterSizeError, this))
-            { Diagnostics.Add(parameterSizeError.ToError(parameter)); }
+            { Diagnostics.Add(parameterSizeError.ToError(parameter.Definition)); }
             else if (argumentSize != parameterSize)
             { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameterType}\" ({parameterSize} bytes) passed \"{compiledArgument.Type}\" ({argumentSize} bytes)", argument)); }
 
             bool typeAllowsTemp = AllowDeallocate(compiledArgument.Type);
 
-            bool calleeAllowsTemp = parameter.Modifiers.Contains(ModifierKeywords.Temp);
+            bool calleeAllowsTemp = parameter.Definition.Modifiers.Contains(ModifierKeywords.Temp);
 
             bool callerAllowsTemp = StatementCanBeDeallocated(argument, out bool explicitDeallocate);
 
@@ -108,12 +108,12 @@ public partial class StatementCompiler
             for (int i = 0; i < remaining; i++)
             {
                 CompiledParameter parameter = compiledFunction.Parameters[arguments.Count + i + alreadyPassed];
-                Expression? argument = parameter.DefaultValue;
+                Expression? argument = parameter.Definition.DefaultValue;
                 GeneralType parameterType = GeneralType.TryInsertTypeParameters(parameter.Type, typeArguments);
 
                 if (argument is null)
                 {
-                    Diagnostics.Add(DiagnosticAt.Internal($"Can't explain this error", parameter));
+                    Diagnostics.Add(DiagnosticAt.Internal($"Can't explain this error", parameter.Definition));
                     return false;
                 }
                 else
@@ -130,13 +130,13 @@ public partial class StatementCompiler
                 if (!FindSize(compiledArgument.Type, out int argumentSize, out PossibleDiagnostic? argumentSizeError, this))
                 { Diagnostics.Add(argumentSizeError.ToError(compiledArgument)); }
                 else if (!FindSize(parameterType, out int parameterSize, out PossibleDiagnostic? parameterSizeError, this))
-                { Diagnostics.Add(parameterSizeError.ToError(parameter)); }
+                { Diagnostics.Add(parameterSizeError.ToError(parameter.Definition)); }
                 else if (argumentSize != parameterSize)
                 { Diagnostics.Add(DiagnosticAt.Internal($"Bad argument type passed: expected \"{parameterType}\" ({parameterSize} bytes) passed \"{compiledArgument.Type}\" ({argumentSize} bytes)", argument)); }
 
                 bool typeAllowsTemp = AllowDeallocate(compiledArgument.Type);
 
-                bool calleeAllowsTemp = parameter.Modifiers.Contains(ModifierKeywords.Temp);
+                bool calleeAllowsTemp = parameter.Definition.Modifiers.Contains(ModifierKeywords.Temp);
 
                 bool callerAllowsTemp = StatementCanBeDeallocated(ArgumentExpression.Wrap(argument), out bool explicitDeallocate);
 
@@ -239,7 +239,7 @@ public partial class StatementCompiler
     }
 
     bool CompileFunctionCall_External<TFunction>(ImmutableArray<CompiledArgument> arguments, bool saveValue, TFunction compiledFunction, IExternalFunction externalFunction, Location location, [NotNullWhen(true)] out CompiledExpression? compiledStatement)
-        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition
+        where TFunction : ICompiledFunctionDefinition, ICompiledDefinition<FunctionThingDefinition>
     {
         //CheckExternalFunctionDeclaration(this, compiledFunction, externalFunction, Diagnostics);
 
@@ -255,12 +255,12 @@ public partial class StatementCompiler
         return true;
     }
     bool CompileFunctionCall<TFunction>(Expression caller, ImmutableArray<ArgumentExpression> arguments, FunctionQueryResult<TFunction> _callee, [NotNullWhen(true)] out CompiledExpression? compiledStatement)
-        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition, IExternalFunctionDefinition
+        where TFunction : ICompiledFunctionDefinition, IExternalFunctionDefinition, ICompiledDefinition<FunctionThingDefinition>
     {
         (TFunction callee, ImmutableDictionary<string, GeneralType>? typeArguments) = _callee;
         _callee.ReplaceArgumentsIfNeeded(ref arguments);
 
-        if (_callee.Function.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
+        if (_callee.Function.Definition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
         {
             Frames.LastRef.IsMsilCompatible = false;
         }
@@ -269,7 +269,7 @@ public partial class StatementCompiler
         if (GeneralType.TryInsertTypeParameters(callee.Type, typeArguments).Is(out StructType? returnStructType) &&
             Utils.ReferenceEquals(returnStructType.Struct, GeneratorStructDefinition?.Struct))
         {
-            if (!CompileAllocation(CompiledTypeExpression.CreateAnonymous(new StructType(GetGeneratorState(callee).Struct, caller.File), caller), out CompiledExpression? allocation))
+            if (!CompileAllocation(CompiledTypeExpression.CreateAnonymous(new StructType(GetGeneratorState(callee.Definition).Struct, caller.File), caller), out CompiledExpression? allocation))
             {
                 compiledStatement = null;
                 return false;
@@ -280,7 +280,7 @@ public partial class StatementCompiler
                 returnStructType.TypeArguments
             ));
 
-            FunctionType calleeFunctionType = new(GeneralType.TryInsertTypeParameters(callee.Type, typeArguments), ((ICompiledFunctionDefinition)callee).Parameters.ToImmutableArray(v => GeneralType.TryInsertTypeParameters(v.Type, typeArguments)), false);
+            FunctionType calleeFunctionType = new(GeneralType.TryInsertTypeParameters(callee.Type, typeArguments), callee.Parameters.ToImmutableArray(v => GeneralType.TryInsertTypeParameters(v.Type, typeArguments)), false);
 
             compiledStatement = new CompiledConstructorCall()
             {
@@ -339,7 +339,7 @@ public partial class StatementCompiler
                 new ConstructorCallExpression(
                     Token.CreateAnonymous(StatementKeywords.New),
                     new TypeInstanceSimple(
-                        Token.CreateAnonymous(GeneratorStructDefinition.Struct.Identifier.Content),
+                        Token.CreateAnonymous(GeneratorStructDefinition.Struct.Identifier),
                         caller.Location.File
                     ),
                     ArgumentListExpression.CreateAnonymous(caller.File),
@@ -355,7 +355,7 @@ public partial class StatementCompiler
         compiledStatement = null;
         SetStatementType(caller, GeneralType.TryInsertTypeParameters(callee.Type, typeArguments));
 
-        if (!callee.CanUse(caller.File))
+        if (!callee.Definition.CanUse(caller.File))
         {
             Diagnostics.Add(DiagnosticAt.Error($"Function \"{callee.ToReadable()}\" could not be called due to its protection level", caller)
                 .WithRelatedInfo(new DiagnosticRelatedInformationAt($"Function \"{callee.ToReadable()}\" defined here", callee.Location)));
@@ -363,15 +363,15 @@ public partial class StatementCompiler
         }
 
         int partial = 0;
-        for (int i = 0; i < callee.Parameters.Count; i++)
+        for (int i = 0; i < callee.Definition.Parameters.Length; i++)
         {
-            if (callee.Parameters[i].DefaultValue is null) partial = i + 1;
+            if (callee.Definition.Parameters[i].DefaultValue is null) partial = i + 1;
             else break;
         }
 
         if (arguments.Length < partial)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {callee.ParameterCount} passed {arguments.Length}", caller));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{callee.ToReadable()}\": required {callee.Definition.ParameterCount} passed {arguments.Length}", caller));
             return false;
         }
 
@@ -381,7 +381,7 @@ public partial class StatementCompiler
             calleeInContext.Context is not null &&
             Utils.ReferenceEquals(calleeInContext.Context, GeneratorStructDefinition?.Struct))
         {
-            CompiledGeneratorState stateStruct = GetGeneratorState(callee);
+            CompiledGeneratorState stateStruct = GetGeneratorState(callee.Definition);
             List<CompiledArgument> modifiedArguments = new(compiledArguments.Length)
             {
                 new()
@@ -412,7 +412,7 @@ public partial class StatementCompiler
                     Field = GeneratorStructDefinition.FunctionField,
                     Object = compiledArguments[0].Value,
                     // fixme: dirty ahh
-                    Type = GeneralType.InsertTypeParameters(GeneratorStructDefinition.FunctionField.Type, ((StructType)((PointerType)((ICompiledFunctionDefinition)callee).Parameters[0].Type).To).TypeArguments),
+                    Type = GeneralType.InsertTypeParameters(GeneratorStructDefinition.FunctionField.Type, ((StructType)((PointerType)callee.Parameters[0].Type).To).TypeArguments),
                     Location = caller.Location,
                     SaveValue = true,
                 },
@@ -432,7 +432,7 @@ public partial class StatementCompiler
                 return CompileFunctionCall_External(compiledArguments, caller.SaveValue, callee, externalFunction, caller.Location, out compiledStatement);
             }
 
-            if (callee.Block is null)
+            if (callee.Definition.Block is null)
             {
                 Diagnostics.Add(exception.ToError(caller));
                 return false;
@@ -462,7 +462,7 @@ public partial class StatementCompiler
         }
 
         if ((Settings.Optimizations.HasFlag(OptimizationSettings.FunctionInlining) || Settings.OptimizationDiagnostics) &&
-            callee.IsInline)
+            callee.Definition.IsInline)
         {
             CompiledFunction? f = GeneratedFunctions.FirstOrDefault(v => Utils.ReferenceEquals(v.Function, callee) && TypeArgumentsEquals(v.TypeArguments, typeArguments));
             if (f is not null)
@@ -470,8 +470,8 @@ public partial class StatementCompiler
                 InlineContext inlineContext = new()
                 {
                     Arguments = f.Function.Parameters
-                        .Select((value, index) => (value.Identifier.Content, compiledArguments[index]))
-                        .ToImmutableDictionary(v => v.Content, v => v.Item2),
+                        .Select((value, index) => (value.Identifier, compiledArguments[index]))
+                        .ToImmutableDictionary(v => v.Identifier, v => v.Item2),
                 };
 
                 if (InlineFunction(f.Body, inlineContext, out CompiledStatement? inlined1, out DiagnosticAt? inlineError))
@@ -687,7 +687,7 @@ public partial class StatementCompiler
                     "operator",
                     null,
 
-                    FunctionQuery.Create<CompiledOperatorDefinition, string, Token>(
+                    FunctionQuery.Create<CompiledOperatorDefinition, string, string>(
                         "()",
                         arguments.ToImmutableArray(),
                         FunctionArgumentConverter,
@@ -763,7 +763,7 @@ public partial class StatementCompiler
 
             CompiledOperatorDefinition? operatorDefinition = result.Function;
 
-            if (operatorDefinition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
+            if (operatorDefinition.Definition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
             {
                 Frames.LastRef.IsMsilCompatible = false;
             }
@@ -1051,20 +1051,20 @@ public partial class StatementCompiler
 
             SetStatementType(@operator, operatorDefinition.Function.Type);
 
-            if (operatorDefinition.Function.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
+            if (operatorDefinition.Function.Definition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
             {
                 Frames.LastRef.IsMsilCompatible = false;
             }
 
-            if (!operatorDefinition.Function.CanUse(@operator.File))
+            if (!operatorDefinition.Function.Definition.CanUse(@operator.File))
             {
                 Diagnostics.Add(DiagnosticAt.Error($"Operator \"{operatorDefinition.Function.ToReadable()}\" cannot be called due to its protection level", @operator.Operator, @operator.File));
                 return false;
             }
 
-            if (UnaryOperatorCallExpression.ParameterCount != operatorDefinition.Function.ParameterCount)
+            if (UnaryOperatorCallExpression.ParameterCount != operatorDefinition.Function.Definition.ParameterCount)
             {
-                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to operator \"{operatorDefinition.Function.ToReadable()}\": required {operatorDefinition.Function.ParameterCount} passed {UnaryOperatorCallExpression.ParameterCount}", @operator));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to operator \"{operatorDefinition.Function.ToReadable()}\": required {operatorDefinition.Function.Definition.ParameterCount} passed {UnaryOperatorCallExpression.ParameterCount}", @operator));
                 return false;
             }
 
@@ -1242,7 +1242,7 @@ public partial class StatementCompiler
 
         ImmutableArray<CompiledParameter>.Builder compiledParameters = ImmutableArray.CreateBuilder<CompiledParameter>();
 
-        for (int i = 0; i < lambdaStatement.Parameters.Count; i++)
+        for (int i = 0; i < lambdaStatement.Parameters.Length; i++)
         {
             if (!CompileType(lambdaStatement.Parameters[i].Type, out GeneralType? parameterType, Diagnostics))
             {
@@ -1374,7 +1374,7 @@ public partial class StatementCompiler
                 {
                     if (!FindSize((item.Variable?.Type ?? item.Parameter?.Type)!, out int itemSize, out PossibleDiagnostic? sizeError, this))
                     {
-                        Diagnostics.Add(sizeError.ToError(((ILocated?)item.Variable ?? item.Parameter)!));
+                        Diagnostics.Add(sizeError.ToError((item.Variable?.Location ?? item.Parameter?.Definition.Location)!));
                     }
                     closureSize += itemSize;
                 }
@@ -1837,16 +1837,16 @@ public partial class StatementCompiler
             SetStatementReference(variable, constant);
             variable.AnalyzedType = TokenAnalyzedType.ConstantName;
 
-            if (constant.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
+            if (constant.Definition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
             {
                 Frames.LastRef.IsMsilCompatible = false;
             }
 
-            if (constant.InternalConstantName is not null)
+            if (constant.Definition.InternalConstantName is not null)
             {
                 compiledStatement = new CompiledCompilerVariableAccess()
                 {
-                    Identifier = constant.InternalConstantName,
+                    Identifier = constant.Definition.InternalConstantName,
                     Type = constant.Type,
                     Location = variable.Location,
                     SaveValue = variable.SaveValue,
@@ -1969,7 +1969,7 @@ public partial class StatementCompiler
 
         if (GetFunction(variable.Content, expectedType, out FunctionQueryResult<CompiledFunctionDefinition>? compiledFunction, out PossibleDiagnostic? functionNotFoundError, AddCompilable))
         {
-            if (compiledFunction.Function.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
+            if (compiledFunction.Function.Definition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
             {
                 Frames.LastRef.IsMsilCompatible = false;
             }
@@ -1978,7 +1978,7 @@ public partial class StatementCompiler
 
             compiledFunction.Function.References.AddReference(variable, variable.File);
             variable.AnalyzedType = TokenAnalyzedType.FunctionName;
-            SetStatementReference(variable, (CompiledFunctionDefinition?)compiledFunction.Function);
+            SetStatementReference(variable, compiledFunction.Function);
             SetStatementType(variable, functionType);
 
             compiledStatement = new CompiledFunctionReference()
@@ -2211,7 +2211,7 @@ public partial class StatementCompiler
             return false;
         }
 
-        if (compiledFunction.Function.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
+        if (compiledFunction.Function.Definition.Attributes.Any(v => v.Identifier.Content == AttributeConstants.MSILIncompatibleIdentifier))
         {
             Frames.LastRef.IsMsilCompatible = false;
         }
@@ -2221,7 +2221,7 @@ public partial class StatementCompiler
 
         SetStatementType(constructorCall, compiledFunction.Function.Type);
 
-        if (!compiledFunction.Function.CanUse(constructorCall.File))
+        if (!compiledFunction.Function.Definition.CanUse(constructorCall.File))
         {
             Diagnostics.Add(DiagnosticAt.Error($"Constructor \"{compiledFunction.Function.ToReadable()}\" could not be called due to its protection level", constructorCall.Type, constructorCall.File)
                 .WithRelatedInfo(new DiagnosticRelatedInformationAt($"Constructor \"{compiledFunction.Function.ToReadable()}\" defined here", compiledFunction.Function.Location)));

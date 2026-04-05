@@ -267,7 +267,7 @@ public abstract class CodeGenerator : IRuntimeInfoProvider
 
         foreach (CompiledField _field in type.Struct.Fields)
         {
-            if (_field.Identifier.Content == name)
+            if (_field.Identifier == name)
             {
                 field = _field;
                 return true;
@@ -297,6 +297,6 @@ public abstract class CodeGenerator : IRuntimeInfoProvider
             if (!Utils.ReferenceEquals(CompiledParameters[i], parameter)) continue;
             return i;
         }
-        throw new LanguageExceptionAt($"Parameter {parameter.Identifier.Content} not found", parameter.Position, parameter.File);
+        throw new LanguageExceptionAt($"Parameter {parameter.Identifier} not found", parameter.Definition.Position, parameter.Definition.File);
     }
 }

@@ -91,7 +91,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 }
                 perfectus = ConstantPerfectus.Name;
 
-                if (!_constant.CanUse(file))
+                if (!_constant.Definition.CanUse(file))
                 {
                     if (perfectus < ConstantPerfectus.File ||
                         notFoundError is null)
@@ -123,7 +123,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             perfectus = ConstantPerfectus.Name;
 
-            if (!_constant.CanUse(file))
+            if (!_constant.Definition.CanUse(file))
             {
                 if (perfectus < ConstantPerfectus.File ||
                     notFoundError is null)
@@ -294,7 +294,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
     #region Get Functions ...
 
-    public readonly struct Functions<TFunction> where TFunction : ITemplateable<TFunction>
+    public readonly struct Functions<TFunction> where TFunction : notnull
     {
         public IEnumerable<TFunction> Compiled { get; init; }
         public IEnumerable<TemplateInstance<TFunction>> Compilable { get; init; }
@@ -438,8 +438,8 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
         ImmutableArray<GeneralType> arguments = ImmutableArray.Create(prevType, indexType);
-        FunctionQuery<CompiledFunctionDefinition, string, Token, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(BuiltinFunctionIdentifiers.IndexerGet, arguments, relevantFile, null, addCompilable);
-        return GetFunction<CompiledFunctionDefinition, string, Token, GeneralType>(
+        FunctionQuery<CompiledFunctionDefinition, string, string, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(BuiltinFunctionIdentifiers.IndexerGet, arguments, relevantFile, null, addCompilable);
+        return GetFunction<CompiledFunctionDefinition, string, string, GeneralType>(
             GetFunctions(),
             "function",
             null,
@@ -459,7 +459,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
         string identifier = BuiltinFunctionIdentifiers.IndexerGet;
-        FunctionQuery<CompiledFunctionDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(
+        FunctionQuery<CompiledFunctionDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(
             identifier,
             ImmutableArray.Create<ArgumentExpression>(ArgumentExpression.Wrap(expression.Object), expression.Index),
             FunctionArgumentConverter,
@@ -484,8 +484,8 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
         ImmutableArray<GeneralType> arguments = ImmutableArray.Create(prevType, indexType, elementType);
-        FunctionQuery<CompiledFunctionDefinition, string, Token, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(BuiltinFunctionIdentifiers.IndexerSet, arguments, relevantFile, null, addCompilable);
-        return GetFunction<CompiledFunctionDefinition, string, Token, GeneralType>(
+        FunctionQuery<CompiledFunctionDefinition, string, string, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(BuiltinFunctionIdentifiers.IndexerSet, arguments, relevantFile, null, addCompilable);
+        return GetFunction<CompiledFunctionDefinition, string, string, GeneralType>(
             GetFunctions(),
             "function",
             null,
@@ -508,16 +508,16 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         IEnumerable<CompiledFunctionDefinition> builtinCompiledFunctions =
             CompiledFunctions
-            .Where(v => v.BuiltinFunctionName == builtinName);
+            .Where(v => v.Definition.BuiltinFunctionName == builtinName);
 
         IEnumerable<TemplateInstance<CompiledFunctionDefinition>> builtinCompilableFunctions =
             CompilableFunctions
-            .Where(v => v.Template.BuiltinFunctionName == builtinName);
+            .Where(v => v.Template.Definition.BuiltinFunctionName == builtinName);
 
         string readable = $"[{AttributeConstants.BuiltinIdentifier}(\"{builtinName}\")] ?({string.Join(", ", arguments)})";
-        FunctionQuery<CompiledFunctionDefinition, string, Token, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(null as string, arguments, relevantFile, null, addCompilable);
+        FunctionQuery<CompiledFunctionDefinition, string, string, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(null as string, arguments, relevantFile, null, addCompilable);
 
-        return GetFunction<CompiledFunctionDefinition, string, Token, GeneralType>(
+        return GetFunction<CompiledFunctionDefinition, string, string, GeneralType>(
             new Functions<CompiledFunctionDefinition>()
             {
                 Compiled = builtinCompiledFunctions,
@@ -541,14 +541,14 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         [NotNullWhen(false)] out PossibleDiagnostic? error,
         Action<TemplateInstance<CompiledOperatorDefinition>>? addCompilable = null)
     {
-        FunctionQuery<CompiledOperatorDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, Token>(
+        FunctionQuery<CompiledOperatorDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, string>(
             @operator.Operator.Content,
             @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap),
             FunctionArgumentConverter,
             relevantFile,
             null,
             addCompilable);
-        return GetFunction<CompiledOperatorDefinition, string, Token, ArgumentExpression>(
+        return GetFunction<CompiledOperatorDefinition, string, string, ArgumentExpression>(
             GetOperators(),
             "operator",
             null,
@@ -568,14 +568,14 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         [NotNullWhen(false)] out PossibleDiagnostic? error,
         Action<TemplateInstance<CompiledOperatorDefinition>>? addCompilable = null)
     {
-        FunctionQuery<CompiledOperatorDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, Token>(
+        FunctionQuery<CompiledOperatorDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, string>(
             @operator.Operator.Content,
             @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap),
             FunctionArgumentConverter,
             relevantFile,
             null,
             addCompilable);
-        return GetFunction<CompiledOperatorDefinition, string, Token, ArgumentExpression>(
+        return GetFunction<CompiledOperatorDefinition, string, string, ArgumentExpression>(
             GetOperators(),
             "operator",
             null,
@@ -605,7 +605,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompilableGeneralFunctions
             .Where(v => ContextIs(v.Template, context));
 
-        return GetFunction<CompiledGeneralFunctionDefinition, string, Token, GeneralType>(
+        return GetFunction<CompiledGeneralFunctionDefinition, string, string, GeneralType>(
             new Functions<CompiledGeneralFunctionDefinition>()
             {
                 Compiled = compiledGeneralFunctionsInContext,
@@ -614,7 +614,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             "general function",
             null,
 
-            FunctionQuery.Create<CompiledGeneralFunctionDefinition, string, Token>(identifier, arguments, relevantFile, null, addCompilable),
+            FunctionQuery.Create<CompiledGeneralFunctionDefinition, string, string>(identifier, arguments, relevantFile, null, addCompilable),
 
             out result,
             out error
@@ -631,14 +631,14 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         if (type is null || !type.Is(out FunctionType? functionType))
         {
             return GetFunction(
-                FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(identifier),
+                FunctionQuery.Create<CompiledFunctionDefinition, string, string>(identifier),
                 out result,
                 out error
             );
         }
 
         return GetFunction(
-            FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(identifier, functionType.Parameters, null, functionType.ReturnType, addCompilable),
+            FunctionQuery.Create<CompiledFunctionDefinition, string, string>(identifier, functionType.Parameters, null, functionType.ReturnType, addCompilable),
             out result,
             out error
         );
@@ -652,7 +652,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
         string identifier = functionCallStatement.Identifier.Content;
-        FunctionQuery<CompiledFunctionDefinition, string, Token, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, Token>(
+        FunctionQuery<CompiledFunctionDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(
             identifier,
             functionCallStatement.MethodArguments,
             FunctionArgumentConverter,
@@ -667,12 +667,12 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
 
     bool GetFunction<TArgument>(
-        FunctionQuery<CompiledFunctionDefinition, string, Token, TArgument> query,
+        FunctionQuery<CompiledFunctionDefinition, string, string, TArgument> query,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error)
         where TArgument : notnull
-        => GetFunction<CompiledFunctionDefinition, string, Token, TArgument>(
+        => GetFunction<CompiledFunctionDefinition, string, string, TArgument>(
             GetFunctions(),
             "function",
             null,
@@ -779,7 +779,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             if (!CompileType(constantValue.Type, out constantType, out PossibleDiagnostic? typeError))
             {
-                Diagnostics.Add(typeError.ToError((ILocated?)variableDeclaration.InitialValue ?? variableDeclaration));
+                Diagnostics.Add(typeError.ToError(variableDeclaration.InitialValue?.Location ?? variableDeclaration.Location));
                 return false;
             }
         }
@@ -848,7 +848,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         bool HandleIdentifier(CompiledStruct function)
         {
             if (structName is not null &&
-                function.Identifier.Content != structName)
+                function.Identifier != structName)
             { return false; }
 
             perfectus = Max(perfectus, StructPerfectus.Identifier);
@@ -858,7 +858,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         bool HandleFile(CompiledStruct function)
         {
             if (relevantFile is null ||
-                function.File != relevantFile)
+                function.Definition.File != relevantFile)
             {
                 // Not in the same file
                 return false;
@@ -964,7 +964,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         bool HandleIdentifier(CompiledAlias _alias)
         {
             if (aliasName is not null &&
-                _alias.Identifier.Content != aliasName)
+                _alias.Identifier != aliasName)
             { return false; }
 
             perfectus = Max(perfectus, AliasPerfectus.Identifier);
@@ -974,7 +974,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         bool HandleFile(CompiledAlias _alias)
         {
             if (relevantFile is null ||
-                _alias.File != relevantFile)
+                _alias.Definition.File != relevantFile)
             {
                 // Not in the same file
                 return false;
@@ -1145,7 +1145,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         foreach (CompiledParameter compiledParameter in frame.CompiledParameters)
         {
-            if (compiledParameter.Identifier.Content == parameterName)
+            if (compiledParameter.Identifier == parameterName)
             {
                 parameter = compiledParameter;
                 error = null;
@@ -1652,7 +1652,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             alias.References.Add(new Reference<TypeInstance>(new TypeInstanceSimple(name, relevantFile), relevantFile));
 
             // HERE
-            result = new CompiledAliasTypeExpression(CompiledTypeExpression.CreateAnonymous(alias.Value, ((AliasDefinition)alias).Value), alias, new Location(name.Position, relevantFile));
+            result = new CompiledAliasTypeExpression(CompiledTypeExpression.CreateAnonymous(alias.Value, alias.Definition.Value), alias, new Location(name.Position, relevantFile));
             error = null;
             return true;
         }
@@ -1703,7 +1703,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         foreach (CompiledAlias alias in CompiledAliases)
         {
-            if (alias.Attributes.TryGetAttribute(AttributeConstants.InternalType, out AttributeUsage? attribute))
+            if (alias.Definition.Attributes.TryGetAttribute(AttributeConstants.InternalType, out AttributeUsage? attribute))
             {
                 if (ParseAttribute(attribute) == by)
                 {
@@ -1719,7 +1719,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         foreach (CompiledStruct @struct in CompiledStructs)
         {
-            if (@struct.Attributes.TryGetAttribute(AttributeConstants.InternalType, out AttributeUsage? attribute))
+            if (@struct.Definition.Attributes.TryGetAttribute(AttributeConstants.InternalType, out AttributeUsage? attribute))
             {
                 if (ParseAttribute(attribute) == by)
                 {
@@ -1728,7 +1728,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                         error = new PossibleDiagnostic($"Multiple type definitions marked as an internal type `{by}`", attribute);
                         return false;
                     }
-                    type = new StructType(@struct, @struct.File);
+                    type = new StructType(@struct, @struct.Definition.File);
                 }
             }
         }
@@ -1870,17 +1870,17 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return false;
         }
 
-        if (functionType.Parameters.Length != lambdaExpression.Parameters.Parameters.Length)
+        if (functionType.Parameters.Length != lambdaExpression.Parameters.Length)
         {
             diagnostics.Add(DiagnosticAt.Error($"Idk how to explain this", lambdaExpression));
             return false;
         }
 
-        GeneralType[] parameterTypes = new GeneralType[lambdaExpression.Parameters.Parameters.Length];
-        for (int i = 0; i < lambdaExpression.Parameters.Parameters.Length; i++)
+        GeneralType[] parameterTypes = new GeneralType[lambdaExpression.Parameters.Length];
+        for (int i = 0; i < lambdaExpression.Parameters.Length; i++)
         {
             GeneralType expectedParameterType = functionType.Parameters[i];
-            if (!CompileType(lambdaExpression.Parameters.Parameters[i].Type, out GeneralType? definedParameterType, diagnostics)) return false;
+            if (!CompileType(lambdaExpression.Parameters[i].Type, out GeneralType? definedParameterType, diagnostics)) return false;
             if (!expectedParameterType.SameAs(definedParameterType))
             {
                 diagnostics.Add(DiagnosticAt.Error($"Expected `{expectedParameterType}` defined `{definedParameterType}` ", lambdaExpression));
@@ -2511,7 +2511,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             foreach (CompiledField definedField in structType.Struct.Fields)
             {
-                if (definedField.Identifier.Content != field.Identifier.Content) continue;
+                if (definedField.Identifier != field.Identifier.Content) continue;
                 field.Identifier.AnalyzedType = TokenAnalyzedType.FieldName;
 
                 type = GeneralType.TryInsertTypeParameters(definedField.Type, structType.TypeArguments);
@@ -2793,7 +2793,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     {
         inlined = statement;
 
-        if (context.Arguments.TryGetValue(statement.Parameter.Identifier.Content, out CompiledArgument? inlinedArgument))
+        if (context.Arguments.TryGetValue(statement.Parameter.Identifier, out CompiledArgument? inlinedArgument))
         {
             if (inlinedArgument.Cleanup.Deallocator is not null ||
                 inlinedArgument.Cleanup.Destructor is not null)
@@ -2808,7 +2808,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return true;
         }
 
-        error = DiagnosticAt.Error($"Variable `{statement.Parameter.Identifier.Content}` not found to inline", statement);
+        error = DiagnosticAt.Error($"Variable `{statement.Parameter.Identifier}` not found to inline", statement);
         return false;
     }
     static bool Inline(CompiledFunctionReference statement, InlineContext context, out CompiledExpression inlined, [NotNullWhen(false)] out DiagnosticAt? error)
@@ -3822,7 +3822,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
     bool TryCompute(CompiledParameterAccess identifier, EvaluationContext context, out CompiledValue value)
     {
-        if (!context.TryGetParameter(identifier.Parameter.Identifier.Content, out value))
+        if (!context.TryGetParameter(identifier.Parameter.Identifier, out value))
         {
             value = CompiledValue.Null;
             return false;
@@ -4036,7 +4036,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         {
             for (int i = 0; i < parameterValues.Length; i++)
             {
-                context.Frames.Last.Parameters.Add(function.Function.Parameters[i].Identifier.Content, parameterValues[i]);
+                context.Frames.Last.Parameters.Add(function.Function.Parameters[i].Identifier, parameterValues[i]);
             }
 
             bool success = TryEvaluate(function.Body, context);
@@ -4203,7 +4203,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         }
         else if (anyAssignment.Target is CompiledParameterAccess targetParameter)
         {
-            if (!context.TrySetParameter(targetParameter.Parameter.Identifier.Content, value))
+            if (!context.TrySetParameter(targetParameter.Parameter.Identifier, value))
             { return false; }
         }
         else

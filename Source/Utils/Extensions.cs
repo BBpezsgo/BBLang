@@ -14,11 +14,11 @@ public static class Extensions
     }
 
     public static bool IsSame<TFunction>(this TFunction a, TFunction b)
-        where TFunction : FunctionThingDefinition, ICompiledFunctionDefinition
+        where TFunction : ICompiledFunctionDefinition, ICompiledDefinition<FunctionThingDefinition>
     {
         if (!a.Type.Equals(b.Type)) return false;
-        if (!a.Identifier.Content.Equals(b.Identifier.Content)) return false;
-        if (!Utils.SequenceEquals(((ICompiledFunctionDefinition)a).Parameters.Select(v => v.Type), ((ICompiledFunctionDefinition)b).Parameters.Select(v => v.Type))) return false;
+        if (!a.Definition.Identifier.Equals(b.Definition.Identifier)) return false;
+        if (!Utils.SequenceEquals(a.Parameters.Select(v => v.Type), b.Parameters.Select(v => v.Type))) return false;
         return true;
     }
 

@@ -43,7 +43,7 @@ public static class DynamicMethodILProvider
             if (type is null) return null;
         }
 
-        byte[]? bytes = (byte[]?)fiBytes.GetValue(ilgen);
+        byte[]? bytes = fiBytes.GetValue<byte[]>(ilgen);
         int? count = (int?)fiLength.GetValue(ilgen);
 
         if (bytes is null || count is null) return null;

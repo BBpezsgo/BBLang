@@ -13,9 +13,9 @@ public class CompiledExternalFunctionCall : CompiledExpression
 #endif
     string FunctionToString() => Function switch
     {
-        CompiledFunctionDefinition v => v.Identifier.Content,
-        CompiledOperatorDefinition v => v.Identifier.Content,
-        CompiledGeneralFunctionDefinition v => v.Identifier.Content,
+        CompiledFunctionDefinition v => v.Identifier,
+        CompiledOperatorDefinition v => v.Identifier,
+        CompiledGeneralFunctionDefinition v => v.Identifier,
         CompiledConstructorDefinition v => v.Type.ToString(),
         ExternalFunctionSync v => v.UnmarshaledCallback.Method.Name ?? v.Name ?? v.Id.ToString(),
         ExternalFunctionAsync v => v.Name ?? v.Id.ToString(),

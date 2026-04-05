@@ -427,9 +427,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         }
         else if (_statement.Target is CompiledParameterAccess targetParameter)
         {
-            if (!GetVariable(targetParameter.Parameter.Identifier.Content, targetParameter.Parameter.File, out BrainfuckVariable? variable, out PossibleDiagnostic? notFoundError))
+            if (!GetVariable(targetParameter.Parameter.Identifier, targetParameter.Parameter.Definition.File, out BrainfuckVariable? variable, out PossibleDiagnostic? notFoundError))
             {
-                Diagnostics.Add(notFoundError.ToError(targetParameter.Parameter));
+                Diagnostics.Add(notFoundError.ToError(targetParameter.Parameter.Definition));
                 return;
             }
 
@@ -492,7 +492,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 return;
             }
 
-            if (!GetFieldOffset(structPointerType, field.Field.Identifier.Content, out _, out int fieldOffset, out PossibleDiagnostic? error))
+            if (!GetFieldOffset(structPointerType, field.Field.Identifier, out _, out int fieldOffset, out PossibleDiagnostic? error))
             {
                 Diagnostics.Add(error.ToError(field));
                 return;
@@ -1637,7 +1637,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             {
                 if (FindSize(functionCall.Declaration.Type, functionCall) != 1)
                 {
-                    Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"[{AttributeConstants.ExternalIdentifier}(\"{ExternalFunctionNames.StdIn}\")]\" must have a return type with size of 1", ((FunctionDefinition)functionCall.Declaration).Type, functionCall.Declaration.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"[{AttributeConstants.ExternalIdentifier}(\"{ExternalFunctionNames.StdIn}\")]\" must have a return type with size of 1", (functionCall.Declaration.Definition as FunctionDefinition)?.Type.Position ?? functionCall.Declaration.Definition.Position, functionCall.Declaration.File));
                     return;
                 }
                 Code += ',';
@@ -2328,7 +2328,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 return;
             }
 
-            if (!GetFieldOffset(structPointerType, field.Field.Identifier.Content, out CompiledField? fieldDefinition, out int fieldOffset, out PossibleDiagnostic? error))
+            if (!GetFieldOffset(structPointerType, field.Field.Identifier, out CompiledField? fieldDefinition, out int fieldOffset, out PossibleDiagnostic? error))
             {
                 Diagnostics.Add(error.ToError(field));
                 return;
@@ -2339,14 +2339,14 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 Diagnostics.Add(replaceError.ToError(field));
             }
 
-            int resultAddress = Stack.Push(FindSize(fieldType, fieldDefinition));
+            int resultAddress = Stack.Push(FindSize(fieldType, fieldDefinition.Definition));
 
             int pointerAddress = Stack.NextAddress;
             GenerateCodeForStatement(field.Object);
 
             Code.AddValue(pointerAddress, fieldOffset);
 
-            Heap.Get(pointerAddress, resultAddress, FindSize(fieldType, fieldDefinition));
+            Heap.Get(pointerAddress, resultAddress, FindSize(fieldType, fieldDefinition.Definition));
 
             Stack.Pop();
 
@@ -2613,7 +2613,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     void GenerateCodeForFunction(CompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, ImmutableDictionary<string, GeneralType>? typeArguments, ILocated caller)
     {
         if (!AllowFunctionInlining ||
-            !IsFunctionInlineable(function, parameters))
+            !IsFunctionInlineable(function.Definition, parameters))
         {
             GenerateCodeForFunction_(function, parameters, typeArguments, caller);
             return;
@@ -2643,20 +2643,20 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             GeneralType definedType = GeneralType.TryInsertTypeParameters(defined.Type, typeArguments);
             GeneralType passedType = passed.Type;
 
-            if (FindSize(passedType, passed) != FindSize(definedType, defined))
+            if (FindSize(passedType, passed) != FindSize(definedType, defined.Definition))
             { Diagnostics.Add(DiagnosticAt.Error($"Wrong type of argument passed to function \"{function.ToReadable()}\" at index {i}: Expected \"{definedType}\", passed \"{passedType}\"", passed)); }
 
             foreach (BrainfuckVariable compiledParameter in compiledParameters)
             {
-                if (compiledParameter.Identifier == defined.Identifier.Content)
+                if (compiledParameter.Identifier == defined.Identifier)
                 {
-                    Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" already defined as parameter", defined.Identifier, defined.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" already defined as parameter", defined.Definition.Identifier, defined.Definition.File));
                     break;
                 }
             }
 
-            if (defined.Modifiers.Contains(ModifierKeywords.Ref) && defined.Modifiers.Contains(ModifierKeywords.Const))
-            { Diagnostics.Add(DiagnosticAt.Error($"Bruh", defined.Identifier, defined.File)); }
+            if (defined.Definition.Modifiers.Contains(ModifierKeywords.Ref) && defined.Definition.Modifiers.Contains(ModifierKeywords.Const))
+            { Diagnostics.Add(DiagnosticAt.Error($"Bruh", defined.Definition.Identifier, defined.Definition.File)); }
 
             if (passed.Value is CompiledGetReference addressGetter)
             {
@@ -2682,7 +2682,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                     }
                 }
 
-                CompiledVariableDefinition variableDeclaration = defined.ToVariable(definedType, passed);
+                CompiledVariableDefinition variableDeclaration = defined.Definition.ToVariable(definedType, passed);
                 PointerType parameterType = new(v.Type);
                 compiledParameters.Push(new BrainfuckVariable(v.Address, true, false, null, FindSize(parameterType, passed), variableDeclaration)
                 {
@@ -2701,7 +2701,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
                 if (v.IsReference)
                 {
-                    CompiledVariableDefinition variableDeclaration = defined.ToVariable(definedType, passed);
+                    CompiledVariableDefinition variableDeclaration = defined.Definition.ToVariable(definedType, passed);
                     PointerType parameterType = new(v.Type);
                     compiledParameters.Push(new BrainfuckVariable(v.Address, true, false, null, FindSize(parameterType, passed), variableDeclaration)
                     {
@@ -2721,7 +2721,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
                 if (v.IsReference)
                 {
-                    CompiledVariableDefinition variableDeclaration = defined.ToVariable(definedType, passed);
+                    CompiledVariableDefinition variableDeclaration = defined.Definition.ToVariable(definedType, passed);
                     PointerType parameterType = new(v.Type);
                     compiledParameters.Push(new BrainfuckVariable(v.Address, true, false, null, FindSize(parameterType, passed), variableDeclaration)
                     {
@@ -2750,27 +2750,27 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             //     continue;
             // }
 
-            if (defined.Modifiers.Contains(ModifierKeywords.Ref))
+            if (defined.Definition.Modifiers.Contains(ModifierKeywords.Ref))
             {
                 Diagnostics.Add(DiagnosticAt.Error($"You must pass the parameter \"{passed}\" with a \"{ModifierKeywords.Ref}\" modifier", passed));
                 return;
             }
 
-            if (defined.Modifiers.Contains(ModifierKeywords.Const))
+            if (defined.Definition.Modifiers.Contains(ModifierKeywords.Const))
             {
                 Diagnostics.Add(DiagnosticAt.Error($"You must pass the parameter \"{passed}\" with a \"{ModifierKeywords.Const}\" modifier", passed));
                 return;
             }
 
             {
-                CompiledVariableDefinition variableDeclaration = defined.ToVariable(definedType, passed);
+                CompiledVariableDefinition variableDeclaration = defined.Definition.ToVariable(definedType, passed);
                 using (TypeArgumentsScope g = SetTypeArgumentsScope(typeArguments))
                 { PrecompileVariable(compiledParameters, variableDeclaration, false, definedType); }
 
                 BrainfuckVariable? compiledParameter = null;
                 foreach (BrainfuckVariable compiledParameter_ in compiledParameters)
                 {
-                    if (compiledParameter_.Identifier == defined.Identifier.Content)
+                    if (compiledParameter_.Identifier == defined.Identifier)
                     {
                         compiledParameter = compiledParameter_;
                     }
@@ -2778,7 +2778,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
                 if (compiledParameter is null)
                 {
-                    Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" not found", defined.Identifier, defined.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" not found", defined.Definition.Identifier, defined.Definition.File));
                     return;
                 }
 
@@ -2788,7 +2788,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 //     return;
                 // }
 
-                using (Code.Block(this, $"SET \"{defined.Identifier.Content}\" TO _something_"))
+                using (Code.Block(this, $"SET \"{defined.Identifier}\" TO _something_"))
                 {
                     GenerateCodeForStatement(passed.Value, definedType);
 
@@ -2835,9 +2835,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             }
             else
             {
-                if (FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function) != 1)
+                if (FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function.Definition) != 1)
                 {
-                    Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"[{AttributeConstants.ExternalIdentifier}(\"{ExternalFunctionNames.StdIn}\")]\" must have a return type with size of 1", ((FunctionDefinition)function).Type, function.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"[{AttributeConstants.ExternalIdentifier}(\"{ExternalFunctionNames.StdIn}\")]\" must have a return type with size of 1", function.Definition.Type, function.File));
                     return;
                 }
                 Code += ',';
@@ -2846,13 +2846,13 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             return;
         }
 
-        if (function.ParameterCount != parameters.Length)
+        if (function.Definition.ParameterCount != parameters.Length)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{function.ToReadable()}\" (required {function.ParameterCount} passed {parameters.Length})", callerPosition));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{function.ToReadable()}\" (required {function.Definition.ParameterCount} passed {parameters.Length})", callerPosition));
             return;
         }
 
-        if (function.Block is null)
+        if (function.Definition.Block is null)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have any body definition", callerPosition));
             return;
@@ -2869,16 +2869,16 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 Identifier = ReturnVariableName,
                 InitialValue = null,
                 IsGlobal = false,
-                Location = function.Location,
+                Location = function.Definition.Location,
                 Type = GeneralType.TryInsertTypeParameters(function.Type, typeArguments),
-                TypeExpression = CompiledTypeExpression.CreateAnonymous(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function),
+                TypeExpression = CompiledTypeExpression.CreateAnonymous(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function.Definition),
                 Cleanup = new CompiledCleanup()
                 {
                     TrashType = GeneralType.TryInsertTypeParameters(function.Type, typeArguments),
-                    Location = function.Location,
+                    Location = function.Definition.Location,
                 },
             };
-            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function), callerPosition), false, false, null, FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function), variableDeclaration);
+            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function.Definition), callerPosition), false, false, null, FindSize(GeneralType.TryInsertTypeParameters(function.Type, typeArguments), function.Definition), variableDeclaration);
         }
 
         if (!IxMaxResursiveDepthReached(function, callerPosition))
@@ -2924,11 +2924,11 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             Type = v.Type,
         }));
 
-        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Block.Brackets.Start.Position, function.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
+        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Definition.Block.Brackets.Start.Position, function.Definition.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
 
         GenerateCodeForStatement(FunctionBodies[function]);
 
-        using (DebugBlock(function.Block.Brackets.End, function.Block.File))
+        using (DebugBlock(function.Definition.Block.Brackets.End, function.Definition.Block.File))
         {
             if (returnBlock is not null)
             {
@@ -2938,7 +2938,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                     using (Code.Block(this, $"Finish \"return\" block"))
                     {
                         if (returnBlock.Value.FlagAddress.Value != Stack.LastAddress)
-                        { Diagnostics.Add(DiagnosticAt.Internal("I don't know what happened here", function.Block)); }
+                        { Diagnostics.Add(DiagnosticAt.Internal("I don't know what happened here", function.Definition.Block)); }
                         Stack.Pop();
                     }
                 }
@@ -3014,9 +3014,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             }
             else
             {
-                if (FindSize(function.Type, function) != 1)
+                if (FindSize(function.Type, function.Definition.Type) != 1)
                 {
-                    Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"StandardInput\" must have a return type with size of 1", ((FunctionDefinition)function).Type, function.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Function with attribute \"StandardInput\" must have a return type with size of 1", function.Definition.Type, function.File));
                     return;
                 }
                 Code += ',';
@@ -3025,13 +3025,13 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             return;
         }
 
-        if (function.ParameterCount != parameters.Length)
+        if (function.Definition.ParameterCount != parameters.Length)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{function.ToReadable()}\" (required {function.ParameterCount} passed {parameters.Length})", callerPosition));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{function.ToReadable()}\" (required {function.Definition.ParameterCount} passed {parameters.Length})", callerPosition));
             return;
         }
 
-        if (function.Block is null)
+        if (function.Definition.Block is null)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have any body definition", callerPosition));
             return;
@@ -3048,16 +3048,16 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 Identifier = ReturnVariableName,
                 InitialValue = null,
                 IsGlobal = false,
-                Location = function.Location,
+                Location = function.Definition.Location,
                 Type = function.Type,
-                TypeExpression = CompiledTypeExpression.CreateAnonymous(function.Type, function.Location),
+                TypeExpression = CompiledTypeExpression.CreateAnonymous(function.Type, function.Definition.Location),
                 Cleanup = new CompiledCleanup()
                 {
                     TrashType = function.Type,
-                    Location = function.Location,
+                    Location = function.Definition.Location,
                 },
             };
-            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(function.Type, function), callerPosition), false, false, null, FindSize(function.Type, function), variableDeclaration);
+            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(function.Type, function.Definition.Type), callerPosition), false, false, null, FindSize(function.Type, function.Definition.Type), variableDeclaration);
         }
 
         if (!IxMaxResursiveDepthReached(function, callerPosition))
@@ -3100,7 +3100,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             Type = v.Type,
         }));
 
-        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Block.Brackets.Start.Position, function.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
+        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Definition.Block.Brackets.Start.Position, function.Definition.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
 
         GenerateCodeForStatement(FunctionBodies[function]);
 
@@ -3109,16 +3109,16 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             returnBlock = Returns.Pop();
             if (returnBlock.Value.FlagAddress.HasValue)
             {
-                using (DebugBlock(function.Block.Brackets.End, function.Block.File))
+                using (DebugBlock(function.Definition.Block.Brackets.End, function.Definition.Block.File))
                 {
                     if (returnBlock.Value.FlagAddress.Value != Stack.LastAddress)
-                    { Diagnostics.Add(DiagnosticAt.Internal("I don't know what happened here", function.Block)); }
+                    { Diagnostics.Add(DiagnosticAt.Internal("I don't know what happened here", function.Definition.Block)); }
                     Stack.Pop();
                 }
             }
         }
 
-        using (DebugBlock(function.Block.Brackets.End, function.Block.File))
+        using (DebugBlock(function.Definition.Block.Brackets.End, function.Definition.Block.File))
         {
             using (Code.Block(this, $"Deallocate function variables ({CompiledVariables.Count})"))
             {
@@ -3161,9 +3161,9 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     {
         using DebugFunctionBlock debugFunction = FunctionBlock(function, typeArguments);
 
-        if (function.ParameterCount != parameters.Length)
+        if (function.Definition.ParameterCount != parameters.Length)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{function.ToReadable()}\" (required {function.ParameterCount} passed {parameters.Length})", callerPosition));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to function \"{function.ToReadable()}\" (required {function.Definition.ParameterCount} passed {parameters.Length})", callerPosition));
             return;
         }
 
@@ -3176,17 +3176,17 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 Identifier = ReturnVariableName,
                 InitialValue = null,
                 IsGlobal = false,
-                Location = function.Location,
+                Location = function.Definition.Location,
                 Type = function.Type,
-                TypeExpression = CompiledTypeExpression.CreateAnonymous(function.Type, function),
+                TypeExpression = CompiledTypeExpression.CreateAnonymous(function.Type, function.Definition),
                 Cleanup = new CompiledCleanup()
                 {
                     TrashType = function.Type,
-                    Location = function.Location,
+                    Location = function.Definition.Location,
                 },
             };
             GeneralType returnType = GeneralType.TryInsertTypeParameters(function.Type, typeArguments);
-            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(returnType, function), callerPosition), false, false, null, FindSize(returnType, function), variableDeclaration);
+            returnVariable = new BrainfuckVariable(Stack.PushVirtual(FindSize(returnType, function.Definition), callerPosition), false, false, null, FindSize(returnType, function.Definition), variableDeclaration);
         }
 
         if (!IxMaxResursiveDepthReached(function, callerPosition))
@@ -3202,13 +3202,13 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         CompiledVariables.PushIf(returnVariable);
         CompiledVariables.PushRange(compiledParameters);
 
-        if (function.Block is null)
+        if (function.Definition.Block is null)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", function));
+            Diagnostics.Add(DiagnosticAt.Error($"Function \"{function.ToReadable()}\" does not have a body", function.Definition));
             return;
         }
 
-        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Block.Brackets.Start.Position, function.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
+        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Definition.Block.Brackets.Start.Position, function.Definition.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
 
         GenerateCodeForStatement(FunctionBodies[function]);
 
@@ -3257,13 +3257,13 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
     {
         using DebugFunctionBlock debugFunction = FunctionBlock(function, typeArguments);
 
-        if (function.ParameterCount - 1 != parameters.Length)
+        if (function.Definition.ParameterCount - 1 != parameters.Length)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to constructor \"{function.ToReadable()}\" (required {function.ParameterCount - 1} passed {parameters.Length})", callerPosition));
+            Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to constructor \"{function.ToReadable()}\" (required {function.Definition.ParameterCount - 1} passed {parameters.Length})", callerPosition));
             return;
         }
 
-        if (function.Block is null)
+        if (function.Definition.Block is null)
         {
             Diagnostics.Add(DiagnosticAt.Error($"Constructor \"{function.ToReadable()}\" does not have any body definition", callerPosition));
             return;
@@ -3292,7 +3292,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
             compiledParameters.Add(new BrainfuckVariable(newInstanceAddress, false, false, null, PointerSize, new CompiledVariableDefinition()
             {
-                Identifier = function.Parameters[0].Identifier.Content,
+                Identifier = function.Parameters[0].Identifier,
                 InitialValue = null,
                 IsGlobal = false,
                 Location = function.Location,
@@ -3309,12 +3309,12 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         {
             compiledParameters.Add(new BrainfuckVariable(newInstanceAddress, true, false, null, PointerSize, new CompiledVariableDefinition()
             {
-                Identifier = function.Parameters[0].Identifier.Content,
+                Identifier = function.Parameters[0].Identifier,
                 InitialValue = null,
                 IsGlobal = false,
                 Location = function.Location,
                 Type = new PointerType(newInstanceType),
-                TypeExpression = CompiledTypeExpression.CreateAnonymous(new PointerType(newInstanceType), function),
+                TypeExpression = CompiledTypeExpression.CreateAnonymous(new PointerType(newInstanceType), function.Definition),
                 Cleanup = new CompiledCleanup()
                 {
                     TrashType = new PointerType(newInstanceType),
@@ -3344,38 +3344,38 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
             foreach (BrainfuckVariable compiledParameter2 in compiledParameters)
             {
-                if (compiledParameter2.Identifier == defined.Identifier.Content)
+                if (compiledParameter2.Identifier == defined.Identifier)
                 {
-                    Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" already defined as parameter", defined.Identifier, defined.File));
+                    Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" already defined as parameter", defined.Definition.Identifier, defined.Definition.File));
                     return;
                 }
             }
 
-            if (defined.Modifiers.Contains(ModifierKeywords.Ref) && defined.Modifiers.Contains(ModifierKeywords.Const))
+            if (defined.Definition.Modifiers.Contains(ModifierKeywords.Ref) && defined.Definition.Modifiers.Contains(ModifierKeywords.Const))
             {
-                Diagnostics.Add(DiagnosticAt.Error($"Bruh", defined.Identifier, defined.File));
+                Diagnostics.Add(DiagnosticAt.Error($"Bruh", defined.Definition.Identifier, defined.Definition.File));
                 return;
             }
 
-            if (defined.Modifiers.Contains(ModifierKeywords.Ref))
+            if (defined.Definition.Modifiers.Contains(ModifierKeywords.Ref))
             {
                 Diagnostics.Add(DiagnosticAt.Error($"You must pass the parameter \"{passed}\" with a \"{ModifierKeywords.Ref}\" modifier", passed));
                 return;
             }
 
-            if (defined.Modifiers.Contains(ModifierKeywords.Const))
+            if (defined.Definition.Modifiers.Contains(ModifierKeywords.Const))
             {
                 Diagnostics.Add(DiagnosticAt.Error($"You must pass the parameter \"{passed}\" with a \"{ModifierKeywords.Const}\" modifier", passed));
                 return;
             }
 
-            CompiledVariableDefinition variableDeclaration2 = defined.ToVariable(definedType, passed);
+            CompiledVariableDefinition variableDeclaration2 = defined.Definition.ToVariable(definedType, passed);
             PrecompileVariable(compiledParameters, variableDeclaration2, false);
 
             BrainfuckVariable? compiledParameter = null;
             foreach (BrainfuckVariable compiledParameter_ in compiledParameters)
             {
-                if (compiledParameter_.Identifier == defined.Identifier.Content)
+                if (compiledParameter_.Identifier == defined.Identifier)
                 {
                     compiledParameter = compiledParameter_;
                 }
@@ -3383,7 +3383,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
             if (compiledParameter is null)
             {
-                Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" not found", defined.Identifier, defined.File));
+                Diagnostics.Add(DiagnosticAt.Error($"Parameter \"{defined}\" not found", defined.Definition.Identifier, defined.Definition.File));
                 return;
             }
 
@@ -3393,7 +3393,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
                 return;
             }
 
-            using (Code.Block(this, $"SET \"{defined.Identifier.Content}\" TO _something_"))
+            using (Code.Block(this, $"SET \"{defined.Identifier}\" TO _something_"))
             {
                 GenerateCodeForStatement(passed.Value);
 
@@ -3405,7 +3405,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         GeneratorStackFrame frame = PushStackFrame(typeArguments);
         CompiledVariables.PushRange(compiledParameters);
 
-        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Block.Brackets.Start.Position, function.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
+        ControlFlowBlock? returnBlock = BeginReturnBlock(new Location(function.Definition.Block.Brackets.Start.Position, function.Definition.Block.File), StatementCompiler.FindControlFlowUsage(FunctionBodies[function]));
 
         GenerateCodeForStatement(FunctionBodies[function]);
 
@@ -3414,17 +3414,17 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
             returnBlock = Returns.Pop();
             if (returnBlock.Value.FlagAddress.HasValue)
             {
-                using (DebugBlock(function.Block.Brackets.End, function.Block.File))
+                using (DebugBlock(function.Definition.Block.Brackets.End, function.Definition.Block.File))
                 using (Code.Block(this, $"Finish \"return\" block"))
                 {
                     if (returnBlock.Value.FlagAddress.Value != Stack.LastAddress)
-                    { Diagnostics.Add(DiagnosticAt.Internal("I don't know what happened here", function.Block)); }
+                    { Diagnostics.Add(DiagnosticAt.Internal("I don't know what happened here", function.Definition.Block)); }
                     Stack.Pop();
                 }
             }
         }
 
-        using (DebugBlock(function.Block.Brackets.End, function.Block.File))
+        using (DebugBlock(function.Definition.Block.Brackets.End, function.Definition.Block.File))
         {
             using (Code.Block(this, $"Deallocate function variables ({CompiledVariables.Count})"))
             {
@@ -3457,12 +3457,12 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
         CurrentMacro.Pop();
     }
 
-    bool IxMaxResursiveDepthReached(FunctionThingDefinition function, ILocated callerPosition)
+    bool IxMaxResursiveDepthReached(ICompiledFunctionDefinition function, ILocated callerPosition)
     {
         int depth = 0;
         for (int i = 0; i < CurrentMacro.Count; i++)
         {
-            if (!Utils.ReferenceEquals(CurrentMacro[i], (ICompiledFunctionDefinition)function))
+            if (!Utils.ReferenceEquals(CurrentMacro[i], function))
             { continue; }
             depth++;
 

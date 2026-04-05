@@ -9,7 +9,7 @@ public class AliasType : GeneralType,
     public CompiledAlias Definition { get; }
 
     public override GeneralType FinalValue => Value is AliasType aliasType ? aliasType.FinalValue : Value;
-    public string Identifier => Definition.Identifier.Content;
+    public string Identifier => Definition.Identifier;
 
     public AliasType(GeneralType value, CompiledAlias definition)
     {

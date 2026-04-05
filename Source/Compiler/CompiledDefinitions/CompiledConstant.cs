@@ -2,18 +2,23 @@
 
 namespace LanguageCore.Compiler;
 
-public class CompiledVariableConstant : VariableDefinition,
+public class CompiledVariableConstant :
     IHaveCompiledType,
-    IPositioned,
-    IIdentifiable<string>
+    IIdentifiable<string>,
+    IInFile,
+    ILocated
 {
+    public VariableDefinition Definition { get; }
     public CompiledValue Value { get; }
-    public new GeneralType Type { get; }
+    public GeneralType Type { get; }
 
-    public new string Identifier => base.Identifier.Content;
+    public string Identifier => Definition.Identifier.Content;
+    public Uri File => Definition.File;
+    public Location Location => Definition.Location;
 
-    public CompiledVariableConstant(CompiledValue value, GeneralType type, VariableDefinition declaration) : base(declaration)
+    public CompiledVariableConstant(CompiledValue value, GeneralType type, VariableDefinition definition)
     {
+        Definition = definition;
         Value = value;
         Type = type;
     }

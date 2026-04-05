@@ -15,7 +15,7 @@ public partial class StatementCompiler
             Uri? relevantFile = null,
             GeneralType? returnType = null,
             Action<TemplateInstance<TFunction>>? addCompilable = null)
-            where TFunction : ITemplateable<TFunction>
+            where TFunction : notnull
             => new()
             {
                 Identifier = identifier,
@@ -35,7 +35,7 @@ public partial class StatementCompiler
             Uri? relevantFile = null,
             GeneralType? returnType = null,
             Action<TemplateInstance<TFunction>>? addCompilable = null)
-            where TFunction : ITemplateable<TFunction>
+            where TFunction : notnull
             => new()
             {
                 Identifier = identifier,
@@ -55,7 +55,7 @@ public partial class StatementCompiler
             GeneralType? returnType = null,
             Action<TemplateInstance<TFunction>>? addCompilable = null,
             FunctionQueryIdentifierMatcher<TIdentifier, TDefinedIdentifier>? identifierMatcher = null)
-            where TFunction : ITemplateable<TFunction>
+            where TFunction : notnull
             => new()
             {
                 Identifier = identifier,
@@ -70,7 +70,7 @@ public partial class StatementCompiler
     }
 
     public readonly struct FunctionQuery<TFunction, TIdentifier, TDefinedIdentifier, TArgument>
-        where TFunction : ITemplateable<TFunction>
+        where TFunction : notnull
     {
         public TIdentifier? Identifier { get; init; }
         public Uri? RelevantFile { get; init; }
@@ -266,7 +266,7 @@ public partial class StatementCompiler
 
         [NotNullWhen(true)] out FunctionQueryResult<TFunction>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error)
-        where TFunction : class, ICompiledFunctionDefinition, ITemplateable<TFunction>, IIdentifiable<TDefinedIdentifier>
+        where TFunction : class, ICompiledFunctionDefinition, IIdentifiable<TDefinedIdentifier>, ICompiledDefinition<FunctionThingDefinition>
         where TDefinedIdentifier : notnull, IEquatable<TPassedIdentifier>
         where TArgument : notnull
     {
@@ -360,7 +360,7 @@ public partial class StatementCompiler
                 return false;
             }
 
-            if (best.Function.IsTemplate)
+            if (best.Function.Definition.IsTemplate)
             {
                 if (best.TypeArguments is null)
                 {
@@ -414,7 +414,7 @@ public partial class StatementCompiler
     static FunctionMatch<TFunction> GetFunctionMatch<TFunction, TDefinedIdentifier, TPassedIdentifier, TArgument>(
         TFunction function,
         FunctionQuery<TFunction, TPassedIdentifier, TDefinedIdentifier, TArgument> query)
-        where TFunction : ICompiledFunctionDefinition, ITemplateable<TFunction>, IIdentifiable<TDefinedIdentifier>
+        where TFunction : ICompiledFunctionDefinition, IIdentifiable<TDefinedIdentifier>, ICompiledDefinition<FunctionThingDefinition>
         where TDefinedIdentifier : notnull, IEquatable<TPassedIdentifier>
         where TArgument : notnull
     {
@@ -427,7 +427,7 @@ public partial class StatementCompiler
         int partial = 0;
         for (int i = 0; i < function.Parameters.Length; i++)
         {
-            if (function.Parameters[i].DefaultValue is null) partial = i + 1;
+            if (function.Parameters[i].Definition.DefaultValue is null) partial = i + 1;
             else break;
         }
 
@@ -626,7 +626,7 @@ public partial class StatementCompiler
             }
         }
 
-        if (function.IsTemplate)
+        if (function.Definition.IsTemplate)
         {
             Dictionary<string, GeneralType> _typeArguments = new();
 
@@ -643,13 +643,13 @@ public partial class StatementCompiler
                 for (int i = 0; i < checkCount; i++)
                 {
                     GeneralType defined = function.Parameters[i].Type;
-                    if (!query.Converter.Invoke(query.Arguments.Value[i], function.Parameters[i], defined, out GeneralType? passed))
+                    if (!query.Converter.Invoke(query.Arguments.Value[i], function.Parameters[i].Definition, defined, out GeneralType? passed))
                     {
                         result.Errors.Add(new PossibleDiagnostic($"Could not resolve the template types"));
                         return result;
                     }
 
-                    if (TryReplaceArgument2(ref argumentValues[i], passed, defined, function.Parameters[i], query.Arguments.Value[i], _typeArguments))
+                    if (TryReplaceArgument2(ref argumentValues[i], passed, defined, function.Parameters[i].Definition, query.Arguments.Value[i], _typeArguments))
                     {
                         // yay
                     }
@@ -671,7 +671,7 @@ public partial class StatementCompiler
                     GeneralType defined = GeneralType.TryInsertTypeParameters(function.Parameters[i].Type, _typeArguments);
                     TArgument passed = query.Arguments.Value[i];
                     TypeMatch v = result.ParameterTypeMatch.Value;
-                    GetArgumentMatch(ref v, ref argumentValues[i], defined, function.Parameters[i], passed, result.Errors);
+                    GetArgumentMatch(ref v, ref argumentValues[i], defined, function.Parameters[i].Definition, passed, result.Errors);
                     if (v < result.ParameterTypeMatch) result.ParameterTypeMatch = v;
                 }
 
@@ -704,7 +704,7 @@ public partial class StatementCompiler
                     GeneralType defined = function.Parameters[i].Type;
                     TArgument passed = query.Arguments.Value[i];
                     TypeMatch v = result.ParameterTypeMatch.Value;
-                    GetArgumentMatch(ref v, ref arguments[i], defined, function.Parameters[i], passed, result.Errors);
+                    GetArgumentMatch(ref v, ref arguments[i], defined, function.Parameters[i].Definition, passed, result.Errors);
                     if (v < result.ParameterTypeMatch) result.ParameterTypeMatch = v;
                 }
                 result.Arguments = arguments.AsImmutableUnsafe();

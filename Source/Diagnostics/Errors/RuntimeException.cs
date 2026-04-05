@@ -143,7 +143,7 @@ public class RuntimeException : LanguageException
                     break;
                 case StructType v:
                     if (colored) result.SetGraphics(Ansi.BrightForegroundGreen);
-                    result.Append(v.Struct.Identifier.Content);
+                    result.Append(v.Struct.Identifier);
 
                     if (!v.TypeArguments.IsEmpty)
                     {
@@ -152,11 +152,11 @@ public class RuntimeException : LanguageException
                         result.Append(string.Join(", ", v.TypeArguments.Values));
                         result.Append('>');
                     }
-                    else if (v.Struct.Template is not null)
+                    else if (v.Struct.Definition.Template is not null)
                     {
                         if (colored) result.SetGraphics(Ansi.BrightForegroundBlack);
                         result.Append('<');
-                        result.Append(string.Join(", ", v.Struct.Template.Parameters));
+                        result.Append(string.Join(", ", v.Struct.Definition.Template.Parameters));
                         result.Append('>');
                     }
 
@@ -271,7 +271,7 @@ public class RuntimeException : LanguageException
                 {
                     if (comma) comma = false;
                     else result.Append(", ");
-                    result.Append(field.Identifier.Content);
+                    result.Append(field.Identifier);
                     result.Append(": ");
                     GeneralType fieldType = structType.ReplaceType(field.Type, out _);
 
@@ -434,10 +434,10 @@ public class RuntimeException : LanguageException
             for (int j = 0; j < function.Parameters.Length; j++)
             {
                 if (j > 0) result.Append(", ");
-                if (function.Parameters[j].Modifiers.Length > 0)
+                if (function.Parameters[j].Definition.Modifiers.Length > 0)
                 {
                     if (colored) result.SetGraphics(Ansi.ForegroundBlue);
-                    result.AppendJoin(' ', function.Parameters[j].Modifiers);
+                    result.AppendJoin(' ', function.Parameters[j].Definition.Modifiers);
                     if (colored) result.ResetStyle();
                     result.Append(' ');
                 }
@@ -453,7 +453,7 @@ public class RuntimeException : LanguageException
                 }
 
                 result.Append(' ');
-                result.Append(function.Parameters[j].Identifier.Content);
+                result.Append(function.Parameters[j].Identifier);
 
                 bool f = false;
                 foreach (ScopeInformation scope in scopes)
@@ -462,7 +462,7 @@ public class RuntimeException : LanguageException
                     foreach (StackElementInformation item in scope.Stack)
                     {
                         if (item.Kind != StackElementKind.Parameter) continue;
-                        if (item.Identifier != function.Parameters[j].Identifier.Content) continue;
+                        if (item.Identifier != function.Parameters[j].Identifier) continue;
                         result.Append(" = ");
                         AppendValue(item.GetRange(callTraceItem.BasePointer, context.StackStart), item.Type, 0);
                         f = true;
@@ -479,7 +479,7 @@ public class RuntimeException : LanguageException
             }
             else if (function is CompiledFunctionDefinition compiledFunctionDefinition2)
             {
-                result.Append(LanguageExceptionAt.Format(null, compiledFunctionDefinition2.Identifier.Position, function.File));
+                result.Append(LanguageExceptionAt.Format(null, compiledFunctionDefinition2.Definition.Identifier.Position, function.File));
             }
             else
             {

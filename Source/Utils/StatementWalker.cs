@@ -83,9 +83,6 @@ public static partial class StatementWalker
             case UnaryOperatorCallExpression v:
                 foreach (Statement w in Visit(v.Expression, callback)) yield return w;
                 break;
-            case CompiledVariableConstant v:
-                foreach (Statement w in Visit(v.InitialValue, callback)) yield return w;
-                break;
             case ShortOperatorCall v:
                 foreach (Statement w in Visit(v.Expression, callback)) yield return w;
                 break;

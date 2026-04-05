@@ -161,90 +161,28 @@ public sealed class ILReader : IEnumerable<ILInstruction>, IEnumerable
         }
     }
 
-    public static ILInstruction Create(int offset, OpCode opCode, object operand)
+    [SuppressMessage("Quality", "MY003")]
+    public static ILInstruction Create(int offset, OpCode opCode, object operand) => opCode.OperandType switch
     {
-        switch (opCode.OperandType)
-        {
-            case OperandType.InlineNone:
-                return new InlineNoneInstruction(offset, opCode);
-
-            //The operand is an 8-bit integer branch target.
-            case OperandType.ShortInlineBrTarget:
-                sbyte shortDelta = (sbyte)operand;
-                return new ShortInlineBrTargetInstruction(offset, opCode, shortDelta);
-
-            //The operand is a 32-bit integer branch target.
-            case OperandType.InlineBrTarget:
-                int delta = (int)operand;
-                return new InlineBrTargetInstruction(offset, opCode, delta);
-
-            //The operand is an 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
-            case OperandType.ShortInlineI:
-                byte int8 = (byte)operand;
-                return new ShortInlineIInstruction(offset, opCode, int8);
-
-            //The operand is a 32-bit integer.
-            case OperandType.InlineI:
-                int int32 = (int)operand;
-                return new InlineIInstruction(offset, opCode, int32);
-
-            //The operand is a 64-bit integer.
-            case OperandType.InlineI8:
-                long int64 = (long)operand;
-                return new InlineI8Instruction(offset, opCode, int64);
-
-            //The operand is a 32-bit IEEE floating point number.
-            case OperandType.ShortInlineR:
-                float float32 = (float)operand;
-                return new ShortInlineRInstruction(offset, opCode, float32);
-
-            //The operand is a 64-bit IEEE floating point number.
-            case OperandType.InlineR:
-                double float64 = (double)operand;
-                return new InlineRInstruction(offset, opCode, float64);
-
-            //The operand is an 8-bit integer containing the ordinal of a local variable or an argument
-            case OperandType.ShortInlineVar:
-                byte index8 = (byte)operand;
-                return new ShortInlineVarInstruction(offset, opCode, index8);
-
-            //The operand is 16-bit integer containing the ordinal of a local variable or an argument.
-            case OperandType.InlineVar:
-                ushort index16 = (ushort)operand;
-                return new InlineVarInstruction(offset, opCode, index16);
-
-            //The operand is a 32-bit metadata string token.
-            case OperandType.InlineString:
-                return new InlineStringInstruction(offset, opCode, (string)operand);
-
-            //The operand is a 32-bit metadata signature token.
-            case OperandType.InlineSig:
-                return new InlineSigInstruction(offset, opCode, (byte[])operand);
-
-            //The operand is a 32-bit metadata token.
-            case OperandType.InlineMethod:
-                return new InlineMethodInstruction(offset, opCode, (MethodBase)operand);
-
-            //The operand is a 32-bit metadata token.
-            case OperandType.InlineField:
-                return new InlineFieldInstruction(offset, opCode, (FieldInfo)operand);
-
-            //The operand is a 32-bit metadata token.
-            case OperandType.InlineType:
-                return new InlineTypeInstruction(offset, opCode, (Type)operand);
-
-            //The operand is a FieldRef, MethodRef, or TypeRef token.
-            case OperandType.InlineTok:
-                return new InlineTokInstruction(offset, opCode, (MemberInfo)operand);
-
-            //The operand is the 32-bit integer argument to a switch instruction.
-            case OperandType.InlineSwitch:
-                throw new NotImplementedException();
-
-            default:
-                throw new BadImageFormatException($"Unexpected OperandType {opCode.OperandType}");
-        }
-    }
+        OperandType.InlineNone => new InlineNoneInstruction(offset, opCode),
+        OperandType.ShortInlineBrTarget => new ShortInlineBrTargetInstruction(offset, opCode, (sbyte)operand),
+        OperandType.InlineBrTarget => new InlineBrTargetInstruction(offset, opCode, (int)operand),
+        OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, (byte)operand),
+        OperandType.InlineI => new InlineIInstruction(offset, opCode, (int)operand),
+        OperandType.InlineI8 => new InlineI8Instruction(offset, opCode, (long)operand),
+        OperandType.ShortInlineR => new ShortInlineRInstruction(offset, opCode, (float)operand),
+        OperandType.InlineR => new InlineRInstruction(offset, opCode, (double)operand),
+        OperandType.ShortInlineVar => new ShortInlineVarInstruction(offset, opCode, (byte)operand),
+        OperandType.InlineVar => new InlineVarInstruction(offset, opCode, (ushort)operand),
+        OperandType.InlineString => new InlineStringInstruction(offset, opCode, (string)operand),
+        OperandType.InlineSig => new InlineSigInstruction(offset, opCode, (byte[])operand),
+        OperandType.InlineMethod => new InlineMethodInstruction(offset, opCode, (MethodBase)operand),
+        OperandType.InlineField => new InlineFieldInstruction(offset, opCode, (FieldInfo)operand),
+        OperandType.InlineType => new InlineTypeInstruction(offset, opCode, (Type)operand),
+        OperandType.InlineTok => new InlineTokInstruction(offset, opCode, (MemberInfo)operand),
+        OperandType.InlineSwitch => throw new NotImplementedException(),
+        _ => throw new BadImageFormatException($"Unexpected OperandType {opCode.OperandType}"),
+    };
 
     byte ReadByte()
     {

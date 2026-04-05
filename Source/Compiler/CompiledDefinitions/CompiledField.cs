@@ -2,18 +2,27 @@
 
 namespace LanguageCore.Compiler;
 
-public class CompiledField : FieldDefinition,
+public class CompiledField :
     IHaveCompiledType,
-    IInContext<CompiledStruct>
+    IInContext<CompiledStruct>,
+    IIdentifiable<string>,
+    IInFile,
+    ILocated
 {
-    public new CompiledStruct Context { get; set; }
-    public new GeneralType Type { get; }
+    public FieldDefinition Definition { get; }
+    public CompiledStruct Context { get; set; }
+    public GeneralType Type { get; }
 
     public HashSet<CompiledFieldAccess> Getters { get; } = new();
     public HashSet<CompiledFieldAccess> Setters { get; } = new();
 
-    public CompiledField(GeneralType type, CompiledStruct context, FieldDefinition definition) : base(definition)
+    public string Identifier => Definition.Identifier.Content;
+    public Uri File => Context.File;
+    public Location Location => Definition.Location;
+
+    public CompiledField(GeneralType type, CompiledStruct context, FieldDefinition definition)
     {
+        Definition = definition;
         Type = type;
         Context = context;
     }

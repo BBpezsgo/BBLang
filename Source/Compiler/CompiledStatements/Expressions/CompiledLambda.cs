@@ -18,6 +18,7 @@ public class CompiledLambda : CompiledExpression,
     public CompiledExpression? Allocator { get; init; }
     public Uri File { get; }
 
+    public FunctionThingDefinition Definition => throw new InvalidOperationException(); // FIXME
     public bool ReturnSomething => !Type.SameAs(BasicType.Void);
 
     public CompiledLambda(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledBlock block, ParameterDefinitionCollection parameterDefinitions, ImmutableArray<CapturedLocal> capturedLocals, Uri file)

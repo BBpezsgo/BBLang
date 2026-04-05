@@ -1,4 +1,5 @@
 ﻿using LanguageCore.Parser;
+using LanguageCore.Tokenizing;
 
 namespace LanguageCore.Compiler;
 
@@ -147,15 +148,15 @@ public abstract class CompiledTypeExpression : CompiledStatement,
 
         if (defined.Is(out CompiledStructTypeExpression? definedStructType) && passed.Is(out CompiledStructTypeExpression? passedStructType))
         {
-            if (definedStructType.Struct.Identifier.Content != passedStructType.Struct.Identifier.Content) return false;
-            if (definedStructType.Struct.Template is not null && passedStructType.Struct.Template is not null)
+            if (definedStructType.Struct.Identifier != passedStructType.Struct.Identifier) return false;
+            if (definedStructType.Struct.Definition.Template is not null && passedStructType.Struct.Definition.Template is not null)
             {
-                if (definedStructType.Struct.Template.Parameters.Length != passedStructType.TypeArguments.Count)
+                if (definedStructType.Struct.Definition.Template.Parameters.Length != passedStructType.TypeArguments.Count)
                 { throw new NotImplementedException(); }
 
-                for (int i = 0; i < definedStructType.Struct.Template.Parameters.Length; i++)
+                for (int i = 0; i < definedStructType.Struct.Definition.Template.Parameters.Length; i++)
                 {
-                    string typeParamName = definedStructType.Struct.Template.Parameters[i].Content;
+                    string typeParamName = definedStructType.Struct.Definition.Template.Parameters[i].Content;
                     CompiledTypeExpression typeParamValue = passedStructType.TypeArguments[typeParamName];
 
                     if (typeParameters.TryGetValue(typeParamName, out CompiledTypeExpression? addedTypeParameter))
@@ -195,7 +196,7 @@ public abstract class CompiledTypeExpression : CompiledStatement,
 
             case CompiledStructTypeExpression structType:
             {
-                if (structType.Struct.Template is null) return true;
+                if (structType.Struct.Definition.Template is null) return true;
                 return structType.TypeArguments is not null;
             }
 
@@ -237,23 +238,19 @@ public abstract class CompiledTypeExpression : CompiledStatement,
 
             case CompiledStructTypeExpression structType:
             {
-                if (structType.Struct.Template is not null)
+                if (structType.Struct.Definition.Template is not null)
                 {
-                    CompiledTypeExpression[] structTypeParameterValues = new CompiledTypeExpression[structType.Struct.Template.Parameters.Length];
-
-                    foreach (KeyValuePair<string, CompiledTypeExpression> item in typeArguments)
+                    ImmutableDictionary<string, CompiledTypeExpression>.Builder structTypeArguments = ImmutableDictionary.CreateBuilder<string, CompiledTypeExpression>();
+                    foreach (Token typeParameter in structType.Struct.Definition.Template.Parameters)
                     {
-                        if (structType.Struct.TryGetTypeArgumentIndex(item.Key, out int i))
-                        { structTypeParameterValues[i] = item.Value; }
+                        if (!typeArguments.TryGetValue(typeParameter.Content, out CompiledTypeExpression? v))
+                        {
+                            return type;
+                        }
+                        structTypeArguments.Add(typeParameter.Content, v);
                     }
 
-                    for (int i = 0; i < structTypeParameterValues.Length; i++)
-                    {
-                        if (structTypeParameterValues[i] is null or CompiledGenericTypeExpression)
-                        { return type; }
-                    }
-
-                    return new CompiledStructTypeExpression(structType.Struct, structType.File, structTypeParameterValues, type.Location);
+                    return new CompiledStructTypeExpression(structType.Struct, structType.File, structTypeArguments.ToImmutable(), type.Location);
                 }
 
                 return type;

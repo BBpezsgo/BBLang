@@ -1,3 +1,5 @@
+using LanguageCore.Parser;
+
 namespace LanguageCore.Compiler;
 
 public interface ICompiledFunctionDefinition :
@@ -5,7 +7,9 @@ public interface ICompiledFunctionDefinition :
     IInFile,
     IHaveInstructionOffset,
     IReadable,
-    IMsilCompatible
+    IMsilCompatible,
+    ILocated,
+    ICompiledDefinition<FunctionThingDefinition>
 {
     bool ReturnSomething { get; }
     ImmutableArray<CompiledParameter> Parameters { get; }

@@ -20,7 +20,7 @@ public class CompiledGeneratorState
     {
         foreach (CompiledField field in Struct.Fields.Skip(1))
         {
-            if (field.Identifier.Content == variableName)
+            if (field.Identifier == variableName)
             {
                 compiledVariable = field;
                 error = null;

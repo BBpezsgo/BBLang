@@ -33,9 +33,9 @@ public readonly struct CompilerResult
             res.Append(' ');
             res.Append(function switch
             {
-                CompiledFunctionDefinition v => v.Identifier.Content,
-                CompiledOperatorDefinition v => v.Identifier.Content,
-                CompiledGeneralFunctionDefinition v => v.Identifier.Content,
+                CompiledFunctionDefinition v => v.Identifier,
+                CompiledOperatorDefinition v => v.Identifier,
+                CompiledGeneralFunctionDefinition v => v.Identifier,
                 CompiledConstructorDefinition v => v.Type.ToString(),
                 _ => "???",
             });
@@ -45,7 +45,7 @@ public readonly struct CompilerResult
                 if (i > 0) res.Append(", ");
                 res.Append(function.Parameters[i].Type.ToString());
                 res.Append(' ');
-                res.Append(function.Parameters[i].Identifier.Content);
+                res.Append(function.Parameters[i].Identifier);
             }
             res.Append(')');
             res.Append(body.Stringify(0));
@@ -77,19 +77,19 @@ public readonly struct CompilerResult
         foreach (CompiledFunctionDefinition function in FunctionDefinitions)
         {
             if (file != function.File) continue;
-            if (function.Block is not null) yield return function.Block;
+            if (function.Definition.Block is not null) yield return function.Definition.Block;
         }
 
         foreach (CompiledGeneralFunctionDefinition function in GeneralFunctionDefinitions)
         {
             if (file != function.File) continue;
-            if (function.Block is not null) yield return function.Block;
+            if (function.Definition.Block is not null) yield return function.Definition.Block;
         }
 
         foreach (CompiledOperatorDefinition @operator in OperatorDefinitions)
         {
             if (file != @operator.File) continue;
-            if (@operator.Block is not null) yield return @operator.Block;
+            if (@operator.Definition.Block is not null) yield return @operator.Definition.Block;
         }
     }
 

@@ -9,7 +9,7 @@ public class CompiledAliasTypeExpression : CompiledTypeExpression,
     public CompiledAlias Definition { get; }
 
     public override CompiledTypeExpression FinalValue => Value is CompiledAliasTypeExpression aliasType ? aliasType.FinalValue : Value;
-    public string Identifier => Definition.Identifier.Content;
+    public string Identifier => Definition.Identifier;
 
     [SetsRequiredMembers]
     public CompiledAliasTypeExpression(CompiledTypeExpression value, CompiledAlias definition, Location location) : base(location)

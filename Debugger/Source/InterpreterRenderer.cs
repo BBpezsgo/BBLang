@@ -235,14 +235,14 @@ public class InterpreterRenderer
                 t.Write('*');
                 break;
             case StructType v:
-                t.Write(v.Struct.Identifier.Content, AnsiColor.Green);
-                if (v.Struct.Template is not null)
+                t.Write(v.Struct.Identifier, AnsiColor.Green);
+                if (v.Struct.Definition.Template is not null)
                 {
                     t.Write('<');
-                    for (int i = 0; i < v.Struct.Template.Parameters.Length; i++)
+                    for (int i = 0; i < v.Struct.Definition.Template.Parameters.Length; i++)
                     {
                         if (i > 0) t.Write(", ");
-                        WriteType(ref t, v.TypeArguments[v.Struct.Template.Parameters[i].Content]);
+                        WriteType(ref t, v.TypeArguments[v.Struct.Definition.Template.Parameters[i].Content]);
                     }
                     t.Write('>');
                 }
@@ -261,7 +261,7 @@ public class InterpreterRenderer
         {
             if (function is CompiledFunctionDefinition f)
             {
-                t.Write(f.Identifier.Content, AnsiColor.Yellow);
+                t.Write(f.Identifier, AnsiColor.Yellow);
             }
             else if (function is CompiledLambda)
             {
@@ -275,14 +275,14 @@ public class InterpreterRenderer
             for (int j = 0; j < function.Parameters.Length; j++)
             {
                 if (j > 0) t.Write(", ");
-                for (int k = 0; k < function.Parameters[j].Modifiers.Length; k++)
+                for (int k = 0; k < function.Parameters[j].Definition.Modifiers.Length; k++)
                 {
-                    t.Write(function.Parameters[j].Modifiers[k].Content, AnsiColor.Blue);
+                    t.Write(function.Parameters[j].Definition.Modifiers[k].Content, AnsiColor.Blue);
                     t.Write(' ');
                 }
                 WriteType(ref t, GeneralType.TryInsertTypeParameters(function.Parameters[j].Type, typeArguments));
                 t.Write(' ');
-                t.Write(function.Parameters[j].Identifier.Content);
+                t.Write(function.Parameters[j].Identifier);
             }
             t.Write(')');
         }
@@ -292,7 +292,7 @@ public class InterpreterRenderer
         }
     }
 
-    Element CreateSourceElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateSourceElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 
@@ -301,7 +301,7 @@ public class InterpreterRenderer
             if (processor.DebugInformation.TryGetSourceLocation(processor.Registers.CodePointer, out SourceCodeLocation sourceLocation) &&
                 processor.DebugInformation.OriginalFiles.TryGetValue(sourceLocation.Location.File, out ImmutableArray<Tokenizing.Token> tokens))
             {
-                int firstVisibleLine = Math.Max(0, sourceLocation.Location.Position.Range.Start.Line - buffer.Height / 2);
+                int firstVisibleLine = Math.Max(0, sourceLocation.Location.Position.Range.Start.Line - (buffer.Height / 2));
                 int lastVisibleLine = firstVisibleLine + buffer.Height - 1;
 
                 for (int i = 0; i < tokens.Length; i++)
@@ -365,7 +365,7 @@ public class InterpreterRenderer
         }
     }, ElementSize.Auto());
 
-    Element CreateCodeElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateCodeElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 
@@ -548,7 +548,7 @@ public class InterpreterRenderer
         }
     }, ElementSize.Auto());
 
-    Element CreateRegistersElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateRegistersElement() => new Panel((in buffer) =>
     {
         static string GetRegisterLabel(Register register) => register switch
         {
@@ -620,7 +620,7 @@ public class InterpreterRenderer
         else t.Write('-');
     }, ElementSize.Fixed(5));
 
-    Element CreateMemoryElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateMemoryElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
         byte[] memb = new byte[Math.Min(buffer.Width * buffer.Height, processor.Memory.Length / 4)];
@@ -666,7 +666,7 @@ public class InterpreterRenderer
     {
         int prevPosition = 0;
 
-        return new Panel((in AnsiBufferSlice buffer) =>
+        return new Panel((in buffer) =>
         {
             buffer.Clear();
 
@@ -848,7 +848,7 @@ public class InterpreterRenderer
         }, ElementSize.Auto());
     }
 
-    Element CreateHeapElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateHeapElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 
@@ -959,7 +959,7 @@ public class InterpreterRenderer
         }
     }, ElementSize.Auto());
 
-    Element CreateStackTraceElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateStackTraceElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 

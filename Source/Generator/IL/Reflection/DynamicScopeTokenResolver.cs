@@ -130,7 +130,7 @@ class DynamicScopeTokenResolver : ITokenResolver
 
         if (t.GetType() == _varArgMethodType)
         {
-            return (MethodInfo?)_varargFi1?.GetValue(t);
+            return _varargFi1?.GetValue<MethodInfo>(t);
         }
 
         Debug.Assert(false, $"Unexpected type: {t.GetType()}");

@@ -124,15 +124,15 @@ public abstract class GeneralType :
 
         if (defined.Is(out StructType? definedStructType) && passed.Is(out StructType? passedStructType))
         {
-            if (definedStructType.Struct.Identifier.Content != passedStructType.Struct.Identifier.Content) return false;
-            if (definedStructType.Struct.Template is not null && passedStructType.Struct.Template is not null)
+            if (definedStructType.Struct.Identifier != passedStructType.Struct.Identifier) return false;
+            if (definedStructType.Struct.Definition.Template is not null && passedStructType.Struct.Definition.Template is not null)
             {
-                if (definedStructType.Struct.Template.Parameters.Length != passedStructType.TypeArguments.Count)
+                if (definedStructType.Struct.Definition.Template.Parameters.Length != passedStructType.TypeArguments.Count)
                 { throw new NotImplementedException(); }
 
-                for (int i = 0; i < definedStructType.Struct.Template.Parameters.Length; i++)
+                for (int i = 0; i < definedStructType.Struct.Definition.Template.Parameters.Length; i++)
                 {
-                    string typeParamName = definedStructType.Struct.Template.Parameters[i].Content;
+                    string typeParamName = definedStructType.Struct.Definition.Template.Parameters[i].Content;
                     GeneralType typeParamValue = passedStructType.TypeArguments[typeParamName];
 
                     if (typeParameters.TryGetValue(typeParamName, out GeneralType? addedTypeParameter))
@@ -172,7 +172,7 @@ public abstract class GeneralType :
 
             case StructType structType:
             {
-                if (structType.Struct.Template is null) return true;
+                if (structType.Struct.Definition.Template is null) return true;
                 return structType.TypeArguments is not null;
             }
 
@@ -208,13 +208,13 @@ public abstract class GeneralType :
 
             case StructType structType:
             {
-                if (structType.Struct.Template is not null)
+                if (structType.Struct.Definition.Template is not null)
                 {
-                    GeneralType[] structTypeParameterValues = new GeneralType[structType.Struct.Template.Parameters.Length];
+                    GeneralType[] structTypeParameterValues = new GeneralType[structType.Struct.Definition.Template.Parameters.Length];
 
                     foreach (KeyValuePair<string, GeneralType> item in typeArguments)
                     {
-                        if (structType.Struct.TryGetTypeArgumentIndex(item.Key, out int i))
+                        if (structType.Struct.Definition.Template.TryGetTypeArgumentIndex(item.Key, out int i))
                         { structTypeParameterValues[i] = item.Value; }
                     }
 

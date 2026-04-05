@@ -28,9 +28,9 @@ public class CompiledStructTypeExpression : CompiledTypeExpression,
     public CompiledStructTypeExpression(CompiledStruct @struct, Uri originalFile, Location location) : base(location)
     {
         Struct = @struct;
-        if (@struct.Template is not null)
+        if (@struct.Definition.Template is not null)
         {
-            TypeArguments = @struct.Template.Parameters
+            TypeArguments = @struct.Definition.Template.Parameters
                 .Select(v => new KeyValuePair<string, CompiledTypeExpression>(v.Content, new CompiledGenericTypeExpression(v, originalFile, location)))
                 .ToImmutableDictionary();
         }
@@ -43,15 +43,15 @@ public class CompiledStructTypeExpression : CompiledTypeExpression,
     public CompiledStructTypeExpression(CompiledStruct @struct, Uri originalFile, IReadOnlyList<CompiledTypeExpression> typeArguments, Location location) : base(location)
     {
         Struct = @struct;
-        if (@struct.Template is not null)
+        if (@struct.Definition.Template is not null)
         {
-            Dictionary<string, CompiledTypeExpression> result = new(@struct.Template.Parameters.Length);
+            Dictionary<string, CompiledTypeExpression> result = new(@struct.Definition.Template.Parameters.Length);
 
-            if (@struct.Template.Parameters.Length != typeArguments.Count)
+            if (@struct.Definition.Template.Parameters.Length != typeArguments.Count)
             { throw new InternalExceptionWithoutContext("Length of type parameters doesn't matching with length of type arguments"); }
 
-            for (int i = 0; i < @struct.Template.Parameters.Length; i++)
-            { result.Add(@struct.Template.Parameters[i].Content, typeArguments[i]); }
+            for (int i = 0; i < @struct.Definition.Template.Parameters.Length; i++)
+            { result.Add(@struct.Definition.Template.Parameters[i].Content, typeArguments[i]); }
 
             TypeArguments = result.ToImmutableDictionary();
         }
@@ -102,7 +102,7 @@ public class CompiledStructTypeExpression : CompiledTypeExpression,
         if (TypeKeywords.BasicTypes.ContainsKey(otherSimple.Identifier.Content))
         { return false; }
 
-        if (Struct.Identifier.Content == otherSimple.Identifier.Content)
+        if (Struct.Identifier == otherSimple.Identifier.Content)
         { return true; }
 
         return false;
@@ -111,24 +111,24 @@ public class CompiledStructTypeExpression : CompiledTypeExpression,
     public override string ToString()
     {
         StringBuilder result = new();
-        result.Append(Struct.Identifier.Content);
+        result.Append(Struct.Identifier);
 
         if (!TypeArguments.IsEmpty)
         { result.Append($"<{string.Join(", ", TypeArguments.Values)}>"); }
-        else if (Struct.Template is not null)
-        { result.Append($"<{string.Join(", ", Struct.Template.Parameters)}>"); }
+        else if (Struct.Definition.Template is not null)
+        { result.Append($"<{string.Join(", ", Struct.Definition.Template.Parameters)}>"); }
 
         return result.ToString();
     }
     public override string Stringify(int depth = 0)
     {
         StringBuilder result = new();
-        result.Append(Struct.Identifier.Content);
+        result.Append(Struct.Identifier);
 
         if (!TypeArguments.IsEmpty)
         { result.Append($"<{string.Join(", ", TypeArguments.Values.Select(v => v.Stringify(depth)))}>"); }
-        else if (Struct.Template is not null)
-        { result.Append($"<{string.Join(", ", Struct.Template.Parameters)}>"); }
+        else if (Struct.Definition.Template is not null)
+        { result.Append($"<{string.Join(", ", Struct.Definition.Template.Parameters)}>"); }
 
         return result.ToString();
     }

@@ -2,17 +2,26 @@
 
 namespace LanguageCore.Compiler;
 
-public class CompiledParameter : ParameterDefinition,
-    IHaveCompiledType
+public class CompiledParameter :
+    IHaveCompiledType,
+    IIdentifiable<string>,
+    IInFile,
+    ILocated
 {
-    public new GeneralType Type { get; }
+    public ParameterDefinition Definition { get; }
+    public GeneralType Type { get; }
     public HashSet<CompiledParameterAccess> Getters { get; } = new();
     public HashSet<CompiledParameterAccess> Setters { get; } = new();
 
-    public CompiledParameter(GeneralType type, ParameterDefinition definition) : base(definition)
+    public string Identifier => Definition.Identifier.Content;
+    public Uri File => Definition.File;
+    public Location Location => new(Definition.Position, Definition.File);
+
+    public CompiledParameter(GeneralType type, ParameterDefinition definition)
     {
+        Definition = definition;
         Type = type;
     }
 
-    public override string ToString() => $"{(IsRef ? "ref " : string.Empty)}{Type} {Identifier}";
+    public override string ToString() => $"{(Definition.IsRef ? "ref " : string.Empty)}{Type} {Identifier}";
 }

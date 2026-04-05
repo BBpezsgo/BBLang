@@ -110,3 +110,6 @@ dotnet_diagnostic.IDE0051.severity = suggestion
 
 # IDE0060: Remove unused parameter
 dotnet_diagnostic.IDE0060.severity = suggestion
+
+# RS2008: Enable analyzer release tracking
+dotnet_diagnostic.RS2008.severity = suggestion

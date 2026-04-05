@@ -533,10 +533,10 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 return;
             }
 
-            FieldInfo? field = type.GetField(statement.Field.Identifier.Content);
+            FieldInfo? field = type.GetField(statement.Field.Identifier);
             if (field is null)
             {
-                Diagnostics.Add(DiagnosticAt.Error($"Field \"{statement.Field.Identifier.Content}\" not found in type {type}", _object));
+                Diagnostics.Add(DiagnosticAt.Error($"Field \"{statement.Field.Identifier}\" not found in type {type}", _object));
                 successful = false;
                 return;
             }
@@ -552,7 +552,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
     void EmitStatement(CompiledFunctionCall statement, ILProxy il, ref bool successful)
     {
         if (statement.Function.Template is CompiledFunctionDefinition compiledFunction &&
-            compiledFunction.BuiltinFunctionName == "free")
+            compiledFunction.Definition.BuiltinFunctionName == "free")
         {
             return;
         }
@@ -625,6 +625,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     successful = false;
                     return;
 
+                    /*
                     int i = DelegateTargets.IndexOf(f.UnmarshaledCallback.Target);
                     if (i == -1)
                     {
@@ -643,6 +644,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
                     il.Emit(OpCodes.Call, f.UnmarshaledCallback.GetMethodInfo());
 
                     return;
+                    */
                 }
 
                 Diagnostics.Add(DiagnosticAt.Internal($"Invalid external function", statement));
@@ -749,10 +751,10 @@ public partial class CodeGeneratorForIL : CodeGenerator
                 return;
             }
 
-            FieldInfo? field = type.GetField(statement.Field.Identifier.Content);
+            FieldInfo? field = type.GetField(statement.Field.Identifier);
             if (field is null)
             {
-                Diagnostics.Add(DiagnosticAt.Error($"Field \"{statement.Field.Identifier.Content}\" not found in type {type}", _object));
+                Diagnostics.Add(DiagnosticAt.Error($"Field \"{statement.Field.Identifier}\" not found in type {type}", _object));
                 successful = false;
                 return;
             }
@@ -1095,10 +1097,10 @@ public partial class CodeGeneratorForIL : CodeGenerator
                         return;
                     }
 
-                    FieldInfo? field = type.GetField(v.Field.Identifier.Content);
+                    FieldInfo? field = type.GetField(v.Field.Identifier);
                     if (field is null)
                     {
-                        Diagnostics.Add(DiagnosticAt.Error($"Field \"{v.Field.Identifier.Content}\" not found in type {type}", _object));
+                        Diagnostics.Add(DiagnosticAt.Error($"Field \"{v.Field.Identifier}\" not found in type {type}", _object));
                         successful = false;
                         return;
                     }
@@ -1255,7 +1257,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         if (statement.TypeExpression.Is(out CompiledPointerTypeExpression? resultPointerType) &&
             statement.Value is CompiledFunctionCall allocatorCaller &&
             allocatorCaller.Function.Template is CompiledFunctionDefinition allocatorCallee &&
-            allocatorCallee.BuiltinFunctionName == "alloc" &&
+            allocatorCallee.Definition.BuiltinFunctionName == "alloc" &&
             allocatorCaller.Arguments.Length == 1)
         {
             if (allocatorCaller.Arguments[0].Value is CompiledSizeof sizeofArgument)
@@ -2009,11 +2011,11 @@ public partial class CodeGeneratorForIL : CodeGenerator
         FunctionType => $"fnc",
         PointerType => $"ptr",
         ReferenceType => $"ref",
-        StructType v => MakeUnique(v.Struct.Identifier.Content),
+        StructType v => MakeUnique(v.Struct.Identifier),
         _ => throw new UnreachableException(),
     };
 
-    string GenerateTypeId(StructType type) => MakeUnique(type.Struct.Identifier.Content);
+    string GenerateTypeId(StructType type) => MakeUnique(type.Struct.Identifier);
 
     string MakeUnique(string id) => Utils.MakeUnique(id, v => Module.GetType(v) is null);
 
@@ -2050,7 +2052,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             if (error is not null) return false;
             if (!ToType(fieldType, out Type? fieldType1, out error)) return false;
 
-            FieldBuilder fieldBuilder = builder.DefineField(field.Identifier.Content, fieldType1, FieldAttributes.Public);
+            FieldBuilder fieldBuilder = builder.DefineField(field.Identifier, fieldType1, FieldAttributes.Public);
             fieldBuilder.SetOffset(offset);
         }
 
@@ -2308,18 +2310,18 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         string identifier = function switch
         {
-            CompiledFunctionDefinition v => v.Identifier.Content,
-            CompiledOperatorDefinition v => $"op_{v.Identifier.Content switch
+            CompiledFunctionDefinition v => v.Identifier,
+            CompiledOperatorDefinition v => $"op_{v.Identifier switch
             {
                 "+" => "add",
                 "-" => "sub",
                 "*" => "mul",
                 "/" => "div",
                 "%" => "mod",
-                _ => v.Identifier.Content,
+                _ => v.Identifier,
             }}",
-            CompiledConstructorDefinition v => $"ctor_{v.Identifier.Content}",
-            CompiledGeneralFunctionDefinition v => $"genr_{v.Identifier.Content}",
+            CompiledConstructorDefinition v => $"ctor_{v.Identifier}",
+            CompiledGeneralFunctionDefinition v => $"genr_{v.Identifier}",
             _ => throw new UnreachableException(),
         };
         identifier = Utils.MakeUnique(identifier, v => !FunctionBuilders.Any(w => w.Builder.Name == v));
@@ -2406,7 +2408,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
         if (!function.Function.IsMsilCompatible)
         {
-            Diagnostics.Add(DiagnosticAt.Error($"Function {function.ToReadable()} is not MSIL incompatible", (ILocated)function.Function, false));
+            Diagnostics.Add(DiagnosticAt.Error($"Function {function.ToReadable()} is not MSIL incompatible", function.Function, false));
             return false;
         }
 
@@ -2417,19 +2419,19 @@ public partial class CodeGeneratorForIL : CodeGenerator
         {
             if (!CheckMarshalSafety(function.Function.Parameters[i].Type, out PossibleDiagnostic? safetyError1))
             {
-                Diagnostics.Add(safetyError1.ToWarning(((FunctionThingDefinition)function.Function).Parameters[i].Type));
+                Diagnostics.Add(safetyError1.ToWarning(function.Function.Definition.Parameters[i].Type));
                 return false;
             }
         }
         if (!CheckMarshalSafety(function.Function.Type, out PossibleDiagnostic? safetyError2))
         {
-            Diagnostics.Add(safetyError2.ToWarning(function.Function is FunctionDefinition v ? v.Type.Location : new Location(((FunctionThingDefinition)function.Function).Identifier.Position, function.Function.File)));
+            Diagnostics.Add(safetyError2.ToWarning(function.Function is FunctionDefinition v ? v.Type.Location : new Location(function.Function.Definition.Identifier.Position, function.Function.File)));
             return false;
         }
 
         GlobalContextType_Targets.SetValue(null, DelegateTargets.ToArray());
 
-        marshaled = (ExternalFunctionScopedSyncCallback)marshaledBuilder.CreateDelegate(typeof(ExternalFunctionScopedSyncCallback));
+        marshaled = marshaledBuilder.CreateDelegate<ExternalFunctionScopedSyncCallback>();
         raw = builder;
         _marshalCache.Add(function, marshaled);
 
@@ -2442,7 +2444,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
         ILProxy gen = new(method.GetILGenerator(), false);
         gen.Emit(OpCodes.Sizeof, type);
         gen.Emit(OpCodes.Ret);
-        Func<uint> func = (Func<uint>)method.CreateDelegate(typeof(Func<uint>));
+        Func<uint> func = method.CreateDelegate<Func<uint>>();
         return checked((int)func());
     }
 
@@ -2473,7 +2475,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             gen.Emit(OpCodes.Ldarg_0);
             gen.Emit(OpCodes.Ldflda, field);
             gen.Emit(OpCodes.Ret);
-            nint address = value is null ? default : ((Func<object, nint>)method.CreateDelegate(typeof(Func<object, nint>))).Invoke(value);
+            nint address = value is null ? default : method.CreateDelegate<Func<object, nint>>().Invoke(value);
             fieldAddresses.Add((field, address));
             if (smallestAddress == default || smallestAddress > address)
             {
@@ -2671,7 +2673,7 @@ public partial class CodeGeneratorForIL : CodeGenerator
             Module = Module,
             Methods = FunctionBuilders.Select(v => v.Builder).ToImmutableArray(),
             EntryPoint = result,
-            EntryPointDelegate = (Func<int>)result.CreateDelegate(typeof(Func<int>)),
+            EntryPointDelegate = result.CreateDelegate<Func<int>>(),
         };
     }
 

@@ -18,5 +18,19 @@ public class TemplateInfo : IPositioned
         Parameters = typeParameters;
     }
 
+    public bool TryGetTypeArgumentIndex(string typeArgumentName, out int index)
+    {
+        index = -1;
+        for (int i = 0; i < Parameters.Length; i++)
+        {
+            if (Parameters[i].Content == typeArgumentName)
+            {
+                index = i;
+                return true;
+            }
+        }
+        return false;
+    }
+
     public override string ToString() => $"{Brackets.Start}{string.Join(", ", Parameters)}{Brackets.End}";
 }

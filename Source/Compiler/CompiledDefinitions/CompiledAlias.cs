@@ -2,14 +2,23 @@ using LanguageCore.Parser;
 
 namespace LanguageCore.Compiler;
 
-public class CompiledAlias : AliasDefinition,
-    IReferenceable<TypeInstance>
+public class CompiledAlias :
+    IReferenceable<TypeInstance>,
+    IIdentifiable<string>,
+    IInFile,
+    ILocated
 {
-    public new GeneralType Value { get; }
+    public AliasDefinition Definition { get; }
+    public GeneralType Value { get; }
     public List<Reference<TypeInstance>> References { get; }
 
-    public CompiledAlias(GeneralType value, AliasDefinition aliasDefinition) : base(aliasDefinition)
+    public string Identifier => Definition.Identifier.Content;
+    public Uri File => Definition.File;
+    public Location Location => new(Definition.Position, Definition.File);
+
+    public CompiledAlias(GeneralType value, AliasDefinition definition)
     {
+        Definition = definition;
         Value = value;
         References = new List<Reference<TypeInstance>>();
     }

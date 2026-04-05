@@ -11,7 +11,7 @@ public struct FunctionInformation
     public ImmutableDictionary<string, GeneralType>? TypeArguments;
     public MutableRange<int> Instructions;
 
-    public readonly Position SourcePosition => (Function as CompiledFunctionDefinition)?.Identifier.Position ?? default;
+    public readonly Position SourcePosition => (Function as CompiledFunctionDefinition)?.Definition.Identifier.Position ?? default;
     public readonly Uri? File => Function?.File;
 
     public readonly string? ReadableIdentifier()

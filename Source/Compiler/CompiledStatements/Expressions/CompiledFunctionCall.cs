@@ -7,18 +7,18 @@ public class CompiledFunctionCall : CompiledExpression
 
     public override string Stringify(int depth = 0) => $"{Function.Template switch
     {
-        CompiledFunctionDefinition v => v.Identifier.Content,
-        CompiledOperatorDefinition v => v.Identifier.Content,
-        CompiledGeneralFunctionDefinition v => v.Identifier.Content,
+        CompiledFunctionDefinition v => v.Identifier,
+        CompiledOperatorDefinition v => v.Identifier,
+        CompiledGeneralFunctionDefinition v => v.Identifier,
         CompiledConstructorDefinition v => v.Type.ToString(),
         _ => throw new UnreachableException(),
     }}({string.Join(", ", Arguments.Select(v => v.Stringify(depth + 1)))})";
 
     public override string ToString() => $"{Function.Template switch
     {
-        CompiledFunctionDefinition v => v.Identifier.Content,
-        CompiledOperatorDefinition v => v.Identifier.Content,
-        CompiledGeneralFunctionDefinition v => v.Identifier.Content,
+        CompiledFunctionDefinition v => v.Identifier,
+        CompiledOperatorDefinition v => v.Identifier,
+        CompiledGeneralFunctionDefinition v => v.Identifier,
         CompiledConstructorDefinition v => v.Type.ToString(),
         _ => throw new UnreachableException(),
     }}({string.Join(", ", Arguments.Select(v => v.ToString()))})";

@@ -55,7 +55,7 @@ public class ConstructorDefinition : FunctionThingDefinition,
         StringBuilder result = new();
         result.Append(Type.ToString(typeArguments));
         result.Append('(');
-        for (int j = 0; j < Parameters.Count; j++)
+        for (int j = 0; j < Parameters.Length; j++)
         {
             if (j > 0) result.Append(", ");
             result.Append(Parameters[j].Type.ToString(typeArguments));

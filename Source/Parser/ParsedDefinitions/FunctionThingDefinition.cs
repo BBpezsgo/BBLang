@@ -24,8 +24,8 @@ public abstract class FunctionThingDefinition :
     /// <summary>
     /// The first parameter is labeled as "this"
     /// </summary>
-    public bool IsExtension => (Parameters.Count > 0) && Parameters[0].Modifiers.Contains(ModifierKeywords.This);
-    public int ParameterCount => Parameters.Count;
+    public bool IsExtension => (Parameters.Length > 0) && Parameters[0].Modifiers.Contains(ModifierKeywords.This);
+    public int ParameterCount => Parameters.Length;
     public bool IsExported => Modifiers.Contains(ProtectionKeywords.Export);
     public bool IsInline => Modifiers.Contains(ModifierKeywords.Inline);
     public virtual bool IsTemplate => Template is not null;

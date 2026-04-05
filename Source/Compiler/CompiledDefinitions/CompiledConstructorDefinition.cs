@@ -3,38 +3,42 @@ using LanguageCore.Parser.Statements;
 
 namespace LanguageCore.Compiler;
 
-public class CompiledConstructorDefinition : ConstructorDefinition,
+public class CompiledConstructorDefinition :
+    ICompiledDefinition<ConstructorDefinition>,
+    ICompiledDefinition<FunctionThingDefinition>,
     IReferenceable<ConstructorCallExpression>,
-    IHaveCompiledType,
     IInContext<CompiledStruct>,
-    ITemplateable<CompiledConstructorDefinition>,
-    IHaveInstructionOffset,
     ICompiledFunctionDefinition,
     IIdentifiable<GeneralType>,
     IExternalFunctionDefinition
 {
     public bool IsMsilCompatible { get; set; } = true;
 
-    public bool ReturnSomething => true;
-    public new GeneralType Type { get; }
-    public new ImmutableArray<CompiledParameter> Parameters { get; }
-    public new CompiledStruct Context { get; set; }
+    public ConstructorDefinition Definition { get; }
+    public GeneralType Type { get; }
+    public ImmutableArray<CompiledParameter> Parameters { get; }
+    public CompiledStruct Context { get; set; }
     public List<Reference<ConstructorCallExpression>> References { get; }
 
-    GeneralType IIdentifiable<GeneralType>.Identifier => Type;
-
+    FunctionThingDefinition ICompiledDefinition<FunctionThingDefinition>.Definition => Definition;
+    public bool ReturnSomething => true;
+    public GeneralType Identifier => Type;
     string? IExternalFunctionDefinition.ExternalFunctionName => null;
+    public Uri File => Definition.File;
+    public Location Location => Definition.Location;
 
-    public CompiledConstructorDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledStruct context, ConstructorDefinition functionDefinition) : base(functionDefinition)
+    public CompiledConstructorDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledStruct context, ConstructorDefinition functionDefinition)
     {
+        Definition = functionDefinition;
         Type = type;
         Parameters = parameters;
         Context = context;
         References = new List<Reference<ConstructorCallExpression>>();
     }
 
-    public CompiledConstructorDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledConstructorDefinition other) : base(other)
+    public CompiledConstructorDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledConstructorDefinition other)
     {
+        Definition = other.Definition;
         Type = type;
         Parameters = parameters;
         Context = other.Context;
@@ -45,31 +49,16 @@ public class CompiledConstructorDefinition : ConstructorDefinition,
     {
         StringBuilder result = new();
 
-        if (IsExported)
+        if (Definition.IsExported)
         { result.Append("export "); }
         result.Append(Type);
         result.AppendJoin(", ", Parameters.Select(v => $"{v.Type} {v.Identifier}"));
-        result.Append(Block?.ToString() ?? ";");
+        result.Append(Definition.Block?.ToString() ?? ";");
 
         return result.ToString();
     }
 
-    public CompiledConstructorDefinition InstantiateTemplate(IReadOnlyDictionary<string, GeneralType> parameters)
-    {
-        GeneralType newType = GeneralType.InsertTypeParameters(Type, parameters);
-        ImmutableArray<CompiledParameter>.Builder newParameters = ImmutableArray.CreateBuilder<CompiledParameter>(Parameters.Length);
-        foreach (CompiledParameter parameter in Parameters)
-        {
-            newParameters.Add(new CompiledParameter(GeneralType.InsertTypeParameters(parameter.Type, parameters), parameter));
-        }
-        return new CompiledConstructorDefinition(
-            newType,
-            newParameters.MoveToImmutable(),
-            this
-        );
-    }
-
-    public override string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null)
+    public string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null)
     {
         StringBuilder result = new();
         result.Append(GeneralType.TryInsertTypeParameters(Type, typeArguments).ToString());
@@ -92,4 +81,6 @@ public class CompiledConstructorDefinition : ConstructorDefinition,
         result.Append(')');
         return result.ToString();
     }
+
+    string IReadable.ToReadable() => ToReadable(null);
 }

@@ -3,28 +3,35 @@ using LanguageCore.Parser.Statements;
 
 namespace LanguageCore.Compiler;
 
-public class CompiledFunctionDefinition : FunctionDefinition,
+public class CompiledFunctionDefinition :
+    ICompiledDefinition<FunctionDefinition>,
+    ICompiledDefinition<FunctionThingDefinition>,
     IReferenceable<Expression?>,
-    IHaveCompiledType,
     IInContext<CompiledStruct?>,
-    ITemplateable<CompiledFunctionDefinition>,
     ICompiledFunctionDefinition,
-    IHaveInstructionOffset,
     IExternalFunctionDefinition,
-    IExposeable
+    IExposeable,
+    IIdentifiable<string>
 {
     public bool IsMsilCompatible { get; set; } = true;
 
-    public new GeneralType Type { get; }
-    public new ImmutableArray<CompiledParameter> Parameters { get; }
-    public new CompiledStruct? Context { get; }
+    public FunctionDefinition Definition { get; }
+    public GeneralType Type { get; }
+    public ImmutableArray<CompiledParameter> Parameters { get; }
+    public CompiledStruct? Context { get; }
     public List<Reference<Expression?>> References { get; }
 
+    FunctionThingDefinition ICompiledDefinition<FunctionThingDefinition>.Definition => Definition;
     public bool ReturnSomething => !Type.SameAs(BasicType.Void);
-    public TypeInstance TypeToken => base.Type;
+    public Uri File => Definition.File;
+    public Location Location => Definition.Location;
+    public string? ExternalFunctionName => Definition.ExternalFunctionName;
+    public string? ExposedFunctionName => Definition.ExposedFunctionName;
+    public string Identifier => Definition.Identifier.Content;
 
-    public CompiledFunctionDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledStruct? context, FunctionDefinition functionDefinition) : base(functionDefinition)
+    public CompiledFunctionDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledStruct? context, FunctionDefinition functionDefinition)
     {
+        Definition = functionDefinition;
         Type = type;
         Parameters = parameters;
 
@@ -32,8 +39,9 @@ public class CompiledFunctionDefinition : FunctionDefinition,
         References = new List<Reference<Expression?>>();
     }
 
-    public CompiledFunctionDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledFunctionDefinition other) : base(other)
+    public CompiledFunctionDefinition(GeneralType type, ImmutableArray<CompiledParameter> parameters, CompiledFunctionDefinition other)
     {
+        Definition = other.Definition;
         Type = type;
         Parameters = parameters;
 
@@ -44,18 +52,18 @@ public class CompiledFunctionDefinition : FunctionDefinition,
     public override string ToString()
     {
         StringBuilder result = new();
-        if (IsExported)
+        if (Definition.IsExported)
         { result.Append("export "); }
 
         result.Append(Type.ToString());
         result.Append(' ');
 
-        result.Append(Identifier.Content);
+        result.Append(Identifier);
 
-        if (Template is not null)
+        if (Definition.Template is not null)
         {
             result.Append('<');
-            result.AppendJoin(", ", Template.Parameters.Select(v => v.Content));
+            result.AppendJoin(", ", Definition.Template.Parameters.Select(v => v.Content));
             result.Append('>');
         }
 
@@ -70,10 +78,10 @@ public class CompiledFunctionDefinition : FunctionDefinition,
         }
         result.Append(')');
 
-        if (Block is not null)
+        if (Definition.Block is not null)
         {
             result.Append(' ');
-            result.Append(Block.ToString());
+            result.Append(Definition.Block.ToString());
         }
         else
         { result.Append(';'); }
@@ -81,22 +89,7 @@ public class CompiledFunctionDefinition : FunctionDefinition,
         return result.ToString();
     }
 
-    public CompiledFunctionDefinition InstantiateTemplate(IReadOnlyDictionary<string, GeneralType> parameters)
-    {
-        GeneralType newType = GeneralType.InsertTypeParameters(Type, parameters);
-        ImmutableArray<CompiledParameter>.Builder newParameters = ImmutableArray.CreateBuilder<CompiledParameter>(Parameters.Length);
-        foreach (CompiledParameter parameter in Parameters)
-        {
-            newParameters.Add(new CompiledParameter(GeneralType.InsertTypeParameters(parameter.Type, parameters), parameter));
-        }
-        return new CompiledFunctionDefinition(
-            newType,
-            newParameters.MoveToImmutable(),
-            this
-        );
-    }
-
-    public override string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null)
+    public string ToReadable(IReadOnlyDictionary<string, GeneralType>? typeArguments = null)
     {
         StringBuilder result = new();
         result.Append(GeneralType.TryInsertTypeParameters(Type, typeArguments).ToString());
@@ -129,4 +122,6 @@ public class CompiledFunctionDefinition : FunctionDefinition,
         result.Append(')');
         return result.ToString();
     }
+
+    string IReadable.ToReadable() => ToReadable(null);
 }

@@ -39,9 +39,9 @@ public class GeneralFunctionDefinition : FunctionThingDefinition,
         result.Append(Identifier.Content);
 
         result.Append('(');
-        if (Parameters.Count > 0)
+        if (Parameters.Length > 0)
         {
-            for (int i = 0; i < Parameters.Count; i++)
+            for (int i = 0; i < Parameters.Length; i++)
             {
                 if (i > 0) result.Append(", ");
                 result.Append(Parameters[i].Type);
@@ -59,7 +59,7 @@ public class GeneralFunctionDefinition : FunctionThingDefinition,
         StringBuilder result = new();
         result.Append(Identifier.ToString());
         result.Append('(');
-        for (int i = 0; i < Parameters.Count; i++)
+        for (int i = 0; i < Parameters.Length; i++)
         {
             if (i > 0) result.Append(", ");
             result.Append(Parameters[i].Type.ToString(typeArguments));

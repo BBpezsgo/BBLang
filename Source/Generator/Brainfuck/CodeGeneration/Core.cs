@@ -470,7 +470,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
                 return false;
             }
 
-            if (!GetFieldOffset(structType, field.Field.Identifier.Content, out _, out int fieldOffset, out PossibleDiagnostic? error))
+            if (!GetFieldOffset(structType, field.Field.Identifier, out _, out int fieldOffset, out PossibleDiagnostic? error))
             {
                 Diagnostics.Add(error.ToError(field));
                 address = default;
@@ -488,7 +488,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
         if (field.Object.Type.Is(out PointerType? prevPointerType) &&
             prevPointerType.To.Is(out structType))
         {
-            if (!GetFieldOffset(structType, field.Field.Identifier.Content, out _, out int fieldOffset, out PossibleDiagnostic? error))
+            if (!GetFieldOffset(structType, field.Field.Identifier, out _, out int fieldOffset, out PossibleDiagnostic? error))
             {
                 Diagnostics.Add(error.ToError(field));
                 address = default;
@@ -649,7 +649,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
 
         return GetVariable(name.Variable.Identifier, name.Variable.Location.File, out result, out error);
     }
-    bool GetVariable(CompiledParameterAccess name, [NotNullWhen(true)] out BrainfuckVariable? result, [NotNullWhen(false)] out PossibleDiagnostic? error) => GetVariable(name.Parameter.Identifier.Content, name.Parameter.File, out result, out error);
+    bool GetVariable(CompiledParameterAccess name, [NotNullWhen(true)] out BrainfuckVariable? result, [NotNullWhen(false)] out PossibleDiagnostic? error) => GetVariable(name.Parameter.Identifier, name.Parameter.Definition.File, out result, out error);
     bool GetVariable(CompiledDereference name, [NotNullWhen(true)] out BrainfuckVariable? result, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         switch (name.Address)

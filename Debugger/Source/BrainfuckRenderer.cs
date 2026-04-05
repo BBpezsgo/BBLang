@@ -141,14 +141,14 @@ public class BrainfuckRenderer
                 t.Write('*');
                 break;
             case StructType v:
-                t.Write(v.Struct.Identifier.Content, AnsiColor.Green);
-                if (v.Struct.Template is not null)
+                t.Write(v.Struct.Identifier, AnsiColor.Green);
+                if (v.Struct.Definition.Template is not null)
                 {
                     t.Write('<');
-                    for (int i = 0; i < v.Struct.Template.Parameters.Length; i++)
+                    for (int i = 0; i < v.Struct.Definition.Template.Parameters.Length; i++)
                     {
                         if (i > 0) t.Write(", ");
-                        WriteType(ref t, v.TypeArguments[v.Struct.Template.Parameters[i].Content]);
+                        WriteType(ref t, v.TypeArguments[v.Struct.Definition.Template.Parameters[i].Content]);
                     }
                     t.Write('>');
                 }
@@ -161,7 +161,7 @@ public class BrainfuckRenderer
         }
     }
 
-    Element CreateSourceElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateSourceElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 
@@ -170,7 +170,7 @@ public class BrainfuckRenderer
             if (processor.DebugInfo.TryGetSourceLocation(processor.CodePointer, out SourceCodeLocation sourceLocation) &&
                 processor.DebugInfo.OriginalFiles.TryGetValue(sourceLocation.Location.File, out ImmutableArray<Tokenizing.Token> tokens))
             {
-                int firstVisibleLine = Math.Max(0, sourceLocation.Location.Position.Range.Start.Line - buffer.Height / 2);
+                int firstVisibleLine = Math.Max(0, sourceLocation.Location.Position.Range.Start.Line - (buffer.Height / 2));
                 int lastVisibleLine = firstVisibleLine + buffer.Height - 1;
 
                 for (int i = 0; i < tokens.Length; i++)
@@ -234,7 +234,7 @@ public class BrainfuckRenderer
         }
     }, ElementSize.Auto());
 
-    Element CreateCodeElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateCodeElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 
@@ -295,7 +295,7 @@ public class BrainfuckRenderer
         }
     }, ElementSize.Fixed(3));
 
-    Element CreateRegistersElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateRegistersElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
         BufferWriter t;
@@ -311,7 +311,7 @@ public class BrainfuckRenderer
         t.Write(processor.MemoryPointer.ToString(), AnsiColor.White);
     }, ElementSize.Fixed(3));
 
-    Element CreateMemoryElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateMemoryElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
         byte[] memb = new byte[Math.Min(buffer.Width * buffer.Height, processor.Memory.Length / 4)];
@@ -348,7 +348,7 @@ public class BrainfuckRenderer
     {
         int prevPosition = 0;
 
-        return new Panel((in AnsiBufferSlice buffer) =>
+        return new Panel((in buffer) =>
         {
             buffer.Clear();
 
@@ -463,7 +463,7 @@ public class BrainfuckRenderer
         }, ElementSize.Auto());
     }
 
-    Element CreateStackTraceElement() => new Panel((in AnsiBufferSlice buffer) =>
+    Element CreateStackTraceElement() => new Panel((in buffer) =>
     {
         buffer.Clear();
 
@@ -486,7 +486,7 @@ public class BrainfuckRenderer
             {
                 if (function.Function is CompiledFunctionDefinition f)
                 {
-                    t.Write(f.Identifier.Content, AnsiColor.Yellow);
+                    t.Write(f.Identifier, AnsiColor.Yellow);
                 }
                 else if (function.Function is CompiledLambda)
                 {
@@ -500,14 +500,14 @@ public class BrainfuckRenderer
                 for (int j = 0; j < compiledFunction.Parameters.Length; j++)
                 {
                     if (j > 0) t.Write(", ");
-                    for (int k = 0; k < compiledFunction.Parameters[j].Modifiers.Length; k++)
+                    for (int k = 0; k < compiledFunction.Parameters[j].Definition.Modifiers.Length; k++)
                     {
-                        t.Write(compiledFunction.Parameters[j].Modifiers[k].Content, AnsiColor.Blue);
+                        t.Write(compiledFunction.Parameters[j].Definition.Modifiers[k].Content, AnsiColor.Blue);
                         t.Write(' ');
                     }
                     WriteType(ref t, GeneralType.TryInsertTypeParameters(compiledFunction.Parameters[j].Type, function.TypeArguments));
                     t.Write(' ');
-                    t.Write(compiledFunction.Parameters[j].Identifier.Content);
+                    t.Write(compiledFunction.Parameters[j].Identifier);
                 }
                 t.Write(')');
             }
