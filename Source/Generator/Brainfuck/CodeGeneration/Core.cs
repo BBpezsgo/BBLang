@@ -670,13 +670,13 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator, IBrainfuckGenera
                 break;
             default:
                 result = null;
-                error = new PossibleDiagnostic($"Only variables supported :(");
+                error = new PossibleDiagnostic($"Only variables supported :(", name.Address);
                 return false;
         }
 
         if (!result.IsReference)
         {
-            error = new PossibleDiagnostic($"Variable \"{result.Identifier}\" isn't a reference");
+            error = new PossibleDiagnostic($"Variable \"{result.Identifier}\" isn't a reference", name);
             return false;
         }
 

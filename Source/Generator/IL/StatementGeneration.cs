@@ -100,24 +100,40 @@ public partial class CodeGeneratorForIL : CodeGenerator
 
     void EmitStatement(CompiledConstantValue statement, ILProxy il, ref bool successful)
     {
-        switch (statement.Value.Type)
+        switch (statement.Type.FinalValue)
         {
-            case RuntimeType.U8:
-            case RuntimeType.I8:
-            case RuntimeType.U16:
-            case RuntimeType.I16:
-            case RuntimeType.I32:
-            case RuntimeType.U32:
-                EmitValue(statement.Value.I32, il);
-                return;
-            case RuntimeType.F32:
-                EmitValue(statement.Value.F32, il);
-                return;
-            case RuntimeType.Null:
-                Diagnostics.Add(DiagnosticAt.Internal($"Value has type of null", statement));
+            case BuiltinType builtinType:
+                switch (builtinType.Type)
+                {
+                    case BasicType.U8:
+                    case BasicType.I8:
+                    case BasicType.U16:
+                    case BasicType.I16:
+                    case BasicType.I32:
+                    case BasicType.U32:
+                        EmitValue(statement.Value.I32, il);
+                        return;
+                    case BasicType.F32:
+                        EmitValue(statement.Value.F32, il);
+                        return;
+                    case BasicType.Void:
+                        Diagnostics.Add(DiagnosticAt.Internal($"Value has type of null", statement));
+                        return;
+                    case BasicType.U64:
+                        EmitValue((ulong)statement.Value.U32, il);
+                        return;
+                    case BasicType.I64:
+                        EmitValue((long)statement.Value.I32, il);
+                        return;
+                    case BasicType.Any:
+                    default:
+                        throw new UnreachableException();
+                }
+            case PointerType:
+                il.Emit(OpCodes.Ldnull);
                 return;
             default:
-                throw new UnreachableException();
+                throw new UnreachableException(statement.Type.FinalValue.GetType().Name);
         }
     }
     void EmitStatement(CompiledReturn statement, ILProxy il, ref bool successful)

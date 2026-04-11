@@ -242,6 +242,8 @@ public partial class CodeGeneratorForIL : CodeGenerator
     }
 
     static void EmitValue(float value, ILProxy il) => il.Emit(OpCodes.Ldc_R4, value);
+    static void EmitValue(ulong value, ILProxy il) => il.Emit(OpCodes.Ldc_I8, (long)value);
+    static void EmitValue(long value, ILProxy il) => il.Emit(OpCodes.Ldc_I8, value);
     static void EmitValue(int value, ILProxy il)
     {
         switch (value)

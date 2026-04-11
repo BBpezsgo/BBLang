@@ -21,7 +21,7 @@ const int HeapSize = 512;
 const int HeaderSize = sizeof(BlockHeader);
 
 [Internal("heap_start")]
-const int HeapStart = 0;
+const any* HeapStart = 0;
 
 [Builtin("init_heap")]
 export inline void init_heap()
@@ -101,7 +101,7 @@ export any* alloc(int sizeNeed)
 {
 #if IL
     crash "The function `alloc` is not compatible with MSIL";
-#endif
+#else
     if (sizeNeed <= 0) { crash "Invalid size"; }
 
     BlockHeader* headerPointer = HeapStart as BlockHeader*;
@@ -135,6 +135,7 @@ export any* alloc(int sizeNeed)
         headerPointer += blockSize + HeaderSize;
     }
     return 0 as any*;
+#endif
 }
 
 [Expose("resize")]
@@ -143,7 +144,7 @@ export bool resize(any* ptr, int size)
 {
 #if IL
     crash "The function `resize` is not compatible with MSIL";
-#endif
+#else
     if (size <= 0) { crash "Invalid size"; }
     if (!ptr) { return false; }
 
@@ -190,6 +191,7 @@ export bool resize(any* ptr, int size)
     }
 
     return true;
+#endif
 }
 
 [Builtin("free")]
@@ -198,7 +200,7 @@ export void free(any* pointer)
 {
 #if IL
     crash "The function `free` is not compatible with MSIL";
-#endif
+#else
     BlockHeader* headerPtr = (pointer as int - HeaderSize) as BlockHeader*;
 
     int size;
@@ -212,6 +214,7 @@ export void free(any* pointer)
     set_header_free(headerPtr, size);
 
     while (join_free_blocks()) { }
+#endif
 }
 
 [Expose("memprof_block_count")]
@@ -219,7 +222,7 @@ i32 memprof_block_count()
 {
 #if IL
     crash "The function `memprof_block_count` is not compatible with MSIL";
-#endif
+#else
     i32 result = 0;
 
     BlockHeader* headerPointer = HeapStart as BlockHeader*;
@@ -233,12 +236,13 @@ i32 memprof_block_count()
     }
 
     return result;
+#endif
 }
 
 struct memprof_block_get_result
 {
-    u8 status;
-    i32 size;
+    bool status;
+    int size;
 }
 
 [Expose("memprof_block_get")]
@@ -246,7 +250,7 @@ memprof_block_get_result memprof_block_get(i32 index)
 {
 #if IL
     crash "The function `memprof_block_get` is not compatible with MSIL";
-#endif
+#else
     i32 i = 0;
 
     BlockHeader* headerPointer = HeapStart as BlockHeader*;
@@ -269,4 +273,5 @@ memprof_block_get_result memprof_block_get(i32 index)
     }
 
     return new memprof_block_get_result;
+#endif
 }

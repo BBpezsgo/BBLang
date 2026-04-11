@@ -141,8 +141,8 @@ export f32 min(f32 a, f32 b)
 
 export int max(int a, int b)
 {
-    if (a > b) { return a; }
-    return b;
+    if (a > b) return a;
+    else return b;
 }
 
 export f32 max(f32 a, f32 b)

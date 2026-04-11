@@ -829,6 +829,8 @@ public partial class StatementCompiler
 
             if (!CompileExpression(keywordCall.Arguments[0], out CompiledExpression? throwValue)) return false;
 
+            ResolveReference(ref throwValue);
+
             compiledStatement = new CompiledCrash()
             {
                 Value = throwValue,
@@ -873,11 +875,13 @@ public partial class StatementCompiler
 
             if (!CompileExpression(keywordCall.Arguments[0], out CompiledExpression? to)) return false;
 
-            if (!CanCastImplicitly(to.Type, CompiledLabelDeclaration.Type, out PossibleDiagnostic? castError))
+            if (!CanCastImplicitly(to, CompiledLabelDeclaration.Type, out CompiledExpression? assignedValue, out PossibleDiagnostic? castError))
             {
                 Diagnostics.Add(castError.ToError(keywordCall.Arguments[0]));
                 return false;
             }
+
+            to = assignedValue;
 
             compiledStatement = new CompiledGoto()
             {

@@ -441,7 +441,7 @@ public partial class StatementCompiler
         CompileFunction(callee, typeArguments);
 
         if ((Settings.Optimizations.HasFlag(OptimizationSettings.FunctionEvaluating) || Settings.OptimizationDiagnostics) &&
-            TryEvaluate(callee, compiledArguments, new EvaluationContext(), out CompiledValue? returnValue, out ImmutableArray<RuntimeStatement2> runtimeStatements) &&
+            TryEvaluate(callee, compiledArguments, new EvaluationContext(), out CompiledValue? returnValue, out ImmutableArray<RuntimeStatement2> runtimeStatements, out PossibleDiagnostic? evaluateError) &&
             returnValue.HasValue &&
             runtimeStatements.Length == 0)
         {
@@ -543,8 +543,9 @@ public partial class StatementCompiler
                     {
                         Diagnostics.Add(DiagnosticAt.OptimizationNotice($"Function inlined", caller));
 
-                        if (!CanCastImplicitly(statementWithValue.Type, GeneralType.TryInsertTypeParameters(callee.Type, typeArguments), out PossibleDiagnostic? castError))
+                        if (!CanCastImplicitly(statementWithValue, GeneralType.TryInsertTypeParameters(callee.Type, typeArguments), out CompiledExpression? assignedValue, out PossibleDiagnostic? castError))
                         { Diagnostics.Add(castError.ToError(statementWithValue)); }
+                        statementWithValue = assignedValue;
 
                         if (Settings.Optimizations.HasFlag(OptimizationSettings.FunctionInlining))
                         {
@@ -601,7 +602,7 @@ public partial class StatementCompiler
 
             if (anyCall.Arguments.Arguments.Length != 1)
             {
-                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"sizeof\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
+                Diagnostics.Add(DiagnosticAt.Error($"Wrong number of arguments passed to \"{StatementKeywords.Sizeof}\": required {1} passed {anyCall.Arguments.Arguments.Length}", anyCall));
                 return false;
             }
 
@@ -1516,6 +1517,18 @@ public partial class StatementCompiler
                         };
                         return true;
                     }
+                    else if (expectedType.Is<PointerType>())
+                    {
+                        SetStatementType(literal, expectedType);
+                        compiledStatement = new CompiledConstantValue()
+                        {
+                            Location = literal.Location,
+                            SaveValue = literal.SaveValue,
+                            Type = expectedType,
+                            Value = new CompiledValue((int)intLiteral.Value),
+                        };
+                        return true;
+                    }
                 }
 
                 if (!GetLiteralType(LiteralType.Integer, out GeneralType? literalType, out _))
@@ -1784,7 +1797,7 @@ public partial class StatementCompiler
             default: throw new UnreachableException();
         }
     }
-    bool CompileExpression(IdentifierExpression variable, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
+    bool CompileExpression(IdentifierExpression variable, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
     {
         compiledStatement = null;
 
@@ -2630,7 +2643,7 @@ public partial class StatementCompiler
         };
         return true;
     }
-    bool CompileExpression(Expression statement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null, bool resolveReference = true)
+    bool CompileExpression(Expression statement, [NotNullWhen(true)] out CompiledExpression? compiledStatement, GeneralType? expectedType = null)
     {
         Settings.CancellationToken.ThrowIfCancellationRequested();
 
@@ -2647,7 +2660,7 @@ public partial class StatementCompiler
             BinaryOperatorCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
             UnaryOperatorCallExpression v => CompileExpression(v, out compiledStatement),
             LiteralExpression v => CompileExpression(v, out compiledStatement, expectedType),
-            IdentifierExpression v => CompileExpression(v, out compiledStatement, expectedType, resolveReference),
+            IdentifierExpression v => CompileExpression(v, out compiledStatement, expectedType),
             GetReferenceExpression v => CompileExpression(v, out compiledStatement, expectedType),
             DereferenceExpression v => CompileExpression(v, out compiledStatement, expectedType),
             NewInstanceExpression v => CompileExpression(v, out compiledStatement, expectedType),
@@ -2660,6 +2673,19 @@ public partial class StatementCompiler
             AnyCallExpression v => CompileExpression(v, out compiledStatement, expectedType),
             LambdaExpression v => CompileExpression(v, out compiledStatement, expectedType),
             _ => throw new NotImplementedException($"Expression {statement.GetType().Name} is not implemented"),
+        };
+    }
+
+    static void ResolveReference(ref CompiledExpression expression, GeneralType? expectedType = null)
+    {
+        if (!expression.Type.Is(out ReferenceType? referenceType)) return;
+        if (expectedType is not null && expectedType.Is<IReferenceType>()) return;
+        expression = new CompiledDereference()
+        {
+            Address = expression,
+            Type = referenceType.To,
+            Location = expression.Location,
+            SaveValue = expression.SaveValue,
         };
     }
 }

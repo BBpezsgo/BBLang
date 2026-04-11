@@ -52,6 +52,8 @@ public class PossibleDiagnostic
             Position = location.Location.Position;
             File = location.Location.File;
         }
+
+        foreach (PossibleDiagnostic? item in suberrors) if (item is null) throw new ArgumentNullException(nameof(suberrors));
     }
 
     public virtual PossibleDiagnostic Populated(ILocated location) => IsPopulated ? this : new PossibleDiagnostic(Message, location, SubErrors, RelatedInformation, false);

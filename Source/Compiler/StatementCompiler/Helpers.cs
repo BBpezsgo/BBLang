@@ -1327,7 +1327,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 return true;
             }
             default:
-                error = new PossibleDiagnostic($"Expression doesn't have an address");
+                error = new PossibleDiagnostic($"Expression doesn't have an address", expression);
                 return false;
         }
     }
@@ -1374,6 +1374,15 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             { return true; }
         }
 
+        {
+            if (destination.Is(out ReferenceType? destReferenceType)
+                && source.Is(out PointerType? srcPointerType)
+                && destReferenceType.To.Equals(srcPointerType.To))
+            {
+                return true;
+            }
+        }
+
         error = new($"Can't cast \"{source}\" to \"{destination}\" implicitly");
         return false;
     }
@@ -1390,19 +1399,19 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 string literalValue = stringLiteral.Value;
                 if (destArrayType.Length is null)
                 {
-                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (without length)");
+                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (without length)", stringLiteral);
                     return false;
                 }
 
                 if (!destArrayType.Length.HasValue)
                 {
-                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (length of <runtime value>)");
+                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (length of <runtime value>)", stringLiteral);
                     return false;
                 }
 
                 if (literalValue.Length != destArrayType.Length.Value)
                 {
-                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (length of \"{destArrayType.Length.ToString() ?? "null"}\")");
+                    error = new($"Can't cast literal value \"{literalValue}\" (length of {literalValue.Length}) to stack array \"{destination}\" (length of \"{destArrayType.Length.ToString() ?? "null"}\")", stringLiteral);
                     return false;
                 }
 
@@ -1417,13 +1426,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 {
                     if (!arrayType.Length.HasValue)
                     {
-                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of <runtime value>)");
+                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of <runtime value>)", stringLiteral);
                         return false;
                     }
 
                     if (stringLiteral.Value.Length != arrayType.Length.Value)
                     {
-                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length.ToString() ?? "null"}\")");
+                        error = new($"Can't cast literal value \"{stringLiteral.Value}\" (length of {stringLiteral.Value.Length}) to array \"{destination}\" (length of \"{arrayType.Length.ToString() ?? "null"}\")", stringLiteral);
                         return false;
                     }
                 }
@@ -1432,7 +1441,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
         }
 
-        error = new($"Can't cast \"{source}\" to \"{destination}\" implicitly");
+        error = new($"Can't cast \"{source}\" to \"{destination}\" implicitly", value);
         return false;
     }
 
@@ -1496,13 +1505,13 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 {
                     if (!arrayType.Length.HasValue)
                     {
-                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (with a non-constant length)");
+                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (with a non-constant length)", stringInstance);
                         return false;
                     }
 
                     if (stringInstance.Value.Length != arrayType.Length.Value)
                     {
-                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (length of {arrayType.Length.Value})");
+                        error = new($"Can't cast literal value \"{stringInstance.Value}\" (length of {stringInstance.Value.Length}) to array \"{destination}\" (length of {arrayType.Length.Value})", stringInstance);
                         return false;
                     }
                 }
@@ -1518,19 +1527,19 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             {
                 if (destArrayType.Length is null)
                 {
-                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (without length)");
+                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (without length)", stackStringInstance);
                     return false;
                 }
 
                 if (!destArrayType.Length.HasValue)
                 {
-                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (with a non-constant length)");
+                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (with a non-constant length)", stackStringInstance);
                     return false;
                 }
 
                 if (stackStringInstance.Value.Length != destArrayType.Length.Value)
                 {
-                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (length of {destArrayType.Length.Value})");
+                    error = new($"Can't cast literal value \"{stackStringInstance.Value}\" (length of {stackStringInstance.Value.Length}) to stack array \"{destination}\" (length of {destArrayType.Length.Value})", stackStringInstance);
                     return false;
                 }
 
@@ -1546,7 +1555,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 if (!sourceFunctionType.HasClosure && !targetFunctionType.HasClosure) return true;
                 if (sourceFunctionType.HasClosure && !targetFunctionType.HasClosure)
                 {
-                    error = new($"Can't convert `{sourceFunctionType}` to `{targetFunctionType}` because it would lose the closure");
+                    error = new($"Can't convert `{sourceFunctionType}` to `{targetFunctionType}` because it would lose the closure", value);
                     return false;
                 }
                 if (!sourceFunctionType.HasClosure && targetFunctionType.HasClosure)
@@ -1569,7 +1578,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
         }
 
-        error = new($"Can't cast `{value.Type.FinalValue}` to `{destination.FinalValue}` implicitly");
+        error = new($"Can't cast `{value.Type.FinalValue}` to `{destination.FinalValue}` implicitly", value);
         return false;
     }
 
@@ -3943,7 +3952,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             }
             default:
                 value = CompiledValue.Null;
-                error ??= new PossibleDiagnostic($"Cannot compute this");
+                error ??= new PossibleDiagnostic($"Cannot compute this", @operator);
                 return false;
         }
 
@@ -3994,16 +4003,26 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return false;
         }
 
-        if (TryEvaluate(found, parameters, context, out CompiledValue? returnValue, out ImmutableArray<RuntimeStatement2> runtimeStatements)
-            && returnValue.HasValue
-            && runtimeStatements.Length == 0)
+        if (!TryEvaluate(found, parameters, context, out CompiledValue? returnValue, out ImmutableArray<RuntimeStatement2> runtimeStatements, out error))
         {
-            value = returnValue.Value;
-            return true;
+            error = new PossibleDiagnostic($"Couldn't evaluate the function body", functionCall, error);
+            return false;
         }
 
-        error = new PossibleDiagnostic($"Couldn't evaluate the function body", functionCall);
-        return false;
+        if (!returnValue.HasValue)
+        {
+            error = new PossibleDiagnostic($"Function \"{found}\" didn't return anything", functionCall);
+            return false;
+        }
+
+        if (runtimeStatements.Length > 0)
+        {
+            error = new PossibleDiagnostic($"Function \"{found}\" contains runtime statements", functionCall);
+            return false;
+        }
+
+        value = returnValue.Value;
+        return true;
     }
     bool TryCompute(CompiledSizeof functionCall, EvaluationContext context, out CompiledValue value, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
@@ -4161,7 +4180,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             return false;
         }
 
-        error = new PossibleDiagnostic($"Cannot compute runtime-only expressions ({statement.GetType().Name})");
+        error = new PossibleDiagnostic($"Cannot compute runtime-only expressions ({statement.GetType().Name})", statement);
         return statement switch
         {
             CompiledConstantValue v => TryCompute(v, context, out value, out error),
@@ -4199,23 +4218,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         };
     }
 
-    bool TryEvaluate(ICompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, EvaluationContext context, out CompiledValue? value, [NotNullWhen(true)] out ImmutableArray<RuntimeStatement2> runtimeStatements)
-    {
-        value = default;
-        runtimeStatements = default;
-
-        CompiledFunction? found = GeneratedFunctions.FirstOrDefault(v => Utils.ReferenceEquals(v.Function, function) && TypeArgumentsEquals(v.TypeArguments, null));
-
-        if (found is null)
-        { return false; }
-
-        if (TryCompute(parameters, context, out ImmutableArray<CompiledValue> parameterValues, out _)
-            && TryEvaluate(found, parameterValues, context, out value, out runtimeStatements))
-        { return true; }
-
-        return false;
-    }
-    bool TryEvaluate(ICompiledFunctionDefinition function, ImmutableArray<CompiledExpression> parameters, EvaluationContext context, out CompiledValue? value, [NotNullWhen(true)] out ImmutableArray<RuntimeStatement2> runtimeStatements)
+    bool TryEvaluate(ICompiledFunctionDefinition function, ImmutableArray<CompiledArgument> parameters, EvaluationContext context, out CompiledValue? value, [NotNullWhen(true)] out ImmutableArray<RuntimeStatement2> runtimeStatements, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         value = default;
         runtimeStatements = default;
@@ -4224,16 +4227,36 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         if (found is null)
         {
+            error = new PossibleDiagnostic($"Function {function.ToReadable()} not compiled", function);
             return false;
         }
 
-        if (TryCompute(parameters, context, out ImmutableArray<CompiledValue> parameterValues, out _)
-            && TryEvaluate(found, parameterValues, context, out value, out runtimeStatements))
+        if (TryCompute(parameters, context, out ImmutableArray<CompiledValue> parameterValues, out error)
+            && TryEvaluate(found, parameterValues, context, out value, out runtimeStatements, out error))
         { return true; }
 
         return false;
     }
-    bool TryEvaluate(CompiledFunction function, ImmutableArray<CompiledValue> parameterValues, EvaluationContext context, out CompiledValue? value, [NotNullWhen(true)] out ImmutableArray<RuntimeStatement2> runtimeStatements)
+    bool TryEvaluate(ICompiledFunctionDefinition function, ImmutableArray<CompiledExpression> parameters, EvaluationContext context, out CompiledValue? value, [NotNullWhen(true)] out ImmutableArray<RuntimeStatement2> runtimeStatements, [NotNullWhen(false)] out PossibleDiagnostic? error)
+    {
+        value = default;
+        runtimeStatements = default;
+
+        CompiledFunction? found = GeneratedFunctions.FirstOrDefault(v => Utils.ReferenceEquals(v.Function, function) && TypeArgumentsEquals(v.TypeArguments, null));
+
+        if (found is null)
+        {
+            error = new PossibleDiagnostic($"Function {function.ToReadable()} not compiled", function);
+            return false;
+        }
+
+        if (TryCompute(parameters, context, out ImmutableArray<CompiledValue> parameterValues, out error)
+            && TryEvaluate(found, parameterValues, context, out value, out runtimeStatements, out error))
+        { return true; }
+
+        return false;
+    }
+    bool TryEvaluate(CompiledFunction function, ImmutableArray<CompiledValue> parameterValues, EvaluationContext context, out CompiledValue? value, [NotNullWhen(true)] out ImmutableArray<RuntimeStatement2> runtimeStatements, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         value = null;
         runtimeStatements = default;
@@ -4245,12 +4268,14 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 if (!parameterValues[i].TryCast(function.Function.Parameters[i].Type, out CompiledValue castedValue))
                 {
                     // Debugger.Break();
+                    error = new PossibleDiagnostic($"Argument {i}: Can't cast value {parameterValues[i]} of type {parameterValues[i].Type} to {function.Function.Parameters[i].Type}");
                     return false;
                 }
 
                 if (!function.Function.Parameters[i].Type.SameAs(castedValue.Type))
                 {
                     // Debugger.Break();
+                    error = new PossibleDiagnostic($"Argument {i}: {function.Function.Parameters[i].Type} != {castedValue.Type}");
                     return false;
                 }
 
@@ -4262,11 +4287,17 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         if (function.Function.ReturnSomething)
         {
             if (!function.Function.Type.Is<BuiltinType>())
-            { return false; }
+            {
+                error = new PossibleDiagnostic($"Can't evalute functions with not built-in return types");
+                return false;
+            }
         }
 
         if (context.Frames.Count > 8)
-        { return false; }
+        {
+            error = new PossibleDiagnostic($"Call stack reached it's maximum value ({8})");
+            return false;
+        }
 
         using (context.Frames.PushAuto(new EvaluationFrame(function)))
         {
@@ -4275,41 +4306,48 @@ public partial class StatementCompiler : IRuntimeInfoProvider
                 context.Frames.Last.Parameters.Add(function.Function.Parameters[i].Identifier, parameterValues[i]);
             }
 
-            bool success = TryEvaluate(function.Body, context);
-
-            if (!success)
+            if (!TryEvaluate(function.Body, context, out error))
             { return false; }
 
             if (function.Function.ReturnSomething)
             {
                 if (context.Frames?.LastOrDefault is null)
                 { throw new InternalExceptionWithoutContext(); }
+
                 if (!context.Frames.LastOrDefault.ReturnValue.HasValue)
-                { return false; }
+                {
+                    error = new PossibleDiagnostic($"Function \"{function.ToReadable()}\" didn't return anything");
+                    return false;
+                }
+
                 value = context.Frames.LastOrDefault.ReturnValue.Value;
             }
         }
 
         runtimeStatements = context.RuntimeStatements.ToImmutableArray();
-
+        error = null;
         return true;
     }
-    bool TryEvaluate(CompiledWhileLoop whileLoop, EvaluationContext context)
+    bool TryEvaluate(CompiledWhileLoop whileLoop, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
-        int iterations = 64;
+        const int MaxIterations = 64;
+        int iterations = MaxIterations;
 
         while (true)
         {
-            if (!TryCompute(whileLoop.Condition, context, out CompiledValue condition, out _))
+            if (!TryCompute(whileLoop.Condition, context, out CompiledValue condition, out error))
             { return false; }
 
             if (!condition)
             { break; }
 
             if (iterations-- < 0)
-            { return false; }
+            {
+                error = new PossibleDiagnostic($"While loop reached it's maximum allowed iteration count ({MaxIterations})", whileLoop);
+                return false;
+            }
 
-            if (!TryEvaluate(whileLoop.Body, context))
+            if (!TryEvaluate(whileLoop.Body, context, out error))
             {
                 context.IsBreaking = false;
                 return false;
@@ -4322,15 +4360,17 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         }
 
         context.IsBreaking = false;
+        error = null;
         return true;
     }
-    bool TryEvaluate(CompiledForLoop forLoop, EvaluationContext context)
+    bool TryEvaluate(CompiledForLoop forLoop, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
-        int iterations = 5048;
+        const int MaxIterations = 5048;
+        int iterations = MaxIterations;
 
         context.PushScope();
 
-        if (forLoop.Initialization is not null && !TryEvaluate(forLoop.Initialization, context))
+        if (forLoop.Initialization is not null && !TryEvaluate(forLoop.Initialization, context, out error))
         { return false; }
 
         while (true)
@@ -4338,16 +4378,19 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             CompiledValue condition;
             if (forLoop.Condition is null)
             { condition = true; }
-            else if (!TryCompute(forLoop.Condition, context, out condition, out _))
+            else if (!TryCompute(forLoop.Condition, context, out condition, out error))
             { return false; }
 
             if (!condition)
             { break; }
 
             if (iterations-- < 0)
-            { return false; }
+            {
+                error = new PossibleDiagnostic($"For loop reached it's maximum allowed iteration count ({MaxIterations})", forLoop);
+                return false;
+            }
 
-            if (!TryEvaluate(forLoop.Body, context))
+            if (!TryEvaluate(forLoop.Body, context, out error))
             {
                 context.IsBreaking = false;
                 return false;
@@ -4356,7 +4399,7 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             if (context.IsBreaking)
             { break; }
 
-            if (forLoop.Step is not null && !TryEvaluate(forLoop.Step, context))
+            if (forLoop.Step is not null && !TryEvaluate(forLoop.Step, context, out error))
             { return false; }
 
             context.IsBreaking = false;
@@ -4364,148 +4407,178 @@ public partial class StatementCompiler : IRuntimeInfoProvider
 
         context.IsBreaking = false;
         context.PopScope();
+        error = null;
         return true;
     }
-    bool TryEvaluate(CompiledIf ifContainer, EvaluationContext context)
+    bool TryEvaluate(CompiledIf ifContainer, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
-        CompiledBranch? current = ifContainer;
+        CompiledBranch current = ifContainer;
         while (true)
         {
             switch (current)
             {
                 case CompiledIf _if:
                 {
-                    if (!TryCompute(_if.Condition, context, out CompiledValue condition, out _))
+                    if (!TryCompute(_if.Condition, context, out CompiledValue condition, out error))
                     { return false; }
 
                     if (condition)
-                    { return TryEvaluate(_if.Body, context); }
+                    { return TryEvaluate(_if.Body, context, out error); }
+
+                    if (_if.Next is null)
+                    { return true; }
 
                     current = _if.Next;
                     break;
                 }
                 case CompiledElse _else:
                 {
-                    return TryEvaluate(_else.Body, context);
+                    return TryEvaluate(_else.Body, context, out error);
                 }
                 default:
                     throw new NotImplementedException();
             }
-            if (current is null) break;
         }
-
-        return false;
     }
-    bool TryEvaluate(CompiledBlock block, EvaluationContext context)
+    bool TryEvaluate(CompiledBlock block, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         context.PushScope();
-        bool result = TryEvaluate(block.Statements, context);
+        bool result = TryEvaluate(block.Statements, context, out error);
         context.PopScope();
         return result;
     }
-    bool TryEvaluate(CompiledVariableDefinition variableDeclaration, EvaluationContext context)
+    bool TryEvaluate(CompiledVariableDefinition variableDefinition, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         CompiledValue value;
 
         if (context.Frames.LastOrDefault is null)
-        { return false; }
-
-        if (variableDeclaration.InitialValue is null &&
-            variableDeclaration.Type.ToString() != StatementKeywords.Var)
         {
-            if (!GetInitialValue(variableDeclaration.Type, out value))
-            { return false; }
+            error = new PossibleDiagnostic($"Unexpected variable definition", variableDefinition);
+            return false;
+        }
+
+        if (variableDefinition.InitialValue is null &&
+            variableDefinition.Type.ToString() != StatementKeywords.Var)
+        {
+            if (!GetInitialValue(variableDefinition.Type, out value))
+            {
+                error = new PossibleDiagnostic($"Couldn't get an initial value for {variableDefinition.Type}", variableDefinition.TypeExpression);
+                return false;
+            }
         }
         else
         {
-            if (!TryCompute(variableDeclaration.InitialValue, context, out value, out _))
+            if (!TryCompute(variableDefinition.InitialValue, context, out value, out error))
             { return false; }
         }
 
-        if (!(context.Frames.LastOrDefault.Scopes.LastOrDefault?.Variables.TryAdd(variableDeclaration, value) ?? false))
-        { return false; }
+        if (context.Frames.LastOrDefault.Scopes.LastOrDefault is null)
+        {
+            error = new PossibleDiagnostic($"Unexpected variable definition", variableDefinition);
+            return false;
+        }
 
+        if (!context.Frames.LastOrDefault.Scopes.LastOrDefault.Variables.TryAdd(variableDefinition, value))
+        {
+            error = new PossibleDiagnostic($"Variable \"{variableDefinition.Identifier}\" already exists", variableDefinition);
+            return false;
+        }
+
+        error = null;
         return true;
     }
-    bool TryEvaluate(CompiledSetter anyAssignment, EvaluationContext context)
+    bool TryEvaluate(CompiledSetter anyAssignment, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
-        if (!TryCompute(anyAssignment.Value, context, out CompiledValue value, out _))
+        if (!TryCompute(anyAssignment.Value, context, out CompiledValue value, out error))
         { return false; }
 
         if (anyAssignment.Target is CompiledVariableAccess targetVariable)
         {
             if (!context.TrySetVariable(targetVariable.Variable, value))
-            { return false; }
+            {
+                error = new PossibleDiagnostic($"Variable \"{targetVariable.Variable}\" not found", targetVariable);
+                return false;
+            }
         }
         else if (anyAssignment.Target is CompiledParameterAccess targetParameter)
         {
             if (!context.TrySetParameter(targetParameter.Parameter.Identifier, value))
-            { return false; }
+            {
+                error = new PossibleDiagnostic($"Variable \"{targetParameter.Parameter.Identifier}\" not found", targetParameter);
+                return false;
+            }
         }
         else
         {
+            error = new PossibleDiagnostic($"Unsupported assign target {anyAssignment.Target.GetType().Name}", anyAssignment.Target);
             return false;
         }
 
         return true;
     }
-    bool TryEvaluate(CompiledReturn keywordCall, EvaluationContext context)
+    bool TryEvaluate(CompiledReturn keywordCall, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         context.IsReturning = true;
 
         if (keywordCall.Value is not null)
         {
-            if (!TryCompute(keywordCall.Value, context, out CompiledValue returnValue, out _))
+            if (!TryCompute(keywordCall.Value, context, out CompiledValue returnValue, out error))
             { return false; }
 
             context.Frames.Last.ReturnValue = returnValue;
         }
 
+        error = null;
         return true;
     }
-    bool TryEvaluate(CompiledBreak keywordCall, EvaluationContext context)
+    bool TryEvaluate(CompiledBreak keywordCall, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         context.IsBreaking = true;
+        error = null;
         return true;
     }
-    bool TryEvaluate(CompiledCrash keywordCall, EvaluationContext context)
+    bool TryEvaluate(CompiledCrash keywordCall, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
+        error = new PossibleDiagnostic($"Cannot evaluate crash call", keywordCall);
         return false;
     }
-    bool TryEvaluate(CompiledGoto keywordCall, EvaluationContext context)
+    bool TryEvaluate(CompiledGoto keywordCall, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
+        error = new PossibleDiagnostic($"Cannot evaluate goto", keywordCall);
         return false;
     }
-    bool TryEvaluate(CompiledDelete keywordCall, EvaluationContext context)
+    bool TryEvaluate(CompiledDelete keywordCall, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
+        error = new PossibleDiagnostic($"Cannot evaluate delete call", keywordCall);
         return false;
     }
-    bool TryEvaluate(CompiledStatement statement, EvaluationContext context) => statement switch
+    bool TryEvaluate(CompiledStatement statement, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error) => statement switch
     {
-        CompiledExpression v => TryCompute(v, context, out _, out _),
-        CompiledBlock v => TryEvaluate(v, context),
-        CompiledVariableDefinition v => TryEvaluate(v, context),
-        CompiledWhileLoop v => TryEvaluate(v, context),
-        CompiledForLoop v => TryEvaluate(v, context),
-        CompiledSetter v => TryEvaluate(v, context),
-        CompiledReturn v => TryEvaluate(v, context),
-        CompiledCrash v => TryEvaluate(v, context),
-        CompiledBreak v => TryEvaluate(v, context),
-        CompiledGoto v => TryEvaluate(v, context),
-        CompiledDelete v => TryEvaluate(v, context),
-        CompiledIf v => TryEvaluate(v, context),
+        CompiledExpression v => TryCompute(v, context, out _, out error),
+        CompiledBlock v => TryEvaluate(v, context, out error),
+        CompiledVariableDefinition v => TryEvaluate(v, context, out error),
+        CompiledWhileLoop v => TryEvaluate(v, context, out error),
+        CompiledForLoop v => TryEvaluate(v, context, out error),
+        CompiledSetter v => TryEvaluate(v, context, out error),
+        CompiledReturn v => TryEvaluate(v, context, out error),
+        CompiledCrash v => TryEvaluate(v, context, out error),
+        CompiledBreak v => TryEvaluate(v, context, out error),
+        CompiledGoto v => TryEvaluate(v, context, out error),
+        CompiledDelete v => TryEvaluate(v, context, out error),
+        CompiledIf v => TryEvaluate(v, context, out error),
         _ => throw new NotImplementedException(statement.GetType().ToString()),
     };
-    bool TryEvaluate(ImmutableArray<CompiledStatement> statements, EvaluationContext context)
+    bool TryEvaluate(ImmutableArray<CompiledStatement> statements, EvaluationContext context, [NotNullWhen(false)] out PossibleDiagnostic? error)
     {
         foreach (CompiledStatement statement in statements)
         {
-            if (!TryEvaluate(statement, context))
+            if (!TryEvaluate(statement, context, out error))
             { return false; }
 
             if (context.IsReturning || context.IsBreaking)
             { break; }
         }
+        error = null;
         return true;
     }
 

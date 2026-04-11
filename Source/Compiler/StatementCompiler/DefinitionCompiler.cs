@@ -808,13 +808,14 @@ public partial class StatementCompiler
 
             List<CompiledEnumMember> compiledMembers = new(enumDefinition.Members.Length);
 
-            bool? IsEnumMemberUnique1(CompiledValue constantValue, out PossibleDiagnostic? warning)
+            bool? IsEnumMemberUnique(CompiledValue constantValue, out PossibleDiagnostic? warning)
             {
                 foreach (CompiledEnumMember otherMember in compiledMembers)
                 {
                     if (otherMember.Value is not CompiledConstantValue otherConstantValue)
                     {
-                        warning = new PossibleDiagnostic($"Cannot check if the enum member is unique, because not all members has a numeric value");
+                        warning = new PossibleDiagnostic($"Cannot check if the enum member is unique, because not all members has a numeric value",
+                            new PossibleDiagnostic($"Enum member \"{otherMember.Identifier}\" doesn't have a numeric value", otherMember));
                         return null;
                     }
 
@@ -823,34 +824,6 @@ public partial class StatementCompiler
                         warning = new PossibleDiagnostic($"Enum member conflicts with \"{otherMember.Identifier}\"");
                         return false;
                     }
-                }
-
-                warning = null;
-                return true;
-            }
-
-            bool? IsEnumMemberUnique2(CompiledExpression expression, CompiledValue? constantValue, out PossibleDiagnostic? warning)
-            {
-                if (constantValue.HasValue)
-                {
-                    return IsEnumMemberUnique1(constantValue.Value, out warning);
-                }
-
-                foreach (CompiledEnumMember otherMember in compiledMembers)
-                {
-                    if (expression is CompiledStackString stringLiteral1
-                        && otherMember.Value is CompiledStackString otherStringLiteral1)
-                    {
-                        if (stringLiteral1.Value == otherStringLiteral1.Value)
-                        {
-                            warning = new PossibleDiagnostic($"Enum member conflicts with \"{otherMember.Identifier}\"");
-                            return false;
-                        }
-                        continue;
-                    }
-
-                    warning = new PossibleDiagnostic($"Cannot check if the enum member is unique");
-                    return null;
                 }
 
                 warning = null;
@@ -904,7 +877,7 @@ public partial class StatementCompiler
                     CompiledValue constLastValue = lastConstValue.Value;
                     RuntimeType constLastType = constLastValue.Type;
 
-                    while (!IsEnumMemberUnique1(constLastValue, out _) ?? false)
+                    while (!IsEnumMemberUnique(constLastValue, out _) ?? false)
                     {
                         constLastValue += 1;
                     }
@@ -992,7 +965,7 @@ public partial class StatementCompiler
                         };
                     }
 
-                    IsEnumMemberUnique1(constValue, out PossibleDiagnostic? uniqueWarning);
+                    IsEnumMemberUnique(constValue, out PossibleDiagnostic? uniqueWarning);
                     if (uniqueWarning is not null) Diagnostics.Add(uniqueWarning.ToWarning(member));
                 }
                 else

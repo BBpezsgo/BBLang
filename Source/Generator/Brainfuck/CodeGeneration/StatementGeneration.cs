@@ -356,13 +356,13 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
         if (type.Length is null)
         {
-            error = new PossibleDiagnostic($"Array type doesn't have a size");
+            error = new PossibleDiagnostic($"Array type doesn't have a size", type);
             return false;
         }
 
         if (FindSize(type.Length.Type, type.Length) != 1)
         {
-            error = new PossibleDiagnostic($"Array length must be 1 byte");
+            error = new PossibleDiagnostic($"Array length must be 1 byte", type.Length);
             return false;
         }
 
@@ -373,7 +373,7 @@ public partial class CodeGeneratorForBrainfuck : CodeGenerator
 
         if (elementSize != 1)
         {
-            error = new PossibleDiagnostic($"Array element size must be 1 byte");
+            error = new PossibleDiagnostic($"Array element size must be 1 byte", type.Of);
             return false;
         }
 
