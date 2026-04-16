@@ -522,7 +522,15 @@ public class RuntimeException : LanguageException
 
                     if (!AppendFrame(callStack[i], CallTrace[i]))
                     {
-                        result.Append($"<unknown> {CallTrace[i].InstructionPointer}");
+                        if (CallTrace[i].InstructionPointer == 0)
+                        {
+                            result.Append($"Top Level Statements");
+                        }
+                        else
+                        {
+                            result.Append($"<unknown> {CallTrace[i].InstructionPointer}");
+                        }
+
                         if (DebugInformation.TryGetSourceLocation(CallTrace[i].InstructionPointer, out SourceCodeLocation sourceLocation))
                         {
                             result.Append(' ');
