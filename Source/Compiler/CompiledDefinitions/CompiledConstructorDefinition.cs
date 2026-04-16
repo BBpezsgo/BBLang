@@ -84,5 +84,15 @@ public class CompiledConstructorDefinition :
         return result.ToString();
     }
 
+    public static string ToReadable(GeneralType identifier, IEnumerable<CompiledExpression> parameters)
+    {
+        StringBuilder result = new();
+        result.Append(identifier.ToString());
+        result.Append('(');
+        result.AppendJoin(", ", parameters.Select(v => v.Type));
+        result.Append(')');
+        return result.ToString();
+    }
+
     string IReadable.ToReadable() => ToReadable(null);
 }

@@ -1,5 +1,4 @@
 using LanguageCore.Parser;
-using LanguageCore.Parser.Statements;
 
 namespace LanguageCore.Compiler;
 
@@ -11,7 +10,6 @@ public partial class StatementCompiler
         public static FunctionQuery<TFunction, TIdentifier, TDefinedIdentifier, GeneralType> Create<TFunction, TIdentifier, TDefinedIdentifier>(
             TIdentifier? identifier,
             ImmutableArray<GeneralType>? arguments = null,
-            FunctionQueryArgumentConverter<GeneralType>? converter = null,
             Uri? relevantFile = null,
             GeneralType? returnType = null,
             Action<TemplateInstance<TFunction>>? addCompilable = null)
@@ -21,17 +19,16 @@ public partial class StatementCompiler
                 Identifier = identifier,
                 Arguments = arguments,
                 ArgumentCount = arguments?.Length,
-                Converter = converter ?? FunctionArgumentConverter,
+                Converter = v => v,
                 RelevantFile = relevantFile,
                 ReturnType = returnType,
                 AddCompilable = addCompilable,
             };
 
         [DebuggerStepThrough]
-        public static FunctionQuery<TFunction, TIdentifier, TDefinedIdentifier, ArgumentExpression> Create<TFunction, TIdentifier, TDefinedIdentifier>(
+        public static FunctionQuery<TFunction, TIdentifier, TDefinedIdentifier, CompiledExpression> Create<TFunction, TIdentifier, TDefinedIdentifier>(
             TIdentifier? identifier,
-            ImmutableArray<ArgumentExpression> arguments,
-            FunctionQueryArgumentConverter<ArgumentExpression> converter,
+            ImmutableArray<CompiledExpression> arguments,
             Uri? relevantFile = null,
             GeneralType? returnType = null,
             Action<TemplateInstance<TFunction>>? addCompilable = null)
@@ -41,7 +38,7 @@ public partial class StatementCompiler
                 Identifier = identifier,
                 Arguments = arguments,
                 ArgumentCount = arguments.Length,
-                Converter = converter,
+                Converter = v => v.Type,
                 RelevantFile = relevantFile,
                 ReturnType = returnType,
                 AddCompilable = addCompilable,
@@ -61,7 +58,28 @@ public partial class StatementCompiler
                 Identifier = identifier,
                 Arguments = arguments,
                 ArgumentCount = arguments.Length,
-                Converter = FunctionArgumentConverter,
+                Converter = v => v,
+                RelevantFile = relevantFile,
+                ReturnType = returnType,
+                AddCompilable = addCompilable,
+                IdentifierMatcher = identifierMatcher,
+            };
+
+        [DebuggerStepThrough]
+        public static FunctionQuery<TFunction, TIdentifier, TDefinedIdentifier, CompiledExpression> Create<TFunction, TIdentifier, TDefinedIdentifier>(
+            TIdentifier? identifier,
+            ImmutableArray<CompiledExpression> arguments,
+            Uri? relevantFile = null,
+            GeneralType? returnType = null,
+            Action<TemplateInstance<TFunction>>? addCompilable = null,
+            FunctionQueryIdentifierMatcher<TIdentifier, TDefinedIdentifier>? identifierMatcher = null)
+            where TFunction : notnull
+            => new()
+            {
+                Identifier = identifier,
+                Arguments = arguments,
+                ArgumentCount = arguments.Length,
+                Converter = v => v.Type,
                 RelevantFile = relevantFile,
                 ReturnType = returnType,
                 AddCompilable = addCompilable,
@@ -78,7 +96,7 @@ public partial class StatementCompiler
         public int? ArgumentCount { get; init; }
         public GeneralType? ReturnType { get; init; }
         public Action<TemplateInstance<TFunction>>? AddCompilable { get; init; }
-        public FunctionQueryArgumentConverter<TArgument> Converter { get; init; }
+        public Func<TArgument, GeneralType> Converter { get; init; }
         public FunctionQueryIdentifierMatcher<TIdentifier, TDefinedIdentifier>? IdentifierMatcher { get; init; }
 
         public string ToReadable()
@@ -94,15 +112,15 @@ public partial class StatementCompiler
     public class FunctionQueryResult<TFunction> where TFunction : notnull
     {
         public required TFunction Function { get; init; }
-        public required ImmutableArray<ArgumentExpression?> Arguments { get; init; }
+        public required ImmutableArray<CompiledExpression?> Arguments { get; init; }
         public ImmutableDictionary<string, GeneralType>? TypeArguments { get; init; }
         public bool Success { get; init; }
         public bool DidReplaceArguments => !Arguments.IsDefault && Arguments.Any(v => v is not null);
 
-        public void ReplaceArgumentsIfNeeded(ref ImmutableArray<ArgumentExpression> arguments)
+        public void ReplaceArgumentsIfNeeded(ref ImmutableArray<CompiledExpression> arguments)
         {
             if (Arguments.IsDefault) return;
-            ImmutableArray<ArgumentExpression>.Builder newArguments = ImmutableArray.CreateBuilder<ArgumentExpression>(arguments.Length);
+            ImmutableArray<CompiledExpression>.Builder newArguments = ImmutableArray.CreateBuilder<CompiledExpression>(arguments.Length);
             for (int i = 0; i < arguments.Length; i++)
             {
                 newArguments.Add(Arguments[i] ?? arguments[i]);
@@ -148,7 +166,7 @@ public partial class StatementCompiler
         public TypeMatch? ParameterTypeMatch { get; set; }
 
         public ImmutableDictionary<string, GeneralType>? TypeArguments { get; set; }
-        public ImmutableArray<ArgumentExpression?> Arguments { get; set; }
+        public ImmutableArray<CompiledExpression?> Arguments { get; set; }
 
         const int Better = -1;
         const int Same = 0;
@@ -214,48 +232,10 @@ public partial class StatementCompiler
         }
     }
 
-    public delegate bool FunctionQueryArgumentConverter<TArgument>(
-        TArgument passed,
-        ParameterDefinition? definition,
-        GeneralType? defined,
-        [NotNullWhen(true)] out GeneralType? result);
-
     public delegate bool FunctionQueryIdentifierMatcher<TIdentifier, TDefinedIdentifier>(
         TIdentifier passed,
         TDefinedIdentifier defined,
         out int badness);
-
-    static bool FunctionArgumentConverter(
-        GeneralType argument,
-        ParameterDefinition? parameterDefinition,
-        GeneralType? expectedType,
-        [NotNullWhen(true)] out GeneralType? result)
-    {
-        result = argument;
-        return true;
-    }
-
-    bool FunctionArgumentConverter(
-        Expression argument,
-        ParameterDefinition? parameterDefinition,
-        GeneralType? expectedType,
-        [NotNullWhen(true)] out GeneralType? result)
-    {
-        if (expectedType is not null)
-        {
-            if (!expectedType.AllGenericsDefined())
-            {
-                expectedType = null;
-            }
-        }
-
-        if (!FindStatementType(argument, expectedType, out result, Diagnostics))
-        {
-            return false;
-        }
-
-        return true;
-    }
 
     public static bool GetFunction<TFunction, TPassedIdentifier, TDefinedIdentifier, TArgument>(
         Functions<TFunction> functions,
@@ -513,38 +493,42 @@ public partial class StatementCompiler
             result.IsFileMatches = true;
         }
 
-        bool TryReplaceArgument(ref ArgumentExpression? argument, GeneralType passedType, GeneralType definedType, ParameterDefinition definition, TArgument passed)
+        bool TryReplaceArgument(ref CompiledExpression? argument, GeneralType passedType, GeneralType definedType, ParameterDefinition definition, TArgument passed)
         {
-            if (passed is not Expression _v) return false;
+            if (passed is not CompiledExpression passedExpression) return false;
             if (!definition.Modifiers.Contains(ModifierKeywords.This)) return false;
 
-            if (!CanCastImplicitly(new PointerType(passedType), definedType, _v, out _)) return false;
+            if (!CanCastImplicitly(new PointerType(passedType), definedType, out _)) return false;
 
-            argument ??= ArgumentExpression.Wrap(new GetReferenceExpression(
-                Tokenizing.Token.CreateAnonymous("&", Tokenizing.TokenType.Operator),
-                _v,
-                _v.File
-            ));
+            argument = new CompiledGetReference()
+            {
+                Of = passedExpression,
+                Location = passedExpression.Location,
+                SaveValue = passedExpression.SaveValue,
+                Type = new PointerType(passedExpression.Type),
+            };
             return true;
         }
 
-        bool TryReplaceArgument2(ref ArgumentExpression? argument, GeneralType passedType, GeneralType definedType, ParameterDefinition definition, TArgument passed, Dictionary<string, GeneralType> typeArguments)
+        bool TryReplaceArgument2(ref CompiledExpression? argument, GeneralType passedType, GeneralType definedType, ParameterDefinition definition, TArgument passed, Dictionary<string, GeneralType> typeArguments)
         {
-            if (passed is not Expression _v) return false;
+            if (passed is not CompiledExpression passedExpression) return false;
             if (!definition.Modifiers.Contains(ModifierKeywords.This)) return false;
 
             if (!definedType.Is(out PointerType? definedPointerType)) return false;
             if (!GeneralType.TryGetTypeParameters(definedPointerType.To, passedType, typeArguments)) return false;
 
-            argument ??= ArgumentExpression.Wrap(new GetReferenceExpression(
-                Tokenizing.Token.CreateAnonymous("&", Tokenizing.TokenType.Operator),
-                _v,
-                _v.File
-            ));
+            argument = new CompiledGetReference()
+            {
+                Of = passedExpression,
+                Location = passedExpression.Location,
+                SaveValue = passedExpression.SaveValue,
+                Type = new PointerType(passedExpression.Type),
+            };
             return true;
         }
 
-        void GetArgumentMatch(ref TypeMatch typeMatch, ref ArgumentExpression? compiledPassedArgument, GeneralType definedType, ParameterDefinition definition, TArgument passed, List<PossibleDiagnostic> errors)
+        void GetArgumentMatch(ref TypeMatch typeMatch, ref CompiledExpression? compiledPassedArgument, GeneralType definedType, ParameterDefinition definition, TArgument passed, List<PossibleDiagnostic> errors)
         {
             if (typeMatch == TypeMatch.None) return;
 
@@ -552,11 +536,7 @@ public partial class StatementCompiler
 
             if (typeMatch >= TypeMatch.ImplicitCast)
             {
-                if (!query.Converter.Invoke(passed, definition, null, out GeneralType? a))
-                {
-                    typeMatch = TypeMatch.None;
-                    return;
-                }
+                GeneralType a = query.Converter.Invoke(passed);
 
                 if (typeMatch >= TypeMatch.Equals && a.Equals(definedType))
                 {
@@ -592,13 +572,10 @@ public partial class StatementCompiler
 
             if (typeMatch >= TypeMatch.Promotion)
             {
-                if (query.Converter.Invoke(passed, definition, definedType, out GeneralType? converted))
+                if (query.Converter.Invoke(passed).SameAs(definedType))
                 {
-                    if (converted.SameAs(definedType))
-                    {
-                        typeMatch = TypeMatch.Promotion;
-                        return;
-                    }
+                    typeMatch = TypeMatch.Promotion;
+                    return;
                 }
             }
 
@@ -639,16 +616,12 @@ public partial class StatementCompiler
             {
                 int checkCount = Math.Min(function.Parameters.Length, query.Arguments.Value.Length);
 
-                ArgumentExpression?[] argumentValues = new ArgumentExpression?[checkCount];
+                CompiledExpression?[] argumentValues = new CompiledExpression?[checkCount];
 
                 for (int i = 0; i < checkCount; i++)
                 {
                     GeneralType defined = function.Parameters[i].Type;
-                    if (!query.Converter.Invoke(query.Arguments.Value[i], function.Parameters[i].Definition, defined, out GeneralType? passed))
-                    {
-                        result.Errors.Add(new PossibleDiagnostic($"Argument {i + 1}: Could not resolve the template types"));
-                        return result;
-                    }
+                    GeneralType passed = query.Converter.Invoke(query.Arguments.Value[i]);
 
                     if (TryReplaceArgument2(ref argumentValues[i], passed, defined, function.Parameters[i].Definition, query.Arguments.Value[i], _typeArguments))
                     {
@@ -699,7 +672,7 @@ public partial class StatementCompiler
                 result.ParameterTypeMatch = TypeMatch.Equals;
 
                 int checkCount = Math.Min(function.Parameters.Length, query.Arguments.Value.Length);
-                ArgumentExpression?[] arguments = new ArgumentExpression?[checkCount];
+                CompiledExpression?[] arguments = new CompiledExpression?[checkCount];
                 for (int i = 0; i < checkCount; i++)
                 {
                     GeneralType defined = function.Parameters[i].Type;

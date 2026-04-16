@@ -331,8 +331,8 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     };
 
     bool GetConstructor(
-        GeneralType type,
-        ImmutableArray<GeneralType> arguments,
+        CompiledExpression objectArg,
+        ImmutableArray<CompiledExpression> arguments,
         Uri relevantFile,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledConstructorDefinition>? result,
@@ -342,26 +342,32 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         StructType? structType;
 
         {
-            ImmutableArray<GeneralType>.Builder argumentsBuilder = ImmutableArray.CreateBuilder<GeneralType>();
+            ImmutableArray<CompiledExpression>.Builder argumentsBuilder = ImmutableArray.CreateBuilder<CompiledExpression>();
 
-            if (type.Is(out PointerType? pointerType))
+            if (objectArg.Type.Is(out PointerType? pointerType))
             {
                 if (!pointerType.To.Is<StructType>(out structType))
                 {
                     result = null;
-                    error = new PossibleDiagnostic($"Invalid type \"{type}\" used for constructor");
+                    error = new PossibleDiagnostic($"Invalid type \"{objectArg}\" used for constructor");
                     return false;
                 }
-                argumentsBuilder.Add(type);
+                argumentsBuilder.Add(objectArg);
             }
-            else if (type.Is(out structType))
+            else if (objectArg.Type.Is(out structType))
             {
-                argumentsBuilder.Add(new PointerType(structType));
+                argumentsBuilder.Add(new CompiledGetReference()
+                {
+                    Of = objectArg,
+                    Type = new PointerType(structType),
+                    Location = objectArg.Location,
+                    SaveValue = objectArg.SaveValue,
+                });
             }
             else
             {
                 result = null;
-                error = new PossibleDiagnostic($"Invalid type \"{type}\" used for constructor");
+                error = new PossibleDiagnostic($"Invalid type \"{objectArg}\" used for constructor");
                 return false;
             }
 
@@ -377,12 +383,12 @@ public partial class StatementCompiler : IRuntimeInfoProvider
             Compilable = constructors.Compilable.Where(v => Utils.ReferenceEquals(v.Template.Context, structType.Struct)),
         };
 
-        return GetFunction<CompiledConstructorDefinition, GeneralType, GeneralType, GeneralType>(
+        return GetFunction<CompiledConstructorDefinition, GeneralType, GeneralType, CompiledExpression>(
             constructors,
             "constructor",
-            CompiledConstructorDefinition.ToReadable(type, arguments),
+            CompiledConstructorDefinition.ToReadable(objectArg.Type, arguments),
 
-            FunctionQuery.Create(type, arguments, relevantFile, null, addCompilable, (GeneralType passed, GeneralType defined, out int badness) =>
+            FunctionQuery.Create(objectArg.Type, arguments, relevantFile, null, addCompilable, (GeneralType passed, GeneralType defined, out int badness) =>
             {
                 badness = 0;
                 if (passed.Is(out PointerType? passedPointerType))
@@ -431,17 +437,17 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
 
     bool GetIndexGetter(
-        GeneralType prevType,
-        GeneralType indexType,
+        CompiledExpression prevType,
+        CompiledExpression indexType,
         Uri relevantFile,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error,
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
-        ImmutableArray<GeneralType> arguments = ImmutableArray.Create(prevType, indexType);
-        FunctionQuery<CompiledFunctionDefinition, string, string, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(BuiltinFunctionIdentifiers.IndexerGet, arguments, relevantFile, null, addCompilable);
-        return GetFunction<CompiledFunctionDefinition, string, string, GeneralType>(
+        ImmutableArray<CompiledExpression> arguments = ImmutableArray.Create(prevType, indexType);
+        FunctionQuery<CompiledFunctionDefinition, string, string, CompiledExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(BuiltinFunctionIdentifiers.IndexerGet, arguments, relevantFile, null, addCompilable);
+        return GetFunction<CompiledFunctionDefinition, string, string, CompiledExpression>(
             GetFunctions(),
             "function",
             null,
@@ -453,41 +459,19 @@ public partial class StatementCompiler : IRuntimeInfoProvider
         ) && result.Success;
     }
 
-    bool GetIndexGetter(
-        IndexCallExpression expression,
-
-        [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
-        [NotNullWhen(false)] out PossibleDiagnostic? error,
-        Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
-    {
-        string identifier = BuiltinFunctionIdentifiers.IndexerGet;
-        FunctionQuery<CompiledFunctionDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(
-            identifier,
-            ImmutableArray.Create<ArgumentExpression>(ArgumentExpression.Wrap(expression.Object), expression.Index),
-            FunctionArgumentConverter,
-            expression.File,
-            null,
-            addCompilable);
-        return GetFunction(
-            query,
-            out result,
-            out error
-        );
-    }
-
     bool GetIndexSetter(
-        GeneralType prevType,
-        GeneralType elementType,
-        GeneralType indexType,
+        CompiledExpression prevType,
+        CompiledExpression elementType,
+        CompiledExpression indexType,
         Uri relevantFile,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error,
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
-        ImmutableArray<GeneralType> arguments = ImmutableArray.Create(prevType, indexType, elementType);
-        FunctionQuery<CompiledFunctionDefinition, string, string, GeneralType> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(BuiltinFunctionIdentifiers.IndexerSet, arguments, relevantFile, null, addCompilable);
-        return GetFunction<CompiledFunctionDefinition, string, string, GeneralType>(
+        ImmutableArray<CompiledExpression> arguments = ImmutableArray.Create(prevType, indexType, elementType);
+        FunctionQuery<CompiledFunctionDefinition, string, string, CompiledExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(BuiltinFunctionIdentifiers.IndexerSet, arguments, relevantFile, null, addCompilable);
+        return GetFunction<CompiledFunctionDefinition, string, string, CompiledExpression>(
             GetFunctions(),
             "function",
             null,
@@ -536,48 +520,21 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
 
     bool GetOperator(
-        BinaryOperatorCallExpression @operator,
+        string identifier,
+        ImmutableArray<CompiledExpression> arguments,
         Uri relevantFile,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledOperatorDefinition>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error,
         Action<TemplateInstance<CompiledOperatorDefinition>>? addCompilable = null)
     {
-        FunctionQuery<CompiledOperatorDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, string>(
-            @operator.Operator.Content,
-            @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap),
-            FunctionArgumentConverter,
+        FunctionQuery<CompiledOperatorDefinition, string, string, CompiledExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, string>(
+            identifier,
+            arguments,
             relevantFile,
             null,
             addCompilable);
-        return GetFunction<CompiledOperatorDefinition, string, string, ArgumentExpression>(
-            GetOperators(),
-            "operator",
-            null,
-
-            query,
-
-            out result,
-            out error
-        ) && result.Success;
-    }
-
-    bool GetOperator(
-        UnaryOperatorCallExpression @operator,
-        Uri relevantFile,
-
-        [NotNullWhen(true)] out FunctionQueryResult<CompiledOperatorDefinition>? result,
-        [NotNullWhen(false)] out PossibleDiagnostic? error,
-        Action<TemplateInstance<CompiledOperatorDefinition>>? addCompilable = null)
-    {
-        FunctionQuery<CompiledOperatorDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledOperatorDefinition, string, string>(
-            @operator.Operator.Content,
-            @operator.Arguments.ToImmutableArray(ArgumentExpression.Wrap),
-            FunctionArgumentConverter,
-            relevantFile,
-            null,
-            addCompilable);
-        return GetFunction<CompiledOperatorDefinition, string, string, ArgumentExpression>(
+        return GetFunction<CompiledOperatorDefinition, string, string, CompiledExpression>(
             GetOperators(),
             "operator",
             null,
@@ -647,21 +604,21 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     }
 
     bool GetFunction(
-        FunctionCallExpression functionCallStatement,
+        string identifier,
+        ImmutableArray<CompiledExpression> arguments,
+        Uri file,
 
         [NotNullWhen(true)] out FunctionQueryResult<CompiledFunctionDefinition>? result,
         [NotNullWhen(false)] out PossibleDiagnostic? error,
         Action<TemplateInstance<CompiledFunctionDefinition>>? addCompilable = null)
     {
-        string identifier = functionCallStatement.Identifier.Content;
-        FunctionQuery<CompiledFunctionDefinition, string, string, ArgumentExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(
+        FunctionQuery<CompiledFunctionDefinition, string, string, CompiledExpression> query = FunctionQuery.Create<CompiledFunctionDefinition, string, string>(
             identifier,
-            functionCallStatement.MethodArguments,
-            FunctionArgumentConverter,
-            functionCallStatement.File,
+            arguments,
+            file,
             null,
             addCompilable);
-        return GetFunction(
+        return GetFunction<CompiledExpression>(
             query,
             out result,
             out error
@@ -2017,772 +1974,6 @@ public partial class StatementCompiler : IRuntimeInfoProvider
     void SetStatementReference(IReferenceableTo statement, object? reference)
     {
         if (!Frames.Last.IsTemplateInstance) statement.Reference = reference;
-    }
-
-    bool FindStatementType(AnyCallExpression anyCall, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        DiagnosticsCollection subdiagnostics = new();
-        if (anyCall.ToFunctionCall(out FunctionCallExpression? functionCall) && FindStatementType(functionCall, out type, subdiagnostics))
-        {
-            SetStatementType(anyCall, type);
-            return true;
-        }
-
-        if (!FindStatementType(anyCall.Expression, out GeneralType? prevType, diagnostics))
-        {
-            type = null;
-            diagnostics.AddRange(subdiagnostics);
-            return false;
-        }
-
-        if (!prevType.Is(out FunctionType? functionType))
-        {
-            type = null;
-            diagnostics.Add(DiagnosticAt.Error($"This isn't a function", anyCall.Expression));
-            diagnostics.AddRange(subdiagnostics);
-            return false;
-        }
-
-        type = functionType.ReturnType;
-        SetStatementType(anyCall, functionType.ReturnType);
-        return true;
-    }
-    bool FindStatementType(LambdaExpression lambdaExpression, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        type = null;
-
-        if (expectedType is null || !expectedType.Is(out FunctionType? functionType))
-        {
-            diagnostics.Add(DiagnosticAt.Internal($"No bro please no", lambdaExpression));
-            return false;
-        }
-
-        if (functionType.Parameters.Length != lambdaExpression.Parameters.Length)
-        {
-            diagnostics.Add(DiagnosticAt.Error($"Idk how to explain this", lambdaExpression));
-            return false;
-        }
-
-        GeneralType[] parameterTypes = new GeneralType[lambdaExpression.Parameters.Length];
-        for (int i = 0; i < lambdaExpression.Parameters.Length; i++)
-        {
-            GeneralType expectedParameterType = functionType.Parameters[i];
-            if (!CompileType(lambdaExpression.Parameters[i].Type, out GeneralType? definedParameterType, diagnostics)) return false;
-            if (!expectedParameterType.SameAs(definedParameterType))
-            {
-                diagnostics.Add(DiagnosticAt.Error($"Expected `{expectedParameterType}` defined `{definedParameterType}` ", lambdaExpression));
-                return false;
-            }
-            parameterTypes[i] = definedParameterType;
-        }
-
-        type = new FunctionType(functionType.ReturnType, parameterTypes.AsImmutableUnsafe(), functionType.HasClosure);
-        return true;
-    }
-    bool FindStatementType(ListExpression list, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        GeneralType? itemType = null;
-
-        for (int i = 0; i < list.Values.Length; i++)
-        {
-            Expression item = list.Values[i];
-            if (!FindStatementType(item, itemType, out GeneralType? currentItemType, diagnostics)) continue;
-
-            if (itemType is null)
-            {
-                itemType = currentItemType;
-            }
-            else if (!currentItemType.SameAs(itemType))
-            {
-                diagnostics.Add(DiagnosticAt.Error($"List element at index {i} should be a {itemType} and not {currentItemType}", item));
-            }
-        }
-
-        if (itemType is null)
-        {
-            diagnostics.Add(DiagnosticAt.Error($"Could not infer the list element type", list));
-            itemType = BuiltinType.Any;
-        }
-
-        type = new ArrayType(itemType, list.Values.Length);
-        return true;
-    }
-    bool FindStatementType(IndexCallExpression index, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        type = null;
-
-        if (GetIndexGetter(index, out FunctionQueryResult<CompiledFunctionDefinition>? indexer, out PossibleDiagnostic? notFoundError))
-        {
-            SetStatementType(index, type = GeneralType.TryInsertTypeParameters(indexer.Function.Type, indexer.TypeArguments));
-            return true;
-        }
-
-        if (!FindStatementType(index.Object, out GeneralType? prevType, diagnostics)) return false;
-        if (!FindStatementType(index.Index, out GeneralType? indexType, diagnostics)) return false;
-
-        if (prevType.Is(out ArrayType? arrayType))
-        {
-            SetStatementType(index, type = arrayType.Of);
-            return true;
-        }
-
-        if (prevType.Is(out PointerType? pointerType) &&
-            pointerType.To.Is(out arrayType))
-        {
-            type = arrayType.Of;
-            return true;
-        }
-
-        diagnostics.Add(notFoundError.ToError(index, false));
-        return false;
-    }
-    bool FindStatementType(FunctionCallExpression functionCall, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (functionCall.Identifier.Content == StatementKeywords.Sizeof)
-        {
-            if (GetLiteralType(LiteralType.Integer, out GeneralType? integerType, out PossibleDiagnostic? internalTypeError))
-            {
-                type = integerType;
-            }
-            else
-            {
-                type = SizeofStatementType;
-                diagnostics.Add(DiagnosticAt.Warning($"No type defined for integer literals, using the default {type}", functionCall).WithSuberrors(internalTypeError.ToError(functionCall)));
-            }
-            return true;
-        }
-
-        if (!GetFunction(functionCall, out FunctionQueryResult<CompiledFunctionDefinition>? result, out PossibleDiagnostic? notFoundError))
-        {
-            type = null;
-            diagnostics.Add(notFoundError.ToError(functionCall, false));
-            return false;
-        }
-
-        // Diagnostics.Add(notFoundError?.SubErrors.FirstOrDefault()?.ToWarning(functionCall));
-        functionCall.Identifier.AnalyzedType = TokenAnalyzedType.FunctionName;
-        SetStatementType(functionCall, type = GeneralType.TryInsertTypeParameters(result.Function.Type, result.TypeArguments));
-        return true;
-    }
-    bool FindStatementType(BinaryOperatorCallExpression @operator, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (GetOperator(@operator, @operator.File, out FunctionQueryResult<CompiledOperatorDefinition>? result, out _))
-        {
-            if (result.DidReplaceArguments) throw new UnreachableException();
-            @operator.Operator.AnalyzedType = TokenAnalyzedType.FunctionName;
-            SetStatementType(@operator, type = GeneralType.TryInsertTypeParameters(result.Function.Type, result.TypeArguments));
-            return true;
-        }
-
-        type = null;
-
-        if (!FindStatementType(@operator.Left, expectedType, out GeneralType? leftType, diagnostics)) return false;
-        if (!FindStatementType(@operator.Right, expectedType, out GeneralType? rightType, diagnostics)) return false;
-
-        {
-            if (leftType.Is(out BuiltinType? leftBType) &&
-                rightType.Is(out BuiltinType? rightBType))
-            {
-                bool isFloat =
-                    leftBType.Type == BasicType.F32 ||
-                    rightBType.Type == BasicType.F32;
-
-                if (!FindBitWidth(leftType, out BitWidth leftBitWidth, out PossibleDiagnostic? e1, this))
-                {
-                    diagnostics.Add(e1.ToError(@operator.Left));
-                    return false;
-                }
-
-                if (!FindBitWidth(rightType, out BitWidth rightBitWidth, out PossibleDiagnostic? d2, this))
-                {
-                    diagnostics.Add(d2.ToError(@operator.Left));
-                    return false;
-                }
-
-                BitWidth bitWidth = MaxBitWidth(leftBitWidth, rightBitWidth);
-
-                if (!leftBType.TryGetNumericType(out NumericType leftNType1) ||
-                    !rightBType.TryGetNumericType(out NumericType rightNType1))
-                {
-                    diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
-                    return false;
-                }
-                NumericType numericType = leftNType1 > rightNType1 ? leftNType1 : rightNType1;
-
-                BuiltinType numericResultType = BuiltinType.CreateNumeric(numericType, bitWidth);
-
-                switch (@operator.Operator.Content)
-                {
-                    case BinaryOperatorCallExpression.CompLT:
-                    case BinaryOperatorCallExpression.CompGT:
-                    case BinaryOperatorCallExpression.CompLEQ:
-                    case BinaryOperatorCallExpression.CompGEQ:
-                    case BinaryOperatorCallExpression.CompEQ:
-                    case BinaryOperatorCallExpression.CompNEQ:
-                        if (!GetUsedBy(InternalTypes.Boolean, out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
-                        {
-                            type = BooleanType;
-                            diagnostics.Add(DiagnosticAt.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
-                        }
-                        else
-                        {
-                            type = booleanType;
-                        }
-                        break;
-
-                    case BinaryOperatorCallExpression.LogicalOR:
-                    case BinaryOperatorCallExpression.LogicalAND:
-                    case BinaryOperatorCallExpression.BitwiseAND:
-                    case BinaryOperatorCallExpression.BitwiseOR:
-                    case BinaryOperatorCallExpression.BitwiseXOR:
-                    case BinaryOperatorCallExpression.BitshiftLeft:
-                    case BinaryOperatorCallExpression.BitshiftRight:
-                        type = numericResultType;
-                        break;
-
-                    case BinaryOperatorCallExpression.Addition:
-                    case BinaryOperatorCallExpression.Subtraction:
-                    case BinaryOperatorCallExpression.Multiplication:
-                    case BinaryOperatorCallExpression.Division:
-                    case BinaryOperatorCallExpression.Modulo:
-                        type = isFloat ? BuiltinType.F32 : numericResultType;
-                        break;
-
-                    default:
-                        diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{leftType}\" \"{@operator.Operator.Content}\" \"{rightType}\"", @operator.Operator, @operator.File));
-                        type = BuiltinType.Void;
-                        break;
-                }
-
-                if (expectedType is not null &&
-                    CanCastImplicitly(type, expectedType, null, out _))
-                { type = expectedType; }
-
-                SetStatementType(@operator, type);
-                return true;
-            }
-        }
-
-        bool ok = true;
-
-        if (!leftType.TryGetNumericType(out NumericType leftNType))
-        {
-            diagnostics.Add(DiagnosticAt.Error($"Type \"{leftType}\" aint a numeric type", @operator.Left));
-            ok = false;
-        }
-
-        if (!rightType.TryGetNumericType(out NumericType rightNType))
-        {
-            diagnostics.Add(DiagnosticAt.Error($"Type \"{rightType}\" aint a numeric type", @operator.Right));
-            ok = false;
-        }
-
-        if (!FindBitWidth(leftType, out BitWidth leftBitwidth, out PossibleDiagnostic? error, this))
-        {
-            diagnostics.Add(error.ToError(@operator.Left));
-            ok = false;
-        }
-
-        if (!FindBitWidth(rightType, out BitWidth rightBitwidth, out error, this))
-        {
-            diagnostics.Add(error.ToError(@operator.Right));
-            ok = false;
-        }
-
-        if (!ok) return false;
-
-        CompiledValue leftValue = GetInitialValue(leftNType, leftBitwidth);
-        CompiledValue rightValue = GetInitialValue(rightNType, rightBitwidth);
-
-        if (!TryComputeBinaryOperator(@operator.Operator.Content, leftValue, rightValue, out CompiledValue predictedValue, out PossibleDiagnostic? evaluateError))
-        {
-            diagnostics.Add(evaluateError.ToError(@operator));
-            return false;
-        }
-
-        if (!CompileType(predictedValue.Type, out type, out PossibleDiagnostic? typeError))
-        {
-            diagnostics.Add(typeError.ToError(@operator));
-            type = expectedType ?? BuiltinType.Void;
-        }
-
-        if (expectedType is not null)
-        {
-            if (type.SameAs(BasicType.I32) &&
-                expectedType.Is<PointerType>())
-            {
-                SetStatementType(@operator, type = expectedType);
-                return true;
-            }
-        }
-
-        SetStatementType(@operator, type);
-        return true;
-    }
-    bool FindStatementType(UnaryOperatorCallExpression @operator, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (GetOperator(@operator, @operator.File, out FunctionQueryResult<CompiledOperatorDefinition>? result, out _))
-        {
-            if (result.DidReplaceArguments) throw new UnreachableException();
-            @operator.Operator.AnalyzedType = TokenAnalyzedType.FunctionName;
-            SetStatementType(@operator, type = GeneralType.TryInsertTypeParameters(result.Function.Type, result.TypeArguments));
-            return true;
-        }
-
-        type = null;
-        if (!FindStatementType(@operator.Expression, out GeneralType? leftType, diagnostics)) return false;
-
-        switch (@operator.Operator.Content)
-        {
-            case UnaryOperatorCallExpression.LogicalNOT:
-            {
-                if (!GetUsedBy(InternalTypes.Boolean, out GeneralType? booleanType, out PossibleDiagnostic? internalTypeError))
-                {
-                    type = BooleanType;
-                    diagnostics.Add(DiagnosticAt.Warning($"No type defined for booleans, using the default {type}", @operator).WithSuberrors(internalTypeError.ToError(@operator)));
-                }
-                else
-                {
-                    type = booleanType;
-                }
-                break;
-            }
-            case UnaryOperatorCallExpression.BinaryNOT:
-            {
-                type = leftType;
-                break;
-            }
-            case UnaryOperatorCallExpression.UnaryMinus:
-            {
-                type = leftType;
-                break;
-            }
-            case UnaryOperatorCallExpression.UnaryPlus:
-            {
-                type = leftType;
-                break;
-            }
-            default:
-            {
-                diagnostics.Add(DiagnosticAt.Error($"Unknown operator \"{@operator.Operator.Content}\"", @operator.Operator, @operator.File));
-                return false;
-            }
-        }
-
-        if (expectedType is not null && expectedType.Is<PointerType>() && type.SameAs(BasicType.I32))
-        {
-            SetStatementType(@operator, type = expectedType);
-            return true;
-        }
-
-        SetStatementType(@operator, type);
-        return true;
-    }
-    bool FindStatementType(LiteralExpression literal, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        switch (literal)
-        {
-            case IntLiteralExpression intLiteral:
-            {
-                if (expectedType is not null)
-                {
-                    if (expectedType.SameAs(BasicType.U8))
-                    {
-                        if (intLiteral.Value is >= byte.MinValue and <= byte.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.I8))
-                    {
-                        if (intLiteral.Value is >= sbyte.MinValue and <= sbyte.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.U16))
-                    {
-                        if (intLiteral.Value is >= ushort.MinValue and <= ushort.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.I16))
-                    {
-                        if (intLiteral.Value is >= short.MinValue and <= short.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.U32))
-                    {
-                        if (intLiteral.Value >= (int)uint.MinValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.F32))
-                    {
-                        SetStatementType(literal, type = expectedType);
-                        return true;
-                    }
-                }
-
-                if (GetLiteralType(LiteralType.Integer, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
-                {
-                    type = literalType;
-                    return true;
-                }
-
-                SetStatementType(literal, type = BuiltinType.I32);
-                diagnostics.Add(DiagnosticAt.Warning($"No type defined for integer literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
-                return true;
-            }
-            case FloatLiteralExpression:
-            {
-                if (GetLiteralType(LiteralType.Float, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
-                {
-                    type = literalType;
-                    return true;
-                }
-
-                SetStatementType(literal, type = BuiltinType.F32);
-                diagnostics.Add(DiagnosticAt.Warning($"No type defined for float literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
-                return true;
-            }
-            case StringLiteralExpression stringLiteral:
-            {
-                if (expectedType is not null &&
-                    expectedType.Is(out PointerType? pointerType) &&
-                    pointerType.To.Is(out ArrayType? arrayType) &&
-                    arrayType.Of.SameAs(BasicType.U8))
-                {
-                    SetStatementType(literal, type = expectedType);
-                    return true;
-                }
-
-                if (GetLiteralType(LiteralType.String, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
-                {
-                    type = literalType;
-                    return true;
-                }
-
-                if (!GetLiteralType(LiteralType.Char, out GeneralType? charType, out PossibleDiagnostic? charInternalTypeError))
-                {
-                    charType = BuiltinType.Char;
-                    diagnostics.Add(DiagnosticAt.Warning($"No type defined for characters, using the default {charType}", literal).WithSuberrors(charInternalTypeError.ToError(literal)));
-                }
-
-                SetStatementType(literal, type = new PointerType(new ArrayType(charType, stringLiteral.Value.Length + 1)));
-                diagnostics.Add(DiagnosticAt.Warning($"No type defined for string literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
-                return true;
-            }
-            case CharLiteralExpression charLiteral:
-            {
-                if (expectedType is not null)
-                {
-                    if (expectedType.SameAs(BasicType.U8))
-                    {
-                        if ((int)charLiteral.Value is >= byte.MinValue and <= byte.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.I8))
-                    {
-                        if ((int)charLiteral.Value is >= sbyte.MinValue and <= sbyte.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.I16))
-                    {
-                        if ((int)charLiteral.Value is >= short.MinValue and <= short.MaxValue)
-                        {
-                            SetStatementType(literal, type = expectedType);
-                            return true;
-                        }
-                    }
-                    else if (expectedType.SameAs(BasicType.F32))
-                    {
-                        SetStatementType(literal, type = expectedType);
-                        return true;
-                    }
-                }
-
-                if (GetLiteralType(LiteralType.Char, out GeneralType? literalType, out PossibleDiagnostic? internalTypeError))
-                {
-                    type = literalType;
-                    return true;
-                }
-
-                SetStatementType(literal, type = BuiltinType.Char);
-                diagnostics.Add(DiagnosticAt.Warning($"No type defined for character literals, using the default {type}", literal).WithSuberrors(internalTypeError.ToError(literal)));
-                return true;
-            }
-            default:
-                throw new UnreachableException(literal.GetType().ToString());
-        }
-    }
-    bool FindStatementType(IdentifierExpression identifier, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (identifier.Content.StartsWith('#'))
-        {
-            identifier.Reference = null;
-            identifier.AnalyzedType = TokenAnalyzedType.ConstantName;
-            SetStatementType(identifier, type = BooleanType);
-            return true;
-        }
-
-        if (BBLang.Generator.CodeGeneratorForMain.RegisterKeywords.TryGetValue(identifier.Content, out (Register Register, BuiltinType Type) registerKeyword))
-        {
-            type = registerKeyword.Type;
-            return true;
-        }
-
-        if (!Settings.ExpressionVariables.IsDefault)
-        {
-            foreach (ExpressionVariable item in Settings.ExpressionVariables)
-            {
-                if (item.Name != identifier.Content) continue;
-                identifier.AnalyzedType = TokenAnalyzedType.VariableName;
-                SetStatementReference(identifier, item);
-                SetStatementType(identifier, type = item.Type);
-                return true;
-            }
-        }
-
-        if (GetConstant(identifier.Content, identifier.File, out CompiledVariableConstant? constant, out PossibleDiagnostic? constantNotFoundError))
-        {
-            SetStatementReference(identifier, constant);
-            identifier.AnalyzedType = TokenAnalyzedType.ConstantName;
-            SetStatementType(identifier, type = constant.Type);
-            return true;
-        }
-
-        if (GetParameter(identifier.Content, out CompiledParameter? parameter, out PossibleDiagnostic? parameterNotFoundError))
-        {
-            if (identifier.Content != StatementKeywords.This)
-            { identifier.AnalyzedType = TokenAnalyzedType.ParameterName; }
-            SetStatementReference(identifier, parameter);
-            SetStatementType(identifier, type = GeneralType.TryInsertTypeParameters(parameter.Type, Frames.Last.TypeArguments));
-            return true;
-        }
-
-        if (GetVariable(identifier.Content, out CompiledVariableDefinition? variable, out PossibleDiagnostic? variableNotFoundError))
-        {
-            identifier.AnalyzedType = TokenAnalyzedType.VariableName;
-            SetStatementReference(identifier, variable);
-            SetStatementType(identifier, type = variable.Type);
-            return true;
-        }
-
-        if (GetGlobalVariable(identifier.Content, identifier.File, out CompiledVariableDefinition? globalVariable, out PossibleDiagnostic? globalVariableNotFoundError))
-        {
-            identifier.AnalyzedType = TokenAnalyzedType.VariableName;
-            SetStatementReference(identifier, globalVariable);
-            SetStatementType(identifier, type = globalVariable.Type);
-            return true;
-        }
-
-        if (GetLocalSymbolType(identifier, out type))
-        {
-            SetStatementType(identifier, type);
-            return true;
-        }
-
-        if (GetFunction(identifier.Content, expectedType, out FunctionQueryResult<CompiledFunctionDefinition>? function, out PossibleDiagnostic? functionNotFoundError))
-        {
-            identifier.AnalyzedType = TokenAnalyzedType.FunctionName;
-            SetStatementType(identifier, type = new FunctionType(GeneralType.TryInsertTypeParameters(function.Function.Type, function.TypeArguments), function.Function.Parameters.ToImmutableArray(v => GeneralType.TryInsertTypeParameters(v.Type, function.TypeArguments)), false));
-            return true;
-        }
-
-        if (GetInstructionLabel(identifier.Content, out _, out PossibleDiagnostic? instructionLabelNotFound))
-        {
-            SetStatementType(identifier, type = new FunctionType(BuiltinType.Void, ImmutableArray<GeneralType>.Empty, false));
-            return true;
-        }
-
-        for (int i = Frames.Count - 2; i >= 0; i--)
-        {
-            if (GetVariable(identifier.Content, Frames[i], out variable, out _))
-            {
-                SetStatementType(identifier, type = variable.Type);
-                return true;
-            }
-        }
-
-        if (FindType(identifier.Identifier, identifier.File, out GeneralType? result, out PossibleDiagnostic? typeError))
-        {
-            SetStatementType(identifier, type = result);
-            return true;
-        }
-
-        diagnostics.Add(DiagnosticAt.Error($"Symbol \"{identifier.Content}\" not found", identifier)
-            .WithSuberrors(
-                parameterNotFoundError.ToError(identifier),
-                variableNotFoundError.ToError(identifier),
-                globalVariableNotFoundError.ToError(identifier),
-                constantNotFoundError.ToError(identifier),
-                functionNotFoundError.ToError(identifier),
-                instructionLabelNotFound.ToError(identifier),
-                typeError.ToError(identifier)
-            ));
-        return false;
-    }
-    bool FindStatementType(GetReferenceExpression addressGetter, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        type = null;
-        if (!FindStatementType(addressGetter.Expression, out GeneralType? to, diagnostics)) return false;
-        SetStatementType(addressGetter, type = new PointerType(to));
-        return true;
-    }
-    bool FindStatementType(DereferenceExpression pointer, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        type = null;
-        if (!FindStatementType(pointer.Expression, out GeneralType? to, diagnostics)) return false;
-
-        if (!to.Is(out PointerType? pointerType))
-        { SetStatementType(pointer, type = BuiltinType.Any); }
-        else
-        {
-            SetStatementType(pointer, type = pointerType.To);
-        }
-        return true;
-    }
-    bool FindStatementType(NewInstanceExpression newInstance, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (!CompileType(newInstance.Type, out type, diagnostics)) return false;
-
-        SetStatementType(newInstance, type);
-        return true;
-    }
-    bool FindStatementType(ConstructorCallExpression constructorCall, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (!CompileType(constructorCall.Type, out type, diagnostics)) return false;
-
-        if (!FindStatementTypes(constructorCall.Arguments.Arguments, out ImmutableArray<GeneralType> parameters, diagnostics)) return false;
-
-        if (GetConstructor(type, parameters, constructorCall.File, out FunctionQueryResult<CompiledConstructorDefinition>? result, out PossibleDiagnostic? notFound))
-        {
-            SetStatementType(constructorCall, type = GeneralType.TryInsertTypeParameters(result.Function.Type, result.TypeArguments));
-            return true;
-        }
-
-        diagnostics.Add(notFound.ToError(constructorCall));
-        return false;
-    }
-    bool FindStatementType(FieldExpression field, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        type = null;
-
-        PossibleDiagnostic? enumError = null;
-        if (field.Object is IdentifierExpression objectIdentifier
-            && GetEnum(objectIdentifier.Identifier.Content, objectIdentifier.File, out CompiledEnum? @enum, out enumError))
-        {
-            type = new EnumType(@enum);
-            return true;
-        }
-
-        if (!FindStatementType(field.Object, out GeneralType? prevStatementType, diagnostics)) return false;
-
-        if (prevStatementType.Is<ArrayType>() && field.Identifier.Content == "Length")
-        {
-            field.Identifier.AnalyzedType = TokenAnalyzedType.FieldName;
-            SetStatementType(field, type = ArrayLengthType);
-            return true;
-        }
-
-        while (prevStatementType.Is(out IReferenceType? pointerType))
-        { prevStatementType = pointerType.To; }
-
-        if (prevStatementType.Is(out StructType? structType))
-        {
-            foreach (CompiledField definedField in structType.Struct.Fields)
-            {
-                if (definedField.Identifier != field.Identifier.Content) continue;
-                field.Identifier.AnalyzedType = TokenAnalyzedType.FieldName;
-
-                type = GeneralType.TryInsertTypeParameters(definedField.Type, structType.TypeArguments);
-                return true;
-            }
-
-            diagnostics.Add(DiagnosticAt.Error($"Field definition \"{field.Identifier}\" not found in type \"{prevStatementType}\"", field.Identifier, field.File));
-            return false;
-        }
-        else
-        {
-            diagnostics.Add(DiagnosticAt.Error($"Type \"{prevStatementType}\" does not have a field \"{field.Identifier}\"", field));
-            return false;
-        }
-    }
-    bool FindStatementType(ReinterpretExpression @as, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (!CompileType(@as.Type, out type, diagnostics)) return false;
-
-        SetStatementType(@as, type);
-        return true;
-    }
-    bool FindStatementType(ManagedTypeCastExpression @as, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        if (!CompileType(@as.Type, out type, diagnostics)) return false;
-
-        SetStatementType(@as, type);
-        return true;
-    }
-    bool FindStatementType(ArgumentExpression modifiedStatement, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        return FindStatementType(modifiedStatement.Value, expectedType, out type, diagnostics);
-    }
-    bool FindStatementType(Expression statement, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-        => FindStatementType(statement, null, out type, diagnostics);
-    bool FindStatementType(Expression statement, GeneralType? expectedType, [NotNullWhen(true)] out GeneralType? type, DiagnosticsCollection diagnostics)
-    {
-        switch (statement)
-        {
-            case FunctionCallExpression v: return FindStatementType(v, out type, diagnostics);
-            case BinaryOperatorCallExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
-            case UnaryOperatorCallExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
-            case LiteralExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
-            case IdentifierExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
-            case GetReferenceExpression v: return FindStatementType(v, out type, diagnostics);
-            case DereferenceExpression v: return FindStatementType(v, out type, diagnostics);
-            case NewInstanceExpression v: return FindStatementType(v, out type, diagnostics);
-            case ConstructorCallExpression v: return FindStatementType(v, out type, diagnostics);
-            case FieldExpression v: return FindStatementType(v, out type, diagnostics);
-            case ReinterpretExpression v: return FindStatementType(v, out type, diagnostics);
-            case ManagedTypeCastExpression v: return FindStatementType(v, out type, diagnostics);
-            case IndexCallExpression v: return FindStatementType(v, out type, diagnostics);
-            case ArgumentExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
-            case AnyCallExpression v: return FindStatementType(v, out type, diagnostics);
-            case ListExpression v: return FindStatementType(v, out type, diagnostics);
-            case LambdaExpression v: return FindStatementType(v, expectedType, out type, diagnostics);
-            default:
-                type = null;
-                diagnostics.Add(DiagnosticAt.Error($"Statement \"{statement.GetType().Name}\" does not have a type", statement));
-                return false;
-        }
-    }
-    bool FindStatementTypes<TExpression>(ImmutableArray<TExpression> statements, [NotNullWhen(true)] out ImmutableArray<GeneralType> type, DiagnosticsCollection diagnostics)
-        where TExpression : Expression
-    {
-        type = default;
-        ImmutableArray<GeneralType>.Builder result = ImmutableArray.CreateBuilder<GeneralType>(statements.Length);
-        for (int i = 0; i < statements.Length; i++)
-        {
-            if (!FindStatementType(statements[i], out GeneralType? item, diagnostics)) return false;
-            result.Add(item);
-        }
-        type = result.MoveToImmutable();
-        return true;
     }
 
     #endregion

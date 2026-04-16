@@ -1505,13 +1505,53 @@ public partial class StatementCompiler
 
         if (!CompileExpression(value, out CompiledExpression? _value)) return false;
 
-        if (GetIndexSetter(_base.Type, _value.Type, _index.Type, target.File, out FunctionQueryResult<CompiledFunctionDefinition>? indexer, out PossibleDiagnostic? indexerNotFoundError, AddCompilable))
+        if (GetIndexSetter(_base, _value, _index, target.File, out FunctionQueryResult<CompiledFunctionDefinition>? indexer, out PossibleDiagnostic? indexerNotFoundError, AddCompilable))
         {
             indexer.Function.AddReference(target, target.Location);
-            if (CompileFunctionCall(target, ImmutableArray.Create(ArgumentExpression.Wrap(target.Object), target.Index, ArgumentExpression.Wrap(value)), indexer, out CompiledExpression? compiledStatement2))
+            if (CompileFunctionCall(target, ImmutableArray.Create(_base, _index, _value), ImmutableArray.Create(ArgumentExpression.Wrap(target.Object), target.Index, ArgumentExpression.Wrap(value)), indexer, out CompiledExpression? compiledStatement2))
             {
                 compiledStatement = compiledStatement2;
                 return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (GetIndexGetter(_base, _index, target.File, out indexer, out PossibleDiagnostic? indexerNotFoundError2, AddCompilable))
+        {
+            indexer.Function.AddReference(target, target.Location);
+            if (CompileFunctionCall(target, ImmutableArray.Create(_base, _index), ImmutableArray.Create(ArgumentExpression.Wrap(target.Object), target.Index), indexer, out CompiledExpression? compiledStatement2))
+            {
+                if (compiledStatement2.Type.Is(out IReferenceType? referenceReturnType))
+                {
+                    if (CanCastImplicitly(_value.Type, referenceReturnType.To, out PossibleDiagnostic? castError2))
+                    {
+                        compiledStatement = new CompiledSetter()
+                        {
+                            Target = new CompiledDereference()
+                            {
+                                Address = compiledStatement2,
+                                Type = referenceReturnType.To,
+                                Location = target.Location,
+                                SaveValue = true,
+                            },
+                            Value = _value,
+                            Location = target.Location.Union(value.Location),
+                            IsCompoundAssignment = false,
+                        };
+                        return true;
+                    }
+                    else
+                    {
+                        indexerNotFoundError2 = castError2;
+                    }
+                }
+                else
+                {
+                    indexerNotFoundError2 = new PossibleDiagnostic($"Indexer get return type must be a reference type to be able to use as a setter");
+                }
             }
             else
             {
@@ -1533,6 +1573,7 @@ public partial class StatementCompiler
         else
         {
             Diagnostics.Add(indexerNotFoundError.ToError(target));
+            Diagnostics.Add(indexerNotFoundError2.ToError(target));
             return false;
         }
 
@@ -2131,7 +2172,7 @@ public partial class StatementCompiler
                     Token.CreateAnonymous(result.Function.Identifier, TokenType.Identifier, firstHeapUsageLocation.Location.Position),
                     ArgumentListExpression.CreateAnonymous(TokenPair.CreateAnonymous(firstHeapUsageLocation.Location.Position, "(", ")"), entryFile),
                     entryFile
-                ), ImmutableArray<ArgumentExpression>.Empty, result, out CompiledExpression? call))
+                ), ImmutableArray<CompiledExpression>.Empty, ImmutableArray<ArgumentExpression>.Empty, result, out CompiledExpression? call))
                 {
                     CompiledTopLevelStatements.Insert(0, call);
                 }
